@@ -6,7 +6,6 @@ mv_internal const char* gltfPath = "C://dev//glTF-Sample-Models//2.0//";
 mv_internal b8 loadGLTF = false;
 mv_internal b8 loadSponza = false;
 mv_internal f32 shadowWidth = 15.0f;
-mv_internal f32 scale = 5.0f;
 
 mvGLTFModel LoadTestModel(const char* name);
 
@@ -176,14 +175,14 @@ int main()
         //-----------------------------------------------------------------------------
         mvRenderer_BeginPass(lambertian);
 
-        mvBindSlot_b(1u, dshadowCamera, mvBuildCameraMatrix(perspecCamera), mvBuildCameraMatrix(orthoCamera), mvBuildProjectionMatrix(orthoCamera)); // vertex shader
+        mvBindSlot_bVS(1u, dshadowCamera, mvBuildCameraMatrix(perspecCamera), mvBuildCameraMatrix(orthoCamera), mvBuildProjectionMatrix(orthoCamera));
 
-        mvBindSlot_b(0u, light, viewMatrix);         // pixel shader
-        mvBindSlot_b(2u, dlight, viewMatrix);        // pixel shader
-        mvBindSlot_b(3u, scene);                     // pixel shader
+        mvBindSlot_bPS(0u, light, viewMatrix);        
+        mvBindSlot_bPS(2u, dlight, viewMatrix);       
+        mvBindSlot_bPS(3u, scene);                    
                                                     
-        mvBindSlot_ts(directionalShadowMap, 3u, 1u); // pixel shader
-        mvBindSlot_ts(omniShadowMap, 4u, 2u);        // pixel shader
+        mvBindSlot_tsPS(directionalShadowMap, 3u, 1u);
+        mvBindSlot_tsPS(omniShadowMap, 4u, 2u);       
         
         for (int i = 0; i < am.meshCount; i++)
         {
@@ -198,7 +197,7 @@ int main()
         // skybox pass
         //-----------------------------------------------------------------------------
         mvRenderer_BeginPass(skyboxPass.basePass);
-        mvBindSlot_b(0u, scene);
+        mvBindSlot_bPS(0u, scene);
         mvRenderer_RenderSkybox(am, skyboxPass, viewMatrix, projMatrix);
         mvRenderer_EndPass();
 

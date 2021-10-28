@@ -18,7 +18,7 @@ void
 mvRenderer_StartRenderer()
 {
     mvInitializeViewport(1850, 900);
-    mvSetupGraphics("../../Charlie/Charlie/shaders/");
+    mvSetupGraphics();
 
     // Setup Dear ImGui context
     IMGUI_CHECKVERSION();
@@ -84,7 +84,7 @@ void
 mvRenderer_ClearPass(mvPass& pass)
 {
     // clear render target
-    static float backgroundColor[] = { 0.0f, 0.0f, 0.0f, 1.0f };
+    mv_local_persist float backgroundColor[] = { 0.0f, 0.0f, 0.0f, 1.0f };
     if (pass.target)
         GContext->graphics.imDeviceContext->ClearRenderTargetView(*pass.target, backgroundColor);
     if(pass.depthStencil)
@@ -175,7 +175,7 @@ mvRenderer_RenderMeshPhong(mvAssetManager& am, mvMesh& mesh, mvMat4 cam, mvMat4 
     device->Unmap(GContext->graphics.tranformCBuf.Get(), 0u);
 
     // mesh
-    static const UINT offset = 0u;
+    mv_local_persist const UINT offset = 0u;
     device->VSSetConstantBuffers(0u, 1u, GContext->graphics.tranformCBuf.GetAddressOf());
     device->IASetIndexBuffer(am.buffers[mesh.indexBuffer].buffer.buffer.Get(), DXGI_FORMAT_R32_UINT, 0u);
     device->IASetVertexBuffers(0u, 1u,

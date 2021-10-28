@@ -21,6 +21,8 @@ typedef unsigned short   u16;
 typedef unsigned int     u32;
 typedef unsigned __int64 u64;
 
+typedef s32 mvAssetID;
+
 #define mv_internal static
 #define mv_local_persist static
 #define mv_global static

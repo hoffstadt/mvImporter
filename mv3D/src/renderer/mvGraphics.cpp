@@ -4,10 +4,9 @@
 #include "mvMath.h"
 
 void
-mvSetupGraphics(const char* shaderRoot)
+mvSetupGraphics()
 {
     GContext->graphics.threadID = std::this_thread::get_id();
-    GContext->graphics.shaderRoot = shaderRoot;
 
     DXGI_SWAP_CHAIN_DESC sd = {};
     sd.BufferDesc.Width = GContext->viewport.width;

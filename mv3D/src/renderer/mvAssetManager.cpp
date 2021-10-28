@@ -24,7 +24,7 @@ mvCleanupAssetManager(mvAssetManager* manager)
 	delete[] manager->meshes;
 }
 
-s32 
+mvAssetID
 mvGetPhongMaterialAsset(mvAssetManager* manager, const std::string& vs, const std::string& ps, b8 cull, b8 useDiffusemap, b8 useNormalmap, b8 useSpecularMap)
 {
 	std::string hash = ps + vs + 
@@ -46,7 +46,7 @@ mvGetPhongMaterialAsset(mvAssetManager* manager, const std::string& vs, const st
 	return manager->phongMaterialCount - 1;
 }
 
-s32 
+mvAssetID
 mvGetPBRMaterialAsset(mvAssetManager* manager, const std::string& vs, const std::string& ps, b8 cull, b8 useAlbedomap, b8 useNormalmap, b8 useRoughnessMap, b8 useMetalMap)
 {
 	std::string hash = ps + vs +
@@ -69,7 +69,7 @@ mvGetPBRMaterialAsset(mvAssetManager* manager, const std::string& vs, const std:
 	return manager->pbrMaterialCount - 1;
 }
 
-s32 
+mvAssetID
 mvGetTextureAsset(mvAssetManager* manager, const std::string& path)
 {
 	for (s32 i = 0; i < manager->textureCount; i++)
@@ -84,7 +84,7 @@ mvGetTextureAsset(mvAssetManager* manager, const std::string& path)
 	return manager->textureCount - 1;
 }
 
-s32
+mvAssetID
 mvGetCubeTextureAsset(mvAssetManager* manager, const std::string& path)
 {
 	for (s32 i = 0; i < manager->cubeTextureCount; i++)
@@ -99,7 +99,7 @@ mvGetCubeTextureAsset(mvAssetManager* manager, const std::string& path)
 	return manager->cubeTextureCount - 1;
 }
 
-s32 
+mvAssetID
 mvGetBufferAsset(mvAssetManager* manager, void* data, u32 size, D3D11_BIND_FLAG flags, const std::string& tag)
 {
 	for (s32 i = 0; i < manager->bufferCount; i++)
@@ -114,7 +114,7 @@ mvGetBufferAsset(mvAssetManager* manager, void* data, u32 size, D3D11_BIND_FLAG 
 	return manager->bufferCount - 1;
 }
 
-s32 
+mvAssetID
 mvRegistryMeshAsset(mvAssetManager* manager, mvMesh mesh)
 {
 	manager->meshes[manager->meshCount].mesh = mesh;
@@ -122,7 +122,7 @@ mvRegistryMeshAsset(mvAssetManager* manager, mvMesh mesh)
 	return manager->meshCount - 1;
 }
 
-s32 
+mvAssetID
 mvGetSamplerAsset(mvAssetManager* manager, D3D11_FILTER mode, D3D11_TEXTURE_ADDRESS_MODE addressing, b8 hwPcf)
 {
 

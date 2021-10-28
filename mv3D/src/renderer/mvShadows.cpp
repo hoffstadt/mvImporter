@@ -214,7 +214,7 @@ mvCreateShadowCamera()
 }
 
 void 
-mvBindSlot_ts(mvShadowMap& shadowMap, u32 textureSlot, u32 samplerSlot)
+mvBindSlot_tsPS(mvShadowMap& shadowMap, u32 textureSlot, u32 samplerSlot)
 {
 
     GContext->graphics.imDeviceContext->PSSetSamplers(samplerSlot, 1, shadowMap.comparisonSampler.GetAddressOf());
@@ -222,7 +222,7 @@ mvBindSlot_ts(mvShadowMap& shadowMap, u32 textureSlot, u32 samplerSlot)
 }
 
 void
-mvBindSlot_ts(mvShadowCubeMap& shadowMap, u32 textureSlot, u32 samplerSlot)
+mvBindSlot_tsPS(mvShadowCubeMap& shadowMap, u32 textureSlot, u32 samplerSlot)
 {
 
     GContext->graphics.imDeviceContext->PSSetSamplers(samplerSlot, 1, shadowMap.comparisonSampler.GetAddressOf());
@@ -230,7 +230,7 @@ mvBindSlot_ts(mvShadowCubeMap& shadowMap, u32 textureSlot, u32 samplerSlot)
 }
 
 void 
-mvBindSlot_b(u32 slot, mvShadowCamera& camera, mvMat4 oview, mvMat4 dview, mvMat4 proj)
+mvBindSlot_bVS(u32 slot, mvShadowCamera& camera, mvMat4 oview, mvMat4 dview, mvMat4 proj)
 {
     camera.info.pointShadowView = oview;
     camera.info.directShadowView = dview;

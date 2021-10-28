@@ -25,7 +25,7 @@ mvInitializeViewport(i32 width, i32 height)
     wc.hCursor = nullptr;
     wc.hbrBackground = nullptr;
     wc.lpszMenuName = nullptr;
-    wc.lpszClassName = "VGS Window";
+    wc.lpszClassName = "mv3D Window";
     wc.hIconSm = nullptr;
     RegisterClassEx(&wc);
 
@@ -39,7 +39,7 @@ mvInitializeViewport(i32 width, i32 height)
 
     // create window & get hWnd
     GContext->viewport.hWnd = CreateWindow(
-        "VGS Window", "Charlie",
+        "mv3D Window", "mv3D",
         WS_CAPTION | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_SYSMENU | WS_OVERLAPPED | WS_THICKFRAME,
         0, 0, wr.right - wr.left, wr.bottom - wr.top,
         nullptr, nullptr, GetModuleHandle(nullptr), nullptr);

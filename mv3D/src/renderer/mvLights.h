@@ -56,5 +56,5 @@ struct mvDirectionLight
 mvPointLight     mvCreatePointLight    (mvAssetManager* manager, mvVec3 pos = { 0.0f,0.0f,0.5f });
 mvDirectionLight mvCreateDirectionLight(mvVec3 dir = { 0.0f,0.0f,0.5f });
     
-void mvBindSlot_b(uint32_t slot, mvPointLight& light, mvMat4 viewMatrix);
-void mvBindSlot_b(uint32_t slot, mvDirectionLight& light, mvMat4 viewMatrix);
+void mvBindSlot_bPS(u32 slot, mvPointLight& light, mvMat4 viewMatrix);
+void mvBindSlot_bPS(u32 slot, mvDirectionLight& light, mvMat4 viewMatrix);

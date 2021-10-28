@@ -20,9 +20,9 @@ struct mvSkyboxPass
 {
     mvPass     basePass;
     mvPipeline pipeline;
-    u32        mesh;
-    u32        cubeTexture;
-    u32        sampler;
+    mvAssetID  mesh;
+    mvAssetID  cubeTexture;
+    mvAssetID  sampler;
 };
 
 mvPass       mvCreateMainPass();

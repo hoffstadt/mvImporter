@@ -11,9 +11,9 @@
 void
 mvLoadOBJAssets(mvAssetManager& assetManager, const std::string& root, const std::string& file)
 {
-    std::vector<s32> diffuseTextureMaps;
-    std::vector<s32> normalTextureMaps;
-    std::vector<s32> specularTextureMaps;
+    std::vector<mvAssetID> diffuseTextureMaps;
+    std::vector<mvAssetID> normalTextureMaps;
+    std::vector<mvAssetID> specularTextureMaps;
     std::vector<mvObjMaterial> objMaterials = mvLoadObjMaterials(root + file + ".mtl");
     mvObjModel objModel = mvLoadObjModel(root + file + ".obj");
 

@@ -41,7 +41,7 @@ struct mvShadowCubeMap
 mvShadowMap     mvCreateShadowMap    (u32 resolution);
 mvShadowCubeMap mvCreateShadowCubeMap(u32 resolution);
 mvShadowCamera  mvCreateShadowCamera ();
-void            mvBindSlot_ts        (mvShadowMap& shadowMap, u32 textureSlot, u32 samplerSlot);
-void            mvBindSlot_ts        (mvShadowCubeMap& shadowMap, u32 textureSlot, u32 samplerSlot);
-void            mvBindSlot_b         (u32 slot, mvShadowCamera& camera, mvMat4 oview, mvMat4 dview, mvMat4 proj);
+void            mvBindSlot_tsPS      (mvShadowMap& shadowMap, u32 textureSlot, u32 samplerSlot);
+void            mvBindSlot_tsPS      (mvShadowCubeMap& shadowMap, u32 textureSlot, u32 samplerSlot);
+void            mvBindSlot_bVS       (u32 slot, mvShadowCamera& camera, mvMat4 oview, mvMat4 dview, mvMat4 proj);
 

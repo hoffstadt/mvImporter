@@ -5,7 +5,7 @@
 #include <thread>
 #include "mvWindows.h"
 
-void mvSetupGraphics(const char* shaderRoot);
+void mvSetupGraphics();
 void mvCleanupGraphics();
 void mvRecreateSwapChain();
 
@@ -21,8 +21,5 @@ struct mvGraphics
     mvComPtr<IDXGISwapChain>           swapChain;
     mvComPtr<ID3D11DeviceContext>      imDeviceContext;  
     mvComPtr<ID3D11Device>             device;
-    const char*                        shaderRoot;
-    std::thread::id                    threadID;
-        
+    std::thread::id                    threadID;    
 };
-

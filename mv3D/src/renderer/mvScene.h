@@ -22,5 +22,5 @@ struct mvScene
 };
 
 mvScene mvCreateScene();
-void    mvBindSlot_b(uint32_t slot, mvScene& scene);
+void    mvBindSlot_bPS(uint32_t slot, mvScene& scene);
 

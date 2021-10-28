@@ -57,14 +57,14 @@ struct mvAssetManager
 void mvInitializeAssetManager(mvAssetManager* manager);
 void mvCleanupAssetManager   (mvAssetManager* manager);
 
-s32 mvGetPhongMaterialAsset(mvAssetManager* manager, const std::string& vs, const std::string& ps, b8 cull, b8 useDiffusemap, b8 useNormalmap, b8 useSpecularMap);
-s32 mvGetPBRMaterialAsset  (mvAssetManager* manager, const std::string& vs, const std::string& ps, b8 cull, b8 useAlbedomap, b8 useNormalmap, b8 useRoughnessMap, b8 useMetalMap);
-s32 mvGetTextureAsset      (mvAssetManager* manager, const std::string& path);
-s32 mvGetCubeTextureAsset  (mvAssetManager* manager, const std::string& path);
-s32 mvGetBufferAsset       (mvAssetManager* manager, void* data, u32 size, D3D11_BIND_FLAG flags, const std::string& tag);
-s32 mvGetSamplerAsset      (mvAssetManager* manager, D3D11_FILTER mode, D3D11_TEXTURE_ADDRESS_MODE addressing, b8 hwPcf);
+mvAssetID mvGetPhongMaterialAsset(mvAssetManager* manager, const std::string& vs, const std::string& ps, b8 cull, b8 useDiffusemap, b8 useNormalmap, b8 useSpecularMap);
+mvAssetID mvGetPBRMaterialAsset  (mvAssetManager* manager, const std::string& vs, const std::string& ps, b8 cull, b8 useAlbedomap, b8 useNormalmap, b8 useRoughnessMap, b8 useMetalMap);
+mvAssetID mvGetTextureAsset      (mvAssetManager* manager, const std::string& path);
+mvAssetID mvGetCubeTextureAsset  (mvAssetManager* manager, const std::string& path);
+mvAssetID mvGetBufferAsset       (mvAssetManager* manager, void* data, u32 size, D3D11_BIND_FLAG flags, const std::string& tag);
+mvAssetID mvGetSamplerAsset      (mvAssetManager* manager, D3D11_FILTER mode, D3D11_TEXTURE_ADDRESS_MODE addressing, b8 hwPcf);
 
-s32 mvRegistryMeshAsset(mvAssetManager* manager, mvMesh mesh);
+mvAssetID mvRegistryMeshAsset(mvAssetManager* manager, mvMesh mesh);
 
 struct mvMeshAsset
 {

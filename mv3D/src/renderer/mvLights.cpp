@@ -18,7 +18,7 @@ mvCreatePointLight(mvAssetManager* manager, mvVec3 pos)
 	mesh.phongMaterialID = mvGetPhongMaterialAsset(manager, "Phong_VS.hlsl", "Solid_PS.hlsl", true, false, false, false);
 	manager->phongMaterials[mesh.phongMaterialID].material.data.materialColor = { 1.0f, 1.0f, 1.0f, 1.0f };
 
-	u32 mesh_id = mvRegistryMeshAsset(manager, mesh);
+	mvAssetID mesh_id = mvRegistryMeshAsset(manager, mesh);
 
 	light.mesh = &manager->meshes[mesh_id].mesh;
 
@@ -35,7 +35,7 @@ mvCreateDirectionLight(mvVec3 dir)
 }
 
 void
-mvBindSlot_b(uint32_t slot, mvPointLight& light, mvMat4 viewMatrix)
+mvBindSlot_bPS(u32 slot, mvPointLight& light, mvMat4 viewMatrix)
 {
 	mvVec4 posCopy = light.info.viewLightPos;
 	light.mesh->pos.x = light.info.viewLightPos.x;
@@ -53,7 +53,7 @@ mvBindSlot_b(uint32_t slot, mvPointLight& light, mvMat4 viewMatrix)
 }
 
 void
-mvBindSlot_b(uint32_t slot, mvDirectionLight& light, mvMat4 viewMatrix)
+mvBindSlot_bPS(u32 slot, mvDirectionLight& light, mvMat4 viewMatrix)
 {
 
 	mvVec3 posCopy = light.info.viewLightDir;

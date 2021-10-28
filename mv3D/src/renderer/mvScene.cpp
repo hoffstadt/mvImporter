@@ -10,7 +10,7 @@ mvCreateScene()
 }
 
 void
-mvBindSlot_b(uint32_t slot, mvScene& scene)
+mvBindSlot_bPS(uint32_t slot, mvScene& scene)
 {
 	mvUpdateConstBuffer(scene.buffer, &scene.info);
 	GContext->graphics.imDeviceContext->PSSetConstantBuffers(slot, 1u, scene.buffer.buffer.GetAddressOf());

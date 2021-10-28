@@ -5,9 +5,9 @@
 
 struct mvPixelShader
 {
-    mvComPtr<ID3D11PixelShader>  shader;
-    mvComPtr<ID3DBlob>           blob;
-    std::string                  path;
+    mvComPtr<ID3D11PixelShader> shader;
+    mvComPtr<ID3DBlob>          blob;
+    std::string                 path;
 };
 
 struct mvVertexShader
