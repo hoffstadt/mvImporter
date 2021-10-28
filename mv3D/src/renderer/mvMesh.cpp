@@ -590,4 +590,37 @@ mvLoadGLTFAssets(mvAssetManager& assetManager, mvGLTFModel& model)
         mvRegistryMeshAsset(&assetManager, newMesh);
     }
 
+    for (u32 currentNode = 0u; currentNode < model.node_count; currentNode++)
+    {
+        mvGLTFNode& glnode = model.nodes[currentNode];
+
+        mvNode newNode{};
+        newNode.name = glnode.name;
+        if(glnode.mesh_index > -1)
+            newNode.mesh = glnode.mesh_index;
+        newNode.childCount = glnode.child_count;
+
+        for (i32 i = 0; i < glnode.child_count; i++)
+            newNode.children[i] = (mvAssetID)glnode.children[i];
+
+        newNode.matrix = *(mvMat4*)(glnode.matrix);
+        newNode.rotation = *(mvVec4*)(glnode.rotation);
+        newNode.scale = *(mvVec3*)(glnode.scale);
+        newNode.translation = *(mvVec3*)(glnode.translation);
+
+        mvRegistryNodeAsset(&assetManager, newNode);
+    }
+
+    for (u32 currentScene = 0u; currentScene < model.scene_count; currentScene++)
+    {
+        mvGLTFScene& glscene = model.scenes[currentScene];
+
+        mvScene newScene = mvCreateScene();
+        newScene.nodeCount = glscene.node_count;
+
+        for (i32 i = 0; i < glscene.node_count; i++)
+            newScene.nodes[i] = glscene.nodes[i];
+
+        mvRegistrySceneAsset(&assetManager, newScene);
+    }
 }

@@ -10,6 +10,8 @@ mvInitializeAssetManager(mvAssetManager* manager)
 	manager->buffers = new mvBufferAsset[manager->maxBufferCount];
 	manager->meshes = new mvMeshAsset[manager->maxMeshCount];
 	manager->cubeTextures = new mvCubeTextureAsset[manager->maxCubeTextureCount];
+	manager->nodes = new mvNodeAsset[manager->maxNodeCount];
+	manager->scenes = new mvSceneAsset[manager->maxSceneCount];
 }
 
 void 
@@ -22,6 +24,8 @@ mvCleanupAssetManager(mvAssetManager* manager)
 	delete[] manager->pbrMaterials;
 	delete[] manager->buffers;
 	delete[] manager->meshes;
+	delete[] manager->nodes;
+	delete[] manager->scenes;
 }
 
 mvAssetID
@@ -120,6 +124,22 @@ mvRegistryMeshAsset(mvAssetManager* manager, mvMesh mesh)
 	manager->meshes[manager->meshCount].mesh = mesh;
 	manager->meshCount++;
 	return manager->meshCount - 1;
+}
+
+mvAssetID
+mvRegistryNodeAsset(mvAssetManager* manager, mvNode node)
+{
+	manager->nodes[manager->nodeCount].node = node;
+	manager->nodeCount++;
+	return manager->nodeCount - 1;
+}
+
+mvAssetID
+mvRegistrySceneAsset(mvAssetManager* manager, mvScene scene)
+{
+	manager->scenes[manager->sceneCount].scene = scene;
+	manager->sceneCount++;
+	return manager->sceneCount - 1;
 }
 
 mvAssetID

@@ -316,6 +316,7 @@ struct mvJsonMember
 
 	operator char*         ();
 	operator int           ();
+	operator mvU32         ();
 	operator float         ();
 	operator mvJsonObject& ();
 };
@@ -800,6 +801,12 @@ mvJsonMember::operator int()
 	return atoi(context->primitiveValues[index].value);
 }
 
+mvJsonMember::operator mvU32()
+{
+	int value = atoi(context->primitiveValues[index].value);
+	return (mvU32)value;
+}
+
 mvJsonMember::operator float()
 {
 	return atof(context->primitiveValues[index].value);
@@ -882,7 +889,7 @@ namespace mvImp {
 
 				for (int j = 0; j < childCount; j++)
 				{
-					int child = jnode.getMember("children")[j];
+					mvU32 child = jnode["children"][j];
 					node.children[node.child_count] = child;
 					node.child_count++;
 				}

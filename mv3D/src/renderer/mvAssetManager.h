@@ -6,6 +6,7 @@
 #include "mvMaterials.h"
 #include "mvBuffers.h"
 #include "mvMesh.h"
+#include "mvScene.h"
 
 struct mvMeshAsset;
 struct mvBufferAsset;
@@ -14,6 +15,8 @@ struct mvCubeTextureAsset;
 struct mvSamplerAsset;
 struct mvPhongMaterialAsset;
 struct mvPBRMaterialAsset;
+struct mvSceneAsset;
+struct mvNodeAsset;
 
 struct mvAssetManager
 {
@@ -52,6 +55,16 @@ struct mvAssetManager
 	u32                   maxMeshCount = 100u;
 	u32                   meshCount = 0u;
 	mvMeshAsset*          meshes = nullptr;
+
+	// nodes	       	  
+	u32                   maxNodeCount = 100u;
+	u32                   nodeCount = 0u;
+	mvNodeAsset*          nodes = nullptr;
+
+	// scenes
+	u32                   maxSceneCount = 100u;
+	u32                   sceneCount = 0u;
+	mvSceneAsset*         scenes = nullptr;
 };
 
 void mvInitializeAssetManager(mvAssetManager* manager);
@@ -65,10 +78,22 @@ mvAssetID mvGetBufferAsset       (mvAssetManager* manager, void* data, u32 size,
 mvAssetID mvGetSamplerAsset      (mvAssetManager* manager, D3D11_FILTER mode, D3D11_TEXTURE_ADDRESS_MODE addressing, b8 hwPcf);
 
 mvAssetID mvRegistryMeshAsset(mvAssetManager* manager, mvMesh mesh);
+mvAssetID mvRegistryNodeAsset(mvAssetManager* manager, mvNode node);
+mvAssetID mvRegistrySceneAsset(mvAssetManager* manager, mvScene scene);
 
 struct mvMeshAsset
 {
 	mvMesh mesh;
+};
+
+struct mvSceneAsset
+{
+	mvScene scene;
+};
+
+struct mvNodeAsset
+{
+	mvNode node;
 };
 
 struct mvBufferAsset
