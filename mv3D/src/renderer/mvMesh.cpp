@@ -630,53 +630,55 @@ mvLoadGLTFAssets(mvAssetManager& assetManager, mvGLTFModel& model)
         else
         {
             // left hand
-            newNode.rotation.x *= 1.0f;
+            //newNode.rotation.x *= -1.0f;
 
-            mvF32 x2 = newNode.rotation.x * newNode.rotation.x;
+            mvVec4 oldRot = newNode.rotation;
+            newNode.rotation.x = oldRot.x;
+            newNode.rotation.y = oldRot.y;
+            newNode.rotation.z = oldRot.z;
+            newNode.rotation.w = -oldRot.w;
+
+            mvF32 xx = newNode.rotation.x * newNode.rotation.x;
             mvF32 xy = newNode.rotation.x * newNode.rotation.y;
             mvF32 xz = newNode.rotation.x * newNode.rotation.z;
             mvF32 xw = newNode.rotation.x * newNode.rotation.w;
-            mvF32 y2 = newNode.rotation.y * newNode.rotation.y;
+            mvF32 yy = newNode.rotation.y * newNode.rotation.y;
             mvF32 yz = newNode.rotation.y * newNode.rotation.z;
             mvF32 yw = newNode.rotation.y * newNode.rotation.w;
-            mvF32 z2 = newNode.rotation.z * newNode.rotation.z;
+            mvF32 zz = newNode.rotation.z * newNode.rotation.z;
             mvF32 zw = newNode.rotation.z * newNode.rotation.w;
-            mvF32 w2 = newNode.rotation.w * newNode.rotation.w;
-
-            mvF32 m00 = x2 - y2 - z2 + w2;
-            mvF32 m01 = 2.0f * (xy - zw);
-            mvF32 m02 = 2.0f * (xz + yw);
-
-            mvF32 m10 = 2.0f * (xy + zw);
-            mvF32 m11 = -x2 + y2 - z2 + w2;
-            mvF32 m12 = 2.0f * (yz - xw);
-
-            mvF32 m20 = 2.0f * (xz - yw);
-            mvF32 m21 = 2.0f * (yz + xw);
-            mvF32 m22 = -x2 - y2 + z2 + w2;
+            mvF32 ww = newNode.rotation.w * newNode.rotation.w;
 
             mvMat4 rotationMat{};
-            rotationMat[0][0] = m00;
-            rotationMat[0][1] = m01;
-            rotationMat[0][2] = m02;
+
+            // col 1
+            rotationMat[0][0] = 1.0f - 2.0f*yy-2.0f*zz;
+            rotationMat[0][1] = 2.0f*xy+2.0f*zw;
+            rotationMat[0][2] = 2.0f*xz-2.0f*yw;
             rotationMat[0][3] = 0.0f;
 
-            rotationMat[1][0] = m10;
-            rotationMat[1][1] = m11;
-            rotationMat[1][2] = m12;
+            // col 2
+            rotationMat[1][0] = 2.0f*xy-2.0f*zw;
+            rotationMat[1][1] = 1.0f-2.0f*xx-2.0f*zz;
+            rotationMat[1][2] = 2.0f*yz+2.0f*xw;
             rotationMat[1][3] = 0.0f;
 
-            rotationMat[2][0] = m20;
-            rotationMat[2][1] = m21;
-            rotationMat[2][2] = m22;
+            // col 3
+            rotationMat[2][0] = 2.0f*xz+2.0f*yw;
+            rotationMat[2][1] = 2.0f*yz-2.0f*xw;
+            rotationMat[2][2] = 1.0f-2.0f*xx-2.0f*yy;
             rotationMat[2][3] = 0.0f;
 
+            // col 4
             rotationMat[3][0] = 0.0f;
             rotationMat[3][1] = 0.0f;
             rotationMat[3][2] = 0.0f;
             rotationMat[3][3] = 1.0f;
 
+
             newNode.matrix = mvTranslate(mvIdentityMat4(), newNode.translation) * rotationMat * mvScale(mvIdentityMat4(), newNode.scale);
+
+            newNode.matrix = mvSwitchHand(newNode.matrix);
         }
 
         mvRegistryNodeAsset(&assetManager, newNode);

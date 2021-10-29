@@ -5,7 +5,7 @@ mv_internal const char* sponzaPath = "C:/dev/MarvelAssets/Sponza/";
 mv_internal const char* gltfPath = "C://dev//glTF-Sample-Models//2.0//";
 mv_internal b8 loadGLTF = true;
 mv_internal b8 loadSponza = false;
-mv_internal f32 shadowWidth = 75.0f;
+mv_internal f32 shadowWidth = 15.0f;
 
 mvGLTFModel LoadTestModel(const char* name);
 
@@ -91,7 +91,7 @@ int main()
     {
         const auto dt = timer.mark() * 1.0f;
 
-        am.meshes[cubeIndex].mesh.rot.y += dt;
+        texturedCube.rot.y += dt;
 
         if (const auto ecode = mvProcessViewportEvents()) break;
 
