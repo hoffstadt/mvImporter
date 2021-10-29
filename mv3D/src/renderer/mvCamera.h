@@ -8,8 +8,10 @@ mv_global constexpr f32 CameraRotationSpeed = 0.004f;
 struct mvCamera
 {
     mvVec3 pos;
+    mvVec3 front  = {0.0f, 0.0f, 1.0f};
+    mvVec3 up     = {0.0f, 1.0f, 0.0f};
     f32    pitch  = 0.0f;
-    f32    yaw    = 0.0f;
+    f32    yaw    = -M_PI_2;
     f32    aspect = 1.0f;
 };
 

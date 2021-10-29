@@ -39,7 +39,7 @@ int main()
     mvCamera camera{};
     camera.pos = { -13.5f, 6.0f, 3.5f };
     camera.pitch = 0.0f;
-    //camera.yaw = -M_PI;
+    camera.yaw = M_PI;
     camera.aspect = GContext->viewport.width / GContext->viewport.height;
 
     // lights

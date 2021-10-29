@@ -29,18 +29,17 @@ mvBuildProjectionMatrix(mvOrthoCamera& camera)
 mvMat4
 mvBuildCameraMatrix(mvCamera& camera)
 {
-    mvMat4 roll_pitch_yaw = mvYawPitchRoll(camera.yaw, camera.pitch, 0.0f);
-    mvVec4 forward_base_vector = { 0.0f, 0.0f, 1.0f, 0.0f };
-    //mvVec4 up_base_vector = { 0.0f, 1.0f, 0.0f, 0.0f };
+    //mvMat4 roll_pitch_yaw = mvYawPitchRoll(camera.yaw, camera.pitch, 0.0f);
+    //mvVec4 forward_base_vector = { 0.0f, 0.0f, 1.0f, 0.0f };
+    //mvVec4 look_vector = roll_pitch_yaw * forward_base_vector;
+    //mvVec3 lpos = { look_vector.x, look_vector.y, look_vector.z };
 
-    mvVec4 look_vector = roll_pitch_yaw * forward_base_vector;
-    //mvVec4 up_vector = roll_pitch_yaw * up_base_vector;
-
-    mvVec3 lpos = { look_vector.x, look_vector.y, look_vector.z };
-    //mvMat4 camera_matrix = mvLookAtRH(camera.pos, camera.pos + lpos, mvVec3{ up_vector.x, up_vector.y, up_vector.z });
-    ////return mvInvert(camera_matrix);
-    //return camera_matrix;
-    return mvLookAtRH(camera.pos, camera.pos+lpos, mvVec3{ 0.0f, 1.0f, 0.0f });
+    mvVec3 direction{};
+    direction.x = cos((camera.yaw)) * cos((camera.pitch));
+    direction.y = sin((camera.pitch));
+    direction.z = sin((camera.yaw)) * cos((camera.pitch));
+    direction = mvNormalize(direction);
+    return mvLookAtRH(camera.pos, camera.pos + direction, camera.up);
 }
 
 mvMat4
@@ -59,15 +58,19 @@ mvRotateCamera(mvCamera& camera, f32 dx, f32 dy)
 void
 mvTranslateCamera(mvCamera& camera, f32 dx, f32 dy, f32 dz)
 {
-    mvMat4 roll_pitch_yaw = mvYawPitchRoll(camera.yaw, camera.pitch, 0.0f);
-    mvMat4 scale = mvScale(mvIdentityMat4(), mvVec3{ CameraTravelSpeed, CameraTravelSpeed, CameraTravelSpeed });
-    mvVec4 translation = { dx, dy, dz, 0.0f };
+    mvVec3 direction{};
+    direction.x = cos((camera.yaw)) * cos((camera.pitch));
+    direction.y = sin((camera.pitch));
+    direction.z = sin((camera.yaw)) * cos((camera.pitch));
+    direction = mvNormalize(direction);
+    camera.front = direction;
 
-    translation = (roll_pitch_yaw * scale) * translation;
+    if (dz != 0.0f)
+        camera.pos = camera.pos - camera.front * CameraTravelSpeed*dz;
 
-    camera.pos = {
-        camera.pos.x + translation.x,
-        camera.pos.y + translation.y,
-        camera.pos.z + translation.z
-    };
+    if (dx != 0.0f)
+        camera.pos = camera.pos - mvNormalize(mvCross(camera.front, camera.up)) * CameraTravelSpeed*dx;
+
+    if (dy != 0.0f)
+        camera.pos.y += CameraTravelSpeed * dy;
 }

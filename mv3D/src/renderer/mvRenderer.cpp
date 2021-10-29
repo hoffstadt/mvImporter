@@ -232,11 +232,7 @@ mvRenderer_RenderMeshPBR(mvAssetManager& am, mvMesh& mesh, mvMat4 transform, mvM
     device->PSSetConstantBuffers(1u, 1u, material->buffer.buffer.GetAddressOf());
 
     mvTransforms transforms{};
-    transforms.model = transform*mvTranslate(mvIdentityMat4(), mesh.pos) *
-        mvRotate(mvIdentityMat4(), mesh.rot.x, mvVec3{ 1.0f, 0.0f, 0.0f }) *
-        mvRotate(mvIdentityMat4(), mesh.rot.y, mvVec3{ 0.0f, 1.0f, 0.0f }) *
-        mvRotate(mvIdentityMat4(), mesh.rot.z, mvVec3{ 0.0f, 0.0f, 1.0f });
-    transforms.model = transforms.model * mvScale(mvIdentityMat4(), mesh.scale);
+    transforms.model = transform;
     transforms.modelView = cam * transforms.model;
     transforms.modelViewProjection = proj * cam * transforms.model;
 

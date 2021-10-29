@@ -314,6 +314,10 @@ mvRotate(mvMat4& m, f32 angle, mvVec3& v)
 mvMat4 
 mvYawPitchRoll(f32 yaw, f32 pitch, f32 roll)
 {
+	// x = roll
+	// y = pitch
+	// z = yaw
+
 	f32 tmp_ch = cos(yaw);
 	f32 tmp_sh = sin(yaw);
 	f32 tmp_cp = cos(pitch);
@@ -322,22 +326,31 @@ mvYawPitchRoll(f32 yaw, f32 pitch, f32 roll)
 	f32 tmp_sb = sin(roll);
 
 	mvMat4 result{};
+
+	// column 0
 	result[0][0] = tmp_ch * tmp_cb + tmp_sh * tmp_sp * tmp_sb;
 	result[0][1] = tmp_sb * tmp_cp;
 	result[0][2] = -tmp_sh * tmp_cb + tmp_ch * tmp_sp * tmp_sb;
 	result[0][3] = 0.0f;
+
+	// column 1
 	result[1][0] = -tmp_ch * tmp_sb + tmp_sh * tmp_sp * tmp_cb;
 	result[1][1] = tmp_cb * tmp_cp;
 	result[1][2] = tmp_sb * tmp_sh + tmp_ch * tmp_sp * tmp_cb;
 	result[1][3] = 0.0f;
+
+	// column 2
 	result[2][0] = tmp_sh * tmp_cp;
 	result[2][1] = -tmp_sp;
 	result[2][2] = tmp_ch * tmp_cp;
 	result[2][3] = 0.0f;
+
+	// column 3
 	result[3][0] = 0.0f;
 	result[3][1] = 0.0f;
 	result[3][2] = 0.0f;
 	result[3][3] = 1.0f;
+
 	return result;
 }
 
@@ -405,24 +418,38 @@ mvLookAtLH(mvVec3& eye, mvVec3& center, mvVec3& up)
 mvMat4
 mvLookAtRH(mvVec3& eye, mvVec3& center, mvVec3& up)
 {
-	mvVec3 f = mvNormalize(center - eye);
-	mvVec3 s = mvNormalize(mvCross(f, up));
-	mvVec3 u = mvCross(s, f);
+	mvVec3 zaxis = mvNormalize(center - eye);
+	mvVec3 xaxis = mvNormalize(mvCross(up, zaxis));
+	mvVec3 yaxis = mvCross(zaxis, xaxis);
 
-	mvMat4 result = mvIdentityMat4();
-	result[0][0] = s.x;
-	result[1][0] = s.y;
-	result[2][0] = s.z;
-	result[0][1] = u.x;
-	result[1][1] = u.y;
-	result[2][1] = u.z;
-	result[0][2] = f.x;
-	result[1][2] = f.y;
-	result[2][2] = f.z;
-	result[3][0] = -mvDot(s, eye);
-	result[3][1] = -mvDot(u, eye);
-	result[3][2] = -mvDot(f, eye);
-	return result;
+	mvMat4 translation = mvIdentityMat4();
+	translation[3][0] = -eye.x;
+	translation[3][1] = -eye.y;
+	translation[3][2] = -eye.z;
+
+	mvMat4 rotation = mvIdentityMat4();
+
+	// row 0
+	rotation[0][0] = xaxis.x;
+	rotation[1][0] = xaxis.y;
+	rotation[2][0] = xaxis.z;
+
+	// row 1
+	rotation[0][1] = yaxis.x;
+	rotation[1][1] = yaxis.y;
+	rotation[2][1] = yaxis.z;
+
+	// row 2
+	rotation[0][2] = zaxis.x;
+	rotation[1][2] = zaxis.y;
+	rotation[2][2] = zaxis.z;
+
+	// row 3
+	//rotation[3][0] = -mvDot(xaxis, eye);
+	//rotation[3][1] = -mvDot(yaxis, eye);
+	//rotation[3][2] = mvDot(zaxis, eye);
+
+	return rotation * translation;
 }
 
 mvMat4 
@@ -579,4 +606,41 @@ mvSwitchHand(mvMat4& m)
 	result[3][3] = m[3][3];
 
 	return result;
+}
+
+mvMat4 
+mvCreateMatrix(
+	f32 m00, f32 m01, f32 m02, f32 m03,
+	f32 m10, f32 m11, f32 m12, f32 m13,
+	f32 m20, f32 m21, f32 m22, f32 m23,
+	f32 m30, f32 m31, f32 m32, f32 m33
+	)
+{
+	mvMat4 m{};
+
+	// column 0
+	m[0][0] = m00;
+	m[0][1] = m10;
+	m[0][2] = m20;
+	m[0][3] = m30;
+
+	// column 1
+	m[1][0] = m01;
+	m[1][1] = m11;
+	m[1][2] = m21;
+	m[1][3] = m31;
+
+	// column 2
+	m[2][0] = m02;
+	m[2][1] = m12;
+	m[2][2] = m22;
+	m[2][3] = m32;
+
+	// column 3
+	m[3][0] = m03;
+	m[3][1] = m13;
+	m[3][2] = m23;
+	m[3][3] = m33;
+
+	return m;
 }

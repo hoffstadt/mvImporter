@@ -169,8 +169,8 @@ mvCreateTexturedQuad(mvAssetManager& assetManager, f32 size)
     };
 
     static auto indices = std::vector<u32>{
-        1, 2, 0,
-        3, 1, 0
+        1, 0, 2,
+        3, 0, 1
     };
 
     for (size_t i = 0; i < indices.size(); i += 3)
@@ -639,63 +639,34 @@ mvLoadGLTFAssets(mvAssetManager& assetManager, mvGLTFModel& model)
             // left hand
             //newNode.rotation.x *= -1.0f;
 
-            mvVec4 oldRot = newNode.rotation;
-            newNode.rotation.x = oldRot.x;
-            newNode.rotation.y = oldRot.y;
-            newNode.rotation.z = oldRot.z;
-            newNode.rotation.w = oldRot.w;
+            float x2 = newNode.rotation.x * newNode.rotation.x;
+            float xy = newNode.rotation.x * newNode.rotation.y;
+            float xz = newNode.rotation.x * newNode.rotation.z;
+            float xw = newNode.rotation.x * newNode.rotation.w;
+            float y2 = newNode.rotation.y * newNode.rotation.y;
+            float yz = newNode.rotation.y * newNode.rotation.z;
+            float yw = newNode.rotation.y * newNode.rotation.w;
+            float z2 = newNode.rotation.z * newNode.rotation.z;
+            float zw = newNode.rotation.z * newNode.rotation.w;
+            float w2 = newNode.rotation.w * newNode.rotation.w;
+            float m00 = x2 - y2 - z2 + w2;
+            float m01 = 2.0 * (xy - zw);
+            float m02 = 2.0 * (xz + yw);
+            float m10 = 2.0 * (xy + zw);
+            float m11 = -x2 + y2 - z2 + w2;
+            float m12 = 2.0 * (yz - xw);
+            float m20 = 2.0 * (xz - yw);
+            float m21 = 2.0 * (yz + xw);
+            float m22 = -x2 - y2 + z2 + w2;
 
-            float q0 = newNode.rotation.x;
-            float q1 = newNode.rotation.y;
-            float q2 = newNode.rotation.z;
-            float q3 = newNode.rotation.w;
+            mvMat4 rotationMat = mvCreateMatrix(
+                m00, m01, m02, 0.0f,
+                m10, m11, m12, 0.0f,
+                m20, m21, m22, 0.0f,
+                0.0f, 0.0f, 0.0f, 1.0f);
 
-            // first row of the rotation matrix
-            float r00 = 2 * (q0 * q0 + q1 * q1) - 1;
-            float r01 = 2 * (q1 * q2 - q0 * q3);
-            float r02 = 2 * (q1 * q3 + q0 * q2);
-
-            // Second row of the rotation matrix
-            float r10 = 2 * (q1 * q2 + q0 * q3);
-            float r11 = 2 * (q0 * q0 + q2 * q2) - 1;
-            float r12 = 2 * (q2 * q3 - q0 * q1);
-
-            // Third row of the rotation matrix
-            float r20 = 2 * (q1 * q3 - q0 * q2);
-            float r21 = 2 * (q2 * q3 + q0 * q1);
-            float r22 = 2 * (q0 * q0 + q3 * q3) - 1;
-
-            mvMat4 rotationMat{};
-
-            // col 1
-            rotationMat[0][0] = r00;
-            rotationMat[0][1] = r10;
-            rotationMat[0][2] = r20;
-            rotationMat[0][3] = 0.0f;
-
-            // col 2
-            rotationMat[1][0] = r01;
-            rotationMat[1][1] = r11;
-            rotationMat[1][2] = r21;
-            rotationMat[1][3] = 0.0f;
-
-            // col 3
-            rotationMat[2][0] = r02;
-            rotationMat[2][1] = r12;
-            rotationMat[2][2] = r22;
-            rotationMat[2][3] = 0.0f;
-
-            // col 4
-            rotationMat[3][0] = 0.0f;
-            rotationMat[3][1] = 0.0f;
-            rotationMat[3][2] = 0.0f;
-            rotationMat[3][3] = 1.0f;
-
-
-            //newNode.matrix = mvTranslate(mvIdentityMat4(), newNode.translation) * rotationMat * mvScale(mvIdentityMat4(), newNode.scale);
-            newNode.matrix = mvScale(mvIdentityMat4(), newNode.scale)  * rotationMat * mvTranslate(mvIdentityMat4(), newNode.translation);
-
-            //newNode.matrix = mvSwitchHand(newNode.matrix);
+            newNode.matrix = mvTranslate(mvIdentityMat4(), newNode.translation) * rotationMat * mvScale(mvIdentityMat4(), newNode.scale);
+            //newNode.matrix = mvScale(mvIdentityMat4(), newNode.scale) * rotationMat * mvScale(mvIdentityMat4(), newNode.translation);
         }
 
         mvRegistryNodeAsset(&assetManager, newNode);
