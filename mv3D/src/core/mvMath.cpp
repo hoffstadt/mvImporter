@@ -439,3 +439,30 @@ mvPerspectiveLH(f32 fovy, f32 aspect, f32 zNear, f32 zFar)
 	result[3][2] = -(2.0f * zFar * zNear) / (zFar - zNear);
 	return result;
 }
+
+mvMat4 
+mvSwitchHand(mvMat4& m)
+{
+	mvMat4 result = mvIdentityMat4();
+	result[0][0] = m[0][0];
+	result[1][0] = m[2][0];
+	result[2][0] = m[1][0];
+	result[3][0] = m[3][0];
+
+	result[0][1] = m[0][1];
+	result[1][1] = m[2][1];
+	result[2][1] = m[1][1];
+	result[3][1] = m[3][1];
+
+	result[0][2] = m[0][2];
+	result[1][2] = m[2][2];
+	result[2][2] = m[1][2];
+	result[3][2] = m[3][2];
+
+	result[0][3] = m[0][3];
+	result[1][3] = m[2][3];
+	result[2][3] = m[1][3];
+	result[3][3] = m[3][3];
+
+	return result;
+}

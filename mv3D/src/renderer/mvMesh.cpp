@@ -555,13 +555,21 @@ mvLoadGLTFAssets(mvAssetManager& assetManager, mvGLTFModel& model)
         // upload index buffer
         if (glmesh.material_index != -1)
         {
+
             mvGLTFMaterial& material = model.materials[glmesh.material_index];
+
+            mvPBRMaterialData materialData{};
+            materialData.albedo = *(mvVec4*)material.base_color_factor;
+            materialData.metalness = material.metallic_factor;
+            materialData.roughness = material.roughness_factor;
+
             if (material.base_color_texture != -1)
             {
                 mvGLTFTexture& texture = model.textures[material.base_color_texture];
                 std::string uri = model.images[texture.image_index].uri;
                 newMesh.albedoTexture = mvGetTextureAsset(&assetManager, model.root + uri);
                 newMesh.diffuseTexture = newMesh.albedoTexture;
+                materialData.useAlbedoMap = true;
             }
 
             if (material.normal_texture != -1)
@@ -569,6 +577,7 @@ mvLoadGLTFAssets(mvAssetManager& assetManager, mvGLTFModel& model)
                 mvGLTFTexture& texture = model.textures[material.normal_texture];
                 std::string uri = model.images[texture.image_index].uri;
                 newMesh.normalTexture = mvGetTextureAsset(&assetManager, model.root + uri);
+                materialData.useNormalMap = true;
             }
 
             if (material.metallic_roughness_texture != -1)
@@ -576,7 +585,11 @@ mvLoadGLTFAssets(mvAssetManager& assetManager, mvGLTFModel& model)
                 mvGLTFTexture& texture = model.textures[material.metallic_roughness_texture];
                 std::string uri = model.images[texture.image_index].uri;
                 newMesh.metalRoughnessTexture = mvGetTextureAsset(&assetManager, model.root + uri);
+                materialData.useRoughnessMap = true;
+                materialData.useMetalMap = true;
             }
+
+            newMesh.pbrMaterialID = mvGetPBRMaterialAsset(&assetManager, "Phong_VS.hlsl", "PBR_PS.hlsl", materialData);
 
         }
         
@@ -603,10 +616,68 @@ mvLoadGLTFAssets(mvAssetManager& assetManager, mvGLTFModel& model)
         for (i32 i = 0; i < glnode.child_count; i++)
             newNode.children[i] = (mvAssetID)glnode.children[i];
 
-        newNode.matrix = *(mvMat4*)(glnode.matrix);
         newNode.rotation = *(mvVec4*)(glnode.rotation);
         newNode.scale = *(mvVec3*)(glnode.scale);
         newNode.translation = *(mvVec3*)(glnode.translation);
+
+        if (glnode.hadMatrix)
+        {
+            newNode.matrix = *(mvMat4*)(glnode.matrix);
+
+            // left hand
+            //newNode.matrix = mvSwitchHand(newNode.matrix);
+        }
+        else
+        {
+            // left hand
+            newNode.rotation.x *= 1.0f;
+
+            mvF32 x2 = newNode.rotation.x * newNode.rotation.x;
+            mvF32 xy = newNode.rotation.x * newNode.rotation.y;
+            mvF32 xz = newNode.rotation.x * newNode.rotation.z;
+            mvF32 xw = newNode.rotation.x * newNode.rotation.w;
+            mvF32 y2 = newNode.rotation.y * newNode.rotation.y;
+            mvF32 yz = newNode.rotation.y * newNode.rotation.z;
+            mvF32 yw = newNode.rotation.y * newNode.rotation.w;
+            mvF32 z2 = newNode.rotation.z * newNode.rotation.z;
+            mvF32 zw = newNode.rotation.z * newNode.rotation.w;
+            mvF32 w2 = newNode.rotation.w * newNode.rotation.w;
+
+            mvF32 m00 = x2 - y2 - z2 + w2;
+            mvF32 m01 = 2.0f * (xy - zw);
+            mvF32 m02 = 2.0f * (xz + yw);
+
+            mvF32 m10 = 2.0f * (xy + zw);
+            mvF32 m11 = -x2 + y2 - z2 + w2;
+            mvF32 m12 = 2.0f * (yz - xw);
+
+            mvF32 m20 = 2.0f * (xz - yw);
+            mvF32 m21 = 2.0f * (yz + xw);
+            mvF32 m22 = -x2 - y2 + z2 + w2;
+
+            mvMat4 rotationMat{};
+            rotationMat[0][0] = m00;
+            rotationMat[0][1] = m01;
+            rotationMat[0][2] = m02;
+            rotationMat[0][3] = 0.0f;
+
+            rotationMat[1][0] = m10;
+            rotationMat[1][1] = m11;
+            rotationMat[1][2] = m12;
+            rotationMat[1][3] = 0.0f;
+
+            rotationMat[2][0] = m20;
+            rotationMat[2][1] = m21;
+            rotationMat[2][2] = m22;
+            rotationMat[2][3] = 0.0f;
+
+            rotationMat[3][0] = 0.0f;
+            rotationMat[3][1] = 0.0f;
+            rotationMat[3][2] = 0.0f;
+            rotationMat[3][3] = 1.0f;
+
+            newNode.matrix = mvTranslate(mvIdentityMat4(), newNode.translation) * rotationMat * mvScale(mvIdentityMat4(), newNode.scale);
+        }
 
         mvRegistryNodeAsset(&assetManager, newNode);
     }

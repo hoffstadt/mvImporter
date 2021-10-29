@@ -299,7 +299,7 @@ float4 main(VSOut input) : SV_Target
     //-----------------------------------------------------------------------------
     // ambient lighting
     //-----------------------------------------------------------------------------
-    float3 ambientLighting;
+    float3 ambientLighting = Scene.ambientColor;
     {
         
   //      // Sample diffuse irradiance at normal direction.
@@ -333,6 +333,6 @@ float4 main(VSOut input) : SV_Target
   //      ambientLighting = diffuseIBL;
     }
     
-    //return float4(directLighting + ambientLighting, 1.0f);
-    return float4(directLighting, 1.0f);
+    return float4(directLighting + ambientLighting, 1.0f);
+    //return float4(directLighting, 1.0f);
 }

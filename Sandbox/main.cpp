@@ -1,11 +1,11 @@
 #include "mv3D.h"
 
-mv_internal const char* gltfModel = "Lantern";
+mv_internal const char* gltfModel = "OrientationTest";
 mv_internal const char* sponzaPath = "C:/dev/MarvelAssets/Sponza/";
 mv_internal const char* gltfPath = "C://dev//glTF-Sample-Models//2.0//";
 mv_internal b8 loadGLTF = true;
 mv_internal b8 loadSponza = false;
-mv_internal f32 shadowWidth = 15.0f;
+mv_internal f32 shadowWidth = 75.0f;
 
 mvGLTFModel LoadTestModel(const char* name);
 
@@ -74,8 +74,6 @@ int main()
         omniShadowPasses[i] = mvCreateShadowPass(omniShadowMap, i);
 
     mvSkyboxPass skyboxPass = mvCreateSkyboxPass(&am, "../../Resources/Skybox");
-
-
 
     mvMesh texturedQuad = mvCreateTexturedQuad(am, 10.0f);
     texturedQuad.rot.x = M_PI_2;
@@ -146,16 +144,11 @@ int main()
         //-----------------------------------------------------------------------------
         mvRenderer_BeginPass(directionalShadowPass);
 
-        //for (int i = 0; i < am.meshCount; i++)
-        //{
-        //    if(i != skyboxPass.mesh) // skip skybox
-        //        mvRenderer_RenderMeshShadows(am, am.meshes[i].mesh, identityMat, dshadowCamera.info.directShadowView, dshadowCamera.info.directShadowProjection);
-        //}
+        mvRenderer_RenderMeshShadows(am, texturedQuad, identityMat, dshadowCamera.info.directShadowView, dshadowCamera.info.directShadowProjection);
+        mvRenderer_RenderMeshShadows(am, texturedCube, identityMat, dshadowCamera.info.directShadowView, dshadowCamera.info.directShadowProjection);
 
         for (int i = 0; i < am.sceneCount; i++)
-        {
              mvRenderer_RenderSceneShadows(am, am.scenes[i].scene, dshadowCamera.info.directShadowView, dshadowCamera.info.directShadowProjection);
-        }
 
         mvRenderer_EndPass();
 
@@ -169,16 +162,11 @@ int main()
             mvVec3 look_target = perspecCamera.pos + omniShadowMap.cameraDirections[i];
             mvMat4 camera_matrix = mvLookAtLH(perspecCamera.pos, look_target, omniShadowMap.cameraUps[i]);
 
-            //for (int i = 0; i < am.meshCount; i++)
-            //{
-            //    if (i != skyboxPass.mesh) // skip skybox
-            //        mvRenderer_RenderMeshShadows(am, am.meshes[i].mesh, identityMat, camera_matrix, mvPerspectiveLH(M_PI_2, 1.0f, 0.5f, 100.0f));
-            //}
+            mvRenderer_RenderMeshShadows(am, texturedQuad, identityMat, camera_matrix, mvPerspectiveLH(M_PI_2, 1.0f, 0.5f, 100.0f));
+            mvRenderer_RenderMeshShadows(am, texturedCube, identityMat, camera_matrix, mvPerspectiveLH(M_PI_2, 1.0f, 0.5f, 100.0f));
 
             for (int i = 0; i < am.sceneCount; i++)
-            {
                     mvRenderer_RenderSceneShadows(am, am.scenes[i].scene, camera_matrix, mvPerspectiveLH(M_PI_2, 1.0f, 0.5f, 100.0f));
-            }
 
             mvRenderer_EndPass();
         }
@@ -196,17 +184,13 @@ int main()
                                                     
         mvBindSlot_tsPS(directionalShadowMap, 3u, 1u);
         mvBindSlot_tsPS(omniShadowMap, 4u, 2u);       
-        
-        //for (int i = 0; i < am.meshCount; i++)
-        //{
-        //    if (i != skyboxPass.mesh)
-        //        mvRenderer_RenderMesh(am, am.meshes[i].mesh, identityMat, viewMatrix, projMatrix);
-        //}
+
+        mvRenderer_RenderMesh(am, texturedQuad, identityMat, viewMatrix, projMatrix);
+        mvRenderer_RenderMesh(am, texturedCube, identityMat, viewMatrix, projMatrix);
+        mvRenderer_RenderMesh(am, *light.mesh, identityMat, viewMatrix, projMatrix);
 
         for (int i = 0; i < am.sceneCount; i++)
-        {
                 mvRenderer_RenderScene(am, am.scenes[i].scene, viewMatrix, projMatrix);
-        }
 
         mvRenderer_EndPass();
 

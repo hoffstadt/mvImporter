@@ -51,14 +51,22 @@ mvGetPhongMaterialAsset(mvAssetManager* manager, const std::string& vs, const st
 }
 
 mvAssetID
-mvGetPBRMaterialAsset(mvAssetManager* manager, const std::string& vs, const std::string& ps, b8 cull, b8 useAlbedomap, b8 useNormalmap, b8 useRoughnessMap, b8 useMetalMap)
+mvGetPBRMaterialAsset(mvAssetManager* manager, const std::string& vs, const std::string& ps, mvPBRMaterialData& materialData)
 {
 	std::string hash = ps + vs +
-		std::string(cull ? "T" : "F") +
-		std::string(useAlbedomap ? "T" : "F") +
-		std::string(useNormalmap ? "T" : "F") +
-		std::string(useRoughnessMap ? "T" : "F") +
-		std::string(useMetalMap ? "T" : "F");
+		std::to_string(materialData.albedo.x) +
+		std::to_string(materialData.albedo.y) +
+		std::to_string(materialData.albedo.z) +
+		std::to_string(materialData.albedo.w) +
+		std::to_string(materialData.metalness) +
+		std::to_string(materialData.roughness) +
+		std::to_string(materialData.radiance) +
+		std::to_string(materialData.fresnel) +
+		std::string(materialData.hasAlpha ? "T" : "F") +
+		std::string(materialData.useAlbedoMap ? "T" : "F") +
+		std::string(materialData.useNormalMap ? "T" : "F") +
+		std::string(materialData.useRoughnessMap ? "T" : "F") +
+		std::string(materialData.useMetalMap ? "T" : "F");
 
 	for (s32 i = 0; i < manager->pbrMaterialCount; i++)
 	{
@@ -67,8 +75,7 @@ mvGetPBRMaterialAsset(mvAssetManager* manager, const std::string& vs, const std:
 	}
 
 	manager->pbrMaterials[manager->pbrMaterialCount].hash = hash;
-	manager->pbrMaterials[manager->pbrMaterialCount].material = mvCreatePBRMaterial(vs, ps, cull, useAlbedomap, useNormalmap, useRoughnessMap, useMetalMap);
-	manager->pbrMaterials[manager->pbrMaterialCount].material.data.hasAlpha = !cull;
+	manager->pbrMaterials[manager->pbrMaterialCount].material = mvCreatePBRMaterial(vs, ps, materialData);
 	manager->pbrMaterialCount++;
 	return manager->pbrMaterialCount - 1;
 }

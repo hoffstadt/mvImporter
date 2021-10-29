@@ -1,5 +1,6 @@
 #pragma once
 
+#include <string>
 #include "mvMath.h"
 #include "mvBuffers.h"
 
@@ -18,8 +19,8 @@ struct mvNode
 struct mvSceneInfo
 {
 
-    mvVec3 ambientColor = { 0.05f, 0.05f, 0.05f };
-    b32    useShadows = true;
+    mvVec3 ambientColor = { 0.04f, 0.04f, 0.04f };
+    b32    useShadows = false;
     //-------------------------- ( 16 bytes )
 
     b32  useSkybox = true;

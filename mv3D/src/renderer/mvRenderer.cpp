@@ -195,13 +195,7 @@ mvRenderer_RenderMeshPBR(mvAssetManager& am, mvMesh& mesh, mvMat4 transform, mvM
     // if material not assigned, get material
     if (mesh.pbrMaterialID == -1)
     {
-        mesh.pbrMaterialID = mvGetPBRMaterialAsset(&am,
-            "Phong_VS.hlsl", "PBR_PS.hlsl",
-            mesh.albedoTexture == -1, 
-            mesh.albedoTexture > -1, 
-            mesh.normalTexture > -1, 
-            mesh.metalRoughnessTexture > -1,
-            mesh.metalRoughnessTexture > -1);
+        assert(false && "material not assigned");
     }
 
     mvPBRMaterial* material = &am.pbrMaterials[mesh.pbrMaterialID].material;
@@ -396,17 +390,13 @@ mvRenderer_RenderSkybox(mvAssetManager& am, mvSkyboxPass& skyboxPass, mvMat4 cam
 mv_internal void
 mvRenderer_RenderNode(mvAssetManager& am, mvNode& node, mvMat4 accumulatedTransform, mvMat4 cam, mvMat4 proj)
 {
-    mvMat4 transform = mvTranslate(mvIdentityMat4(), node.translation) *
-        mvRotate(mvIdentityMat4(), 0.0f, mvVec3{ 1.0f, 0.0f, 0.0f }) *
-        mvRotate(mvIdentityMat4(), 0.0f, mvVec3{ 0.0f, 1.0f, 0.0f }) *
-        mvRotate(mvIdentityMat4(), 0.0f, mvVec3{ 0.0f, 0.0f, 1.0f }) * mvScale(mvIdentityMat4(), node.scale);
 
     if (node.mesh > -1)
-        mvRenderer_RenderMesh(am, am.meshes[node.mesh].mesh, accumulatedTransform * transform, cam, proj);
+        mvRenderer_RenderMesh(am, am.meshes[node.mesh].mesh, accumulatedTransform * node.matrix, cam, proj);
 
     for (u32 i = 0; i < node.childCount; i++)
     {
-        mvRenderer_RenderNode(am, am.nodes[node.children[i]].node, accumulatedTransform*transform, cam, proj);
+        mvRenderer_RenderNode(am, am.nodes[node.children[i]].node, accumulatedTransform* node.matrix, cam, proj);
     }
 }
 
@@ -417,17 +407,12 @@ mvRenderer_RenderScene(mvAssetManager& am, mvScene& scene, mvMat4 cam, mvMat4 pr
     {
         mvNode& rootNode = am.nodes[scene.nodes[i]].node;
 
-        mvMat4 transform = mvTranslate(mvIdentityMat4(), rootNode.translation) *
-            mvRotate(mvIdentityMat4(), 0.0f, mvVec3{ 1.0f, 0.0f, 0.0f }) *
-            mvRotate(mvIdentityMat4(), 0.0f, mvVec3{ 0.0f, 1.0f, 0.0f }) *
-            mvRotate(mvIdentityMat4(), 0.0f, mvVec3{ 0.0f, 0.0f, 1.0f }) * mvScale(mvIdentityMat4(), rootNode.scale);
-
         if (rootNode.mesh > -1)
-            mvRenderer_RenderMesh(am, am.meshes[rootNode.mesh].mesh, transform, cam, proj);
+            mvRenderer_RenderMesh(am, am.meshes[rootNode.mesh].mesh, rootNode.matrix, cam, proj);
 
         for (u32 j = 0; j < rootNode.childCount; j++)
         {
-            mvRenderer_RenderNode(am, am.nodes[rootNode.children[j]].node, transform, cam, proj);
+            mvRenderer_RenderNode(am, am.nodes[rootNode.children[j]].node, rootNode.matrix, cam, proj);
         }
     }
 }
@@ -435,17 +420,13 @@ mvRenderer_RenderScene(mvAssetManager& am, mvScene& scene, mvMat4 cam, mvMat4 pr
 mv_internal void
 mvRenderer_RenderNodeShadows(mvAssetManager& am, mvNode& node, mvMat4 accumulatedTransform, mvMat4 cam, mvMat4 proj)
 {
-    mvMat4 transform = mvTranslate(mvIdentityMat4(), node.translation) *
-        mvRotate(mvIdentityMat4(), 0.0f, mvVec3{ 1.0f, 0.0f, 0.0f }) *
-        mvRotate(mvIdentityMat4(), 0.0f, mvVec3{ 0.0f, 1.0f, 0.0f }) *
-        mvRotate(mvIdentityMat4(), 0.0f, mvVec3{ 0.0f, 0.0f, 1.0f }) * mvScale(mvIdentityMat4(), node.scale);
 
     if (node.mesh > -1)
-        mvRenderer_RenderMeshShadows(am, am.meshes[node.mesh].mesh, accumulatedTransform * transform, cam, proj);
+        mvRenderer_RenderMeshShadows(am, am.meshes[node.mesh].mesh, accumulatedTransform * node.matrix, cam, proj);
 
     for (u32 i = 0; i < node.childCount; i++)
     {
-        mvRenderer_RenderNodeShadows(am, am.nodes[node.children[i]].node, accumulatedTransform * transform, cam, proj);
+        mvRenderer_RenderNodeShadows(am, am.nodes[node.children[i]].node, accumulatedTransform * node.matrix, cam, proj);
     }
 }
 
@@ -456,17 +437,12 @@ mvRenderer_RenderSceneShadows(mvAssetManager& am, mvScene& scene, mvMat4 cam, mv
     {
         mvNode& rootNode = am.nodes[scene.nodes[i]].node;
 
-        mvMat4 transform = mvTranslate(mvIdentityMat4(), rootNode.translation) *
-            mvRotate(mvIdentityMat4(), 0.0f, mvVec3{ 1.0f, 0.0f, 0.0f }) *
-            mvRotate(mvIdentityMat4(), 0.0f, mvVec3{ 0.0f, 1.0f, 0.0f }) *
-            mvRotate(mvIdentityMat4(), 0.0f, mvVec3{ 0.0f, 0.0f, 1.0f }) * mvScale(mvIdentityMat4(), rootNode.scale);
-
         if (rootNode.mesh > -1)
-            mvRenderer_RenderMeshShadows(am, am.meshes[rootNode.mesh].mesh, transform, cam, proj);
+            mvRenderer_RenderMeshShadows(am, am.meshes[rootNode.mesh].mesh, rootNode.matrix, cam, proj);
 
         for (u32 j = 0; j < rootNode.childCount; j++)
         {
-            mvRenderer_RenderNodeShadows(am, am.nodes[rootNode.children[j]].node, transform, cam, proj);
+            mvRenderer_RenderNodeShadows(am, am.nodes[rootNode.children[j]].node, rootNode.matrix, cam, proj);
         }
     }
 }

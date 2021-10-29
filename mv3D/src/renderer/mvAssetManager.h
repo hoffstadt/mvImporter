@@ -22,47 +22,47 @@ struct mvAssetManager
 {
 
 	// textures
-	u32                   maxTextureCount = 100u;
+	u32                   maxTextureCount = 500u;
 	u32                   textureCount = 0u;
 	mvTextureAsset*       textures = nullptr;
 						  
 	// cube textures	  
-	u32                   maxCubeTextureCount = 100u;
+	u32                   maxCubeTextureCount = 500u;
 	u32                   cubeTextureCount = 0u;
 	mvCubeTextureAsset*   cubeTextures = nullptr;
 						  
 	// samplers			  
-	u32                   maxSamplerCount = 100u;
+	u32                   maxSamplerCount = 500u;
 	u32                   samplerCount = 0u;
 	mvSamplerAsset*       samplers = nullptr;
 				       
 	// phong materials       
-	u32                   maxPhongMaterialCount = 100u;
+	u32                   maxPhongMaterialCount = 500u;
 	u32                   phongMaterialCount = 0u;
 	mvPhongMaterialAsset* phongMaterials = nullptr;
 
 	// pbr materials       
-	u32                   maxPbrMaterialCount = 100u;
+	u32                   maxPbrMaterialCount = 500u;
 	u32                   pbrMaterialCount = 0u;
 	mvPBRMaterialAsset*   pbrMaterials = nullptr;
 				       
 	// buffers	       
-	u32                   maxBufferCount = 100u;
+	u32                   maxBufferCount = 500u;
 	u32                   bufferCount = 0u;
 	mvBufferAsset*        buffers = nullptr;
 				       	  
 	// meshes	       	  
-	u32                   maxMeshCount = 100u;
+	u32                   maxMeshCount = 500u;
 	u32                   meshCount = 0u;
 	mvMeshAsset*          meshes = nullptr;
 
 	// nodes	       	  
-	u32                   maxNodeCount = 100u;
+	u32                   maxNodeCount = 500u;
 	u32                   nodeCount = 0u;
 	mvNodeAsset*          nodes = nullptr;
 
 	// scenes
-	u32                   maxSceneCount = 100u;
+	u32                   maxSceneCount = 500u;
 	u32                   sceneCount = 0u;
 	mvSceneAsset*         scenes = nullptr;
 };
@@ -71,7 +71,7 @@ void mvInitializeAssetManager(mvAssetManager* manager);
 void mvCleanupAssetManager   (mvAssetManager* manager);
 
 mvAssetID mvGetPhongMaterialAsset(mvAssetManager* manager, const std::string& vs, const std::string& ps, b8 cull, b8 useDiffusemap, b8 useNormalmap, b8 useSpecularMap);
-mvAssetID mvGetPBRMaterialAsset  (mvAssetManager* manager, const std::string& vs, const std::string& ps, b8 cull, b8 useAlbedomap, b8 useNormalmap, b8 useRoughnessMap, b8 useMetalMap);
+mvAssetID mvGetPBRMaterialAsset  (mvAssetManager* manager, const std::string& vs, const std::string& ps, mvPBRMaterialData& materialData);
 mvAssetID mvGetTextureAsset      (mvAssetManager* manager, const std::string& path);
 mvAssetID mvGetCubeTextureAsset  (mvAssetManager* manager, const std::string& path);
 mvAssetID mvGetBufferAsset       (mvAssetManager* manager, void* data, u32 size, D3D11_BIND_FLAG flags, const std::string& tag);
