@@ -17,13 +17,13 @@ wrap_angle(T theta) noexcept
 mvMat4
 mvBuildCameraMatrix(mvOrthoCamera& camera)
 {
-    return mvLookAtLH(camera.pos, camera.pos + camera.dir, mvVec3{ 0.0f, 0.0f, 1.0f });
+    return mvLookAtRH(camera.pos, camera.pos + camera.dir, mvVec3{ 0.0f, 1.0f, 0.0f });
 }
 
 mvMat4
 mvBuildProjectionMatrix(mvOrthoCamera& camera)
 {
-    return mvOrthoLH(camera.left, camera.right, camera.bottom, camera.top, camera.nearZ, camera.farZ);
+    return mvOrthoRH(camera.left, camera.right, camera.bottom, camera.top, camera.nearZ, camera.farZ);
 }
 
 mvMat4
@@ -31,17 +31,22 @@ mvBuildCameraMatrix(mvCamera& camera)
 {
     mvMat4 roll_pitch_yaw = mvYawPitchRoll(camera.yaw, camera.pitch, 0.0f);
     mvVec4 forward_base_vector = { 0.0f, 0.0f, 1.0f, 0.0f };
+    //mvVec4 up_base_vector = { 0.0f, 1.0f, 0.0f, 0.0f };
+
     mvVec4 look_vector = roll_pitch_yaw * forward_base_vector;
+    //mvVec4 up_vector = roll_pitch_yaw * up_base_vector;
+
     mvVec3 lpos = { look_vector.x, look_vector.y, look_vector.z };
-    mvVec3 look_target = camera.pos + lpos;
-    mvMat4 camera_matrix = mvLookAtLH(camera.pos, look_target, mvVec3{ 0.0f, 1.0f, 0.0f });
-    return camera_matrix;
+    //mvMat4 camera_matrix = mvLookAtRH(camera.pos, camera.pos + lpos, mvVec3{ up_vector.x, up_vector.y, up_vector.z });
+    ////return mvInvert(camera_matrix);
+    //return camera_matrix;
+    return mvLookAtRH(camera.pos, camera.pos+lpos, mvVec3{ 0.0f, 1.0f, 0.0f });
 }
 
 mvMat4
 mvBuildProjectionMatrix(mvCamera& camera)
 {
-    return mvPerspectiveLH(mvRadians(45.0f), camera.aspect, 0.1f, 400.0f);
+    return mvPerspectiveRH(mvRadians(45.0f), camera.aspect, 0.1f, 400.0f);
 }
 
 void

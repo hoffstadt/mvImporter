@@ -39,7 +39,7 @@ int main()
     mvCamera camera{};
     camera.pos = { -13.5f, 6.0f, 3.5f };
     camera.pitch = 0.0f;
-    camera.yaw = M_PI_2;
+    //camera.yaw = -M_PI;
     camera.aspect = GContext->viewport.width / GContext->viewport.height;
 
     // lights
@@ -76,13 +76,13 @@ int main()
     mvSkyboxPass skyboxPass = mvCreateSkyboxPass(&am, "../../Resources/Skybox");
 
     mvMesh texturedQuad = mvCreateTexturedQuad(am, 10.0f);
-    texturedQuad.rot.x = M_PI_2;
+    texturedQuad.rot.x = -M_PI_2;
     texturedQuad.pos = { 5.0f, -3.0f, 5.0f };
     mvRegistryMeshAsset(&am, texturedQuad);
 
     mvMesh texturedCube = mvCreateTexturedCube(am, 1.0f);
     texturedCube.pos = { 5.0f, 5.0f, 5.0f };
-    texturedCube.rot = { M_PI_4, M_PI_4, M_PI_4 };
+    //texturedCube.rot = { M_PI_4, M_PI_4, M_PI_4 };
     texturedCube.diffuseTexture = mvGetTextureAsset(&am, "../../Resources/test_image.png");
     u32 cubeIndex = mvRegistryMeshAsset(&am, texturedCube);
 
@@ -91,7 +91,7 @@ int main()
     {
         const auto dt = timer.mark() * 1.0f;
 
-        texturedCube.rot.y += dt;
+        //texturedCube.rot.y += dt;
 
         if (const auto ecode = mvProcessViewportEvents()) break;
 
@@ -160,13 +160,13 @@ int main()
             mvRenderer_BeginPass(omniShadowPasses[i]);
 
             mvVec3 look_target = perspecCamera.pos + omniShadowMap.cameraDirections[i];
-            mvMat4 camera_matrix = mvLookAtLH(perspecCamera.pos, look_target, omniShadowMap.cameraUps[i]);
+            mvMat4 camera_matrix = mvLookAtRH(perspecCamera.pos, look_target, omniShadowMap.cameraUps[i]);
 
-            mvRenderer_RenderMeshShadows(am, texturedQuad, identityMat, camera_matrix, mvPerspectiveLH(M_PI_2, 1.0f, 0.5f, 100.0f));
-            mvRenderer_RenderMeshShadows(am, texturedCube, identityMat, camera_matrix, mvPerspectiveLH(M_PI_2, 1.0f, 0.5f, 100.0f));
+            mvRenderer_RenderMeshShadows(am, texturedQuad, identityMat, camera_matrix, mvPerspectiveRH(M_PI_2, 1.0f, 0.5f, 100.0f));
+            mvRenderer_RenderMeshShadows(am, texturedCube, identityMat, camera_matrix, mvPerspectiveRH(M_PI_2, 1.0f, 0.5f, 100.0f));
 
             for (int i = 0; i < am.sceneCount; i++)
-                    mvRenderer_RenderSceneShadows(am, am.scenes[i].scene, camera_matrix, mvPerspectiveLH(M_PI_2, 1.0f, 0.5f, 100.0f));
+                    mvRenderer_RenderSceneShadows(am, am.scenes[i].scene, camera_matrix, mvPerspectiveRH(M_PI_2, 1.0f, 0.5f, 100.0f));
 
             mvRenderer_EndPass();
         }

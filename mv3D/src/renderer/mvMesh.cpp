@@ -98,13 +98,20 @@ mvCreateTexturedCube(mvAssetManager& assetManager, f32 size)
     };
 
     static auto indices = std::vector<u32>{
-        0,  2,  1,  2,  3,  1,
-        4,  5,  7,  4,  7,  6,
-        8, 10,  9, 10, 11,  9,
-        12, 13, 15, 12, 15, 14,
-        16, 17, 18, 18, 17, 19,
-        20, 23, 21, 20, 22, 23
+        1,  2,  0,  1,  3,  2,
+        7,  5,  4,  6,  7,  4,
+        9, 10,  8, 9, 11,  10,
+        15, 13, 12, 14, 15, 12,
+        18, 17, 16, 19, 17, 18,
+        21, 23, 20, 23, 22, 20
     };
+
+    //0, 2, 1, 2, 3, 1,
+    //    4, 5, 7, 4, 7, 6,
+    //    8, 10, 9, 10, 11, 9,
+    //    12, 13, 15, 12, 15, 14,
+    //    16, 17, 18, 18, 17, 19,
+    //    20, 23, 21, 20, 22, 23
 
     for (size_t i = 0; i < indices.size(); i += 3)
     {
@@ -520,25 +527,25 @@ mvLoadGLTFAssets(mvAssetManager& assetManager, mvGLTFModel& model)
         }
 
         // left hand
-        for (size_t i = 0; i < vertexBuffer.size(); i += 14)
-        {
-            vertexBuffer[i + 2]  *= -1.0f;                    // z
-            vertexBuffer[i + 5]  *= -1.0f;                    // nz
-            vertexBuffer[i + 10] *= -1.0f;                    // tz
-            vertexBuffer[i + 13] *= -1.0f;                    // bz
-            //vertexBuffer[i + 7] = 1.0f - vertexBuffer[i + 7]; // v
-        }
+        //for (size_t i = 0; i < vertexBuffer.size(); i += 14)
+        //{
+        //    vertexBuffer[i + 2]  *= -1.0f;                    // z
+        //    vertexBuffer[i + 5]  *= -1.0f;                    // nz
+        //    vertexBuffer[i + 10] *= -1.0f;                    // tz
+        //    vertexBuffer[i + 13] *= -1.0f;                    // bz
+        //    //vertexBuffer[i + 7] = 1.0f - vertexBuffer[i + 7]; // v
+        //}
 
         // left hand
-        for (size_t i = 0; i < indexBuffer.size(); i += 3)
-        {
+        //for (size_t i = 0; i < indexBuffer.size(); i += 3)
+        //{
 
-            size_t i0 = indexBuffer[i];
-            size_t i2 = indexBuffer[i + 2];
+        //    size_t i0 = indexBuffer[i];
+        //    size_t i2 = indexBuffer[i + 2];
 
-            indexBuffer[i] = i2;
-            indexBuffer[i + 2] = i0;
-        }
+        //    indexBuffer[i] = i2;
+        //    indexBuffer[i + 2] = i0;
+        //}
         mvMesh newMesh{};
         newMesh.pbr = true;
         newMesh.name = glmesh.name;
@@ -636,37 +643,46 @@ mvLoadGLTFAssets(mvAssetManager& assetManager, mvGLTFModel& model)
             newNode.rotation.x = oldRot.x;
             newNode.rotation.y = oldRot.y;
             newNode.rotation.z = oldRot.z;
-            newNode.rotation.w = -oldRot.w;
+            newNode.rotation.w = oldRot.w;
 
-            mvF32 xx = newNode.rotation.x * newNode.rotation.x;
-            mvF32 xy = newNode.rotation.x * newNode.rotation.y;
-            mvF32 xz = newNode.rotation.x * newNode.rotation.z;
-            mvF32 xw = newNode.rotation.x * newNode.rotation.w;
-            mvF32 yy = newNode.rotation.y * newNode.rotation.y;
-            mvF32 yz = newNode.rotation.y * newNode.rotation.z;
-            mvF32 yw = newNode.rotation.y * newNode.rotation.w;
-            mvF32 zz = newNode.rotation.z * newNode.rotation.z;
-            mvF32 zw = newNode.rotation.z * newNode.rotation.w;
-            mvF32 ww = newNode.rotation.w * newNode.rotation.w;
+            float q0 = newNode.rotation.x;
+            float q1 = newNode.rotation.y;
+            float q2 = newNode.rotation.z;
+            float q3 = newNode.rotation.w;
+
+            // first row of the rotation matrix
+            float r00 = 2 * (q0 * q0 + q1 * q1) - 1;
+            float r01 = 2 * (q1 * q2 - q0 * q3);
+            float r02 = 2 * (q1 * q3 + q0 * q2);
+
+            // Second row of the rotation matrix
+            float r10 = 2 * (q1 * q2 + q0 * q3);
+            float r11 = 2 * (q0 * q0 + q2 * q2) - 1;
+            float r12 = 2 * (q2 * q3 - q0 * q1);
+
+            // Third row of the rotation matrix
+            float r20 = 2 * (q1 * q3 - q0 * q2);
+            float r21 = 2 * (q2 * q3 + q0 * q1);
+            float r22 = 2 * (q0 * q0 + q3 * q3) - 1;
 
             mvMat4 rotationMat{};
 
             // col 1
-            rotationMat[0][0] = 1.0f - 2.0f*yy-2.0f*zz;
-            rotationMat[0][1] = 2.0f*xy+2.0f*zw;
-            rotationMat[0][2] = 2.0f*xz-2.0f*yw;
+            rotationMat[0][0] = r00;
+            rotationMat[0][1] = r10;
+            rotationMat[0][2] = r20;
             rotationMat[0][3] = 0.0f;
 
             // col 2
-            rotationMat[1][0] = 2.0f*xy-2.0f*zw;
-            rotationMat[1][1] = 1.0f-2.0f*xx-2.0f*zz;
-            rotationMat[1][2] = 2.0f*yz+2.0f*xw;
+            rotationMat[1][0] = r01;
+            rotationMat[1][1] = r11;
+            rotationMat[1][2] = r21;
             rotationMat[1][3] = 0.0f;
 
             // col 3
-            rotationMat[2][0] = 2.0f*xz+2.0f*yw;
-            rotationMat[2][1] = 2.0f*yz-2.0f*xw;
-            rotationMat[2][2] = 1.0f-2.0f*xx-2.0f*yy;
+            rotationMat[2][0] = r02;
+            rotationMat[2][1] = r12;
+            rotationMat[2][2] = r22;
             rotationMat[2][3] = 0.0f;
 
             // col 4
@@ -676,9 +692,10 @@ mvLoadGLTFAssets(mvAssetManager& assetManager, mvGLTFModel& model)
             rotationMat[3][3] = 1.0f;
 
 
-            newNode.matrix = mvTranslate(mvIdentityMat4(), newNode.translation) * rotationMat * mvScale(mvIdentityMat4(), newNode.scale);
+            //newNode.matrix = mvTranslate(mvIdentityMat4(), newNode.translation) * rotationMat * mvScale(mvIdentityMat4(), newNode.scale);
+            newNode.matrix = mvScale(mvIdentityMat4(), newNode.scale)  * rotationMat * mvTranslate(mvIdentityMat4(), newNode.translation);
 
-            newNode.matrix = mvSwitchHand(newNode.matrix);
+            //newNode.matrix = mvSwitchHand(newNode.matrix);
         }
 
         mvRegistryNodeAsset(&assetManager, newNode);

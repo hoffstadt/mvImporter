@@ -41,6 +41,7 @@ struct mvMat4
 };
 
 mvMat4 mvIdentityMat4();
+mvMat4 mvConstructMat4(mvVec4& c0, mvVec4& c1, mvVec4& c2, mvVec4& c3);
 
 struct mvTransforms
 {
@@ -66,6 +67,7 @@ mvVec4 operator*(mvVec4& left, f32 right);
 mvVec4 operator*(mvMat4& left, mvVec4& right);
 
 mvMat4 operator*(mvMat4& left, mvMat4& right);
+mvMat4 operator*(mvMat4& left, f32 right);
 
 mvVec3 mvNormalize(mvVec3& v);
 mvVec3 mvCross    (mvVec3& v1, mvVec3& v2);
@@ -80,4 +82,7 @@ mvMat4 mvRotate       (mvMat4& m, f32 angle, mvVec3& v);
 mvMat4 mvScale        (mvMat4& m, mvVec3& v);
 mvMat4 mvSwitchHand   (mvMat4& m);
 mvMat4 mvOrthoLH      (f32 left, f32 right, f32 bottom, f32 top, f32 zNear, f32 zFar);
+mvMat4 mvOrthoRH      (f32 left, f32 right, f32 bottom, f32 top, f32 zNear, f32 zFar);
 mvMat4 mvPerspectiveLH(f32 fovy, f32 aspect, f32 zNear, f32 zFar);
+mvMat4 mvPerspectiveRH(f32 fovy, f32 aspect, f32 zNear, f32 zFar);
+mvMat4 mvInvert       (mvMat4& m);

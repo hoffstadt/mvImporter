@@ -81,6 +81,7 @@ mvCreateSkyboxPass(mvAssetManager* assetManager, const std::string& path)
 
     D3D11_RASTERIZER_DESC rasterDesc = CD3D11_RASTERIZER_DESC(CD3D11_DEFAULT{});
     rasterDesc.CullMode = D3D11_CULL_NONE;
+    rasterDesc.FrontCounterClockwise = TRUE;
     rasterDesc.DepthBias = pass.pipeline.info.depthBias;
     rasterDesc.DepthBiasClamp = pass.pipeline.info.clamp;
     rasterDesc.SlopeScaledDepthBias = pass.pipeline.info.slopeBias;
@@ -142,12 +143,12 @@ mvCreateSkyboxPass(mvAssetManager* assetManager, const std::string& path)
     };
 
     static auto indices = std::vector<u32>{
-        0, 2, 1, 2, 3, 1,
-        1, 3, 5, 3, 7, 5,
-        2, 6, 3, 3, 6, 7,
-        4, 5, 7, 4, 7, 6,
-        0, 4, 2, 2, 4, 6,
-        0, 1, 4, 1, 5, 4
+        1, 2, 0, 1, 3, 2,
+        5, 3, 1, 5, 7, 3,
+        3, 6, 2, 7, 6, 3,
+        7, 5, 4, 6, 7, 4,
+        2, 4, 0, 6, 4, 2,
+        4, 1, 0, 4, 5, 1
     };
 
     mvMesh mesh{};

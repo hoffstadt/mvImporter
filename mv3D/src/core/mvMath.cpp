@@ -239,6 +239,18 @@ operator*(mvMat4& left, mvMat4& right)
 	return result;
 }
 
+mvMat4
+operator*(mvMat4& left, f32 right)
+{
+	mvMat4 result = left;
+
+	for (u32 i = 0; i < 4; i++)
+		for (u32 j = 0; j < 4; j++)
+			result[i][j] *= right;
+
+	return result;
+}
+
 mvMat4 
 mvIdentityMat4()
 {
@@ -404,12 +416,12 @@ mvLookAtRH(mvVec3& eye, mvVec3& center, mvVec3& up)
 	result[0][1] = u.x;
 	result[1][1] = u.y;
 	result[2][1] = u.z;
-	result[0][2] = -f.x;
-	result[1][2] = -f.y;
-	result[2][2] = -f.z;
+	result[0][2] = f.x;
+	result[1][2] = f.y;
+	result[2][2] = f.z;
 	result[3][0] = -mvDot(s, eye);
 	result[3][1] = -mvDot(u, eye);
-	result[3][2] = mvDot(f, eye);
+	result[3][2] = -mvDot(f, eye);
 	return result;
 }
 
@@ -420,6 +432,19 @@ mvOrthoLH(f32 left, f32 right, f32 bottom, f32 top, f32 zNear, f32 zFar)
 	result[0][0] = 2.0f / (right - left);
 	result[1][1] = 2.0f / (top - bottom);
 	result[2][2] = 2.0f / (zFar - zNear);
+	result[3][0] = -(right + left) / (right - left);
+	result[3][1] = -(top + bottom) / (top - bottom);
+	result[3][2] = -(zFar + zNear) / (zFar - zNear);
+	return result;
+}
+
+mvMat4
+mvOrthoRH(f32 left, f32 right, f32 bottom, f32 top, f32 zNear, f32 zFar)
+{
+	mvMat4 result = mvIdentityMat4();
+	result[0][0] = 2.0f / (right - left);
+	result[1][1] = 2.0f / (top - bottom);
+	result[2][2] = -2.0f / (zFar - zNear);
 	result[3][0] = -(right + left) / (right - left);
 	result[3][1] = -(top + bottom) / (top - bottom);
 	result[3][2] = -(zFar + zNear) / (zFar - zNear);
@@ -440,28 +465,117 @@ mvPerspectiveLH(f32 fovy, f32 aspect, f32 zNear, f32 zFar)
 	return result;
 }
 
+mvMat4
+mvPerspectiveRH(f32 fovy, f32 aspect, f32 zNear, f32 zFar)
+{
+	const f32 tanHalfFovy = tan(fovy / 2.0f);
+
+	mvMat4 result{};
+	result[0][0] = 1.0f / (aspect * tanHalfFovy);
+	result[1][1] = 1.0f / (tanHalfFovy);
+	result[2][2] = -(zFar + zNear) / (zFar - zNear);
+	result[2][3] = -1.0f;
+	result[3][2] = -(2.0f * zFar * zNear) / (zFar - zNear);
+	return result;
+}
+
+mvMat4
+mvInvert(mvMat4& m)
+{
+	float Coef00 = m[2][2] * m[3][3] - m[3][2] * m[2][3];
+	float Coef02 = m[1][2] * m[3][3] - m[3][2] * m[1][3];
+	float Coef03 = m[1][2] * m[2][3] - m[2][2] * m[1][3];
+	
+	float Coef04 = m[2][1] * m[3][3] - m[3][1] * m[2][3];
+	float Coef06 = m[1][1] * m[3][3] - m[3][1] * m[1][3];
+	float Coef07 = m[1][1] * m[2][3] - m[2][1] * m[1][3];
+	
+	float Coef08 = m[2][1] * m[3][2] - m[3][1] * m[2][2];
+	float Coef10 = m[1][1] * m[3][2] - m[3][1] * m[1][2];
+	float Coef11 = m[1][1] * m[2][2] - m[2][1] * m[1][2];
+	
+	float Coef12 = m[2][0] * m[3][3] - m[3][0] * m[2][3];
+	float Coef14 = m[1][0] * m[3][3] - m[3][0] * m[1][3];
+	float Coef15 = m[1][0] * m[2][3] - m[2][0] * m[1][3];
+	
+	float Coef16 = m[2][0] * m[3][2] - m[3][0] * m[2][2];
+	float Coef18 = m[1][0] * m[3][2] - m[3][0] * m[1][2];
+	float Coef19 = m[1][0] * m[2][2] - m[2][0] * m[1][2];
+	
+	float Coef20 = m[2][0] * m[3][1] - m[3][0] * m[2][1];
+	float Coef22 = m[1][0] * m[3][1] - m[3][0] * m[1][1];
+	float Coef23 = m[1][0] * m[2][1] - m[2][0] * m[1][1];
+
+	mvVec4 Fac0 = {Coef00, Coef00, Coef02, Coef03};
+	mvVec4 Fac1 = {Coef04, Coef04, Coef06, Coef07};
+	mvVec4 Fac2 = {Coef08, Coef08, Coef10, Coef11};
+	mvVec4 Fac3 = {Coef12, Coef12, Coef14, Coef15};
+	mvVec4 Fac4 = {Coef16, Coef16, Coef18, Coef19};
+	mvVec4 Fac5 = {Coef20, Coef20, Coef22, Coef23};
+
+	mvVec4 Vec0 = {m[1][0], m[0][0], m[0][0], m[0][0]};
+	mvVec4 Vec1 = {m[1][1], m[0][1], m[0][1], m[0][1]};
+	mvVec4 Vec2 = {m[1][2], m[0][2], m[0][2], m[0][2]};
+	mvVec4 Vec3 = {m[1][3], m[0][3], m[0][3], m[0][3]};
+
+	mvVec4 Inv0 = {Vec1 * Fac0 - Vec2 * Fac1 + Vec3 * Fac2};
+	mvVec4 Inv1 = {Vec0 * Fac0 - Vec2 * Fac3 + Vec3 * Fac4};
+	mvVec4 Inv2 = {Vec0 * Fac1 - Vec1 * Fac3 + Vec3 * Fac5};
+	mvVec4 Inv3 = {Vec0 * Fac2 - Vec1 * Fac4 + Vec2 * Fac5};
+
+	mvVec4 SignA = {+1.0f, -1.0f, +1.0f, -1.0f};
+	mvVec4 SignB = {-1.0f, +1.0f, -1.0f, +1.0f};
+
+	mvMat4 Inverse = mvConstructMat4(Inv0 * SignA, Inv1 * SignB, Inv2 * SignA, Inv3 * SignB);
+
+	mvVec4 Row0 = { Inverse[0][0], Inverse[1][0], Inverse[2][0], Inverse[3][0] };
+
+	mvVec4 Dot0 = (m[0] * Row0);
+	float Dot1 = (Dot0.x + Dot0.y) + (Dot0.z + Dot0.w);
+
+	float OneOverDeterminant = 1.0f / Dot1;
+
+	return Inverse * OneOverDeterminant;
+}
+
+mvMat4
+mvConstructMat4(mvVec4& c0, mvVec4& c1, mvVec4& c2, mvVec4& c3)
+{
+	mvMat4 result{};
+	result[0] = c0;
+	result[1] = c1;
+	result[2] = c2;
+	result[3] = c3;
+	return result;
+}
+
 mvMat4 
 mvSwitchHand(mvMat4& m)
 {
 	mvMat4 result = mvIdentityMat4();
+
+	// row 0
 	result[0][0] = m[0][0];
-	result[1][0] = m[2][0];
-	result[2][0] = m[1][0];
+	result[1][0] = m[1][0];
+	result[2][0] = m[2][0];
 	result[3][0] = m[3][0];
 
+	// row 1
 	result[0][1] = m[0][1];
-	result[1][1] = m[2][1];
-	result[2][1] = m[1][1];
+	result[1][1] = m[1][1];
+	result[2][1] = m[2][1];
 	result[3][1] = m[3][1];
 
+	// row 2
 	result[0][2] = m[0][2];
-	result[1][2] = m[2][2];
-	result[2][2] = m[1][2];
+	result[1][2] = m[1][2];
+	result[2][2] = m[2][2];
 	result[3][2] = m[3][2];
 
+	// row 3
 	result[0][3] = m[0][3];
-	result[1][3] = m[2][3];
-	result[2][3] = m[1][3];
+	result[1][3] = m[1][3];
+	result[2][3] = m[2][3];
 	result[3][3] = m[3][3];
 
 	return result;
