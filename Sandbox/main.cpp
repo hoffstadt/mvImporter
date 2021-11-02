@@ -5,7 +5,7 @@ mv_internal const char* sponzaPath = "C:/dev/MarvelAssets/Sponza/";
 mv_internal const char* gltfPath = "C://dev//glTF-Sample-Models//2.0//";
 mv_internal b8 loadGLTF = false;
 mv_internal b8 loadSponza = false;
-mv_internal f32 shadowWidth = 25.0f;
+mv_internal f32 shadowWidth = 100.0f;
 
 mvGLTFModel LoadTestModel(const char* name);
 
@@ -49,7 +49,8 @@ int main()
 
     // shadows
     mvOrthoCamera orthoCamera{};
-    orthoCamera.dir = { 0.0f, -1.0f, 0.0f };
+    orthoCamera.dir = { 0.0f, 1.0f, 0.0f };
+    orthoCamera.up = { 1.0f, 0.0f, 0.0f };
     orthoCamera.pos.y = shadowWidth/2.0f;
     orthoCamera.left = -shadowWidth;
     orthoCamera.right = shadowWidth;
@@ -78,7 +79,6 @@ int main()
     mvSkyboxPass skyboxPass = mvCreateSkyboxPass(&am, "../../Resources/Skybox");
 
     mvMesh texturedQuad = mvCreateTexturedQuad(am, 30.0f);
-    mvVec3 texturedQuad_rot = { -M_PI_2, 0.0f, 0.0f };
     mvVec3 texturedQuad_pos = { 5.0f, -3.0f, 5.0f };
     mvMat4 texturedQuadTrans = mvTranslate(mvIdentityMat4(), texturedQuad_pos) * mvRotate(mvIdentityMat4(), -M_PI_2, mvVec3{1.0f, 0.0f, 0.0f});
     //mvRegistryMeshAsset(&am, texturedQuad);
@@ -88,11 +88,11 @@ int main()
 
     mvMesh texturedCube = mvCreateTexturedCube(am, 1.0f);
     mvVec3 texturedCube_pos = { 5.0f, 5.0f, 5.0f };
+    mvVec3 texturedCube_rot = { M_PI_4, M_PI_4, M_PI_4 };
     mvMat4 texturedCubeTrans = mvTranslate(mvIdentityMat4(), texturedCube_pos) * mvRotate(mvIdentityMat4(), M_PI_4, mvVec3{ 1.0f, 1.0f, 1.0f });
-    //texturedCube.rot = { M_PI_4, M_PI_4, M_PI_4 };
     texturedCube.diffuseTexture = mvGetTextureAsset(&am, "../../Resources/test_image.png");
 
-    dshadowCamera.info.directShadowView = mvLookAtRH(orthoCamera.pos, orthoCamera.pos + orthoCamera.dir, mvVec3{ 0.0f, 1.0f, 0.0f });
+    dshadowCamera.info.directShadowView = mvLookAtRH(orthoCamera.pos, orthoCamera.pos + orthoCamera.dir, orthoCamera.up);
     dshadowCamera.info.directShadowProjection = mvOrthoRH(orthoCamera.left, orthoCamera.right, orthoCamera.bottom, orthoCamera.top, orthoCamera.nearZ, orthoCamera.farZ);
 
     mvTimer timer;
@@ -100,8 +100,11 @@ int main()
     {
         const auto dt = timer.mark() * 1.0f;
 
-        //texturedQuad_rot.y += dt;
-        //texturedCubeTrans = mvTranslate(mvIdentityMat4(), texturedCube_pos) * mvRotate(mvIdentityMat4(), texturedQuad_rot.y, mvVec3{ 0.0f, 1.0f, 0.0f });
+        texturedCube_rot.x += dt;
+        texturedCube_rot.y += dt;
+        texturedCubeTrans = mvTranslate(mvIdentityMat4(), texturedCube_pos) 
+            * mvRotate(mvIdentityMat4(), texturedCube_rot.x, mvVec3{ 1.0f, 0.0f, 0.0f }) 
+            * mvRotate(mvIdentityMat4(), texturedCube_rot.y, mvVec3{ 0.0f, 1.0f, 0.0f });
 
         if (const auto ecode = mvProcessViewportEvents()) break;
 
@@ -149,7 +152,10 @@ int main()
             perspecCamera.pos = { light.info.viewLightPos.x, light.info.viewLightPos.y, light.info.viewLightPos.z };
             lightTransform = mvTranslate(mvIdentityMat4(), perspecCamera.pos);
         }
-        ImGui::SliderFloat3("DLight", &orthoCamera.dir.x, -1.0f, 1.0f);
+        if (ImGui::SliderFloat3("DLight", &orthoCamera.dir.x, -1.0f, 1.0f))
+        {
+            dshadowCamera.info.directShadowView = mvLookAtRH(orthoCamera.pos, orthoCamera.pos + orthoCamera.dir, orthoCamera.up);
+        }
         ImGui::End();
 
         //-----------------------------------------------------------------------------
