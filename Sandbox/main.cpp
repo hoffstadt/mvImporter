@@ -158,6 +158,12 @@ int main()
         }
         ImGui::End();
 
+        ImGui::Begin("Scene");
+        ImGui::ColorEdit3("Ambient Color", &scene.info.ambientColor.x);
+        ImGui::Checkbox("Use Shadows", (bool*)&scene.info.useShadows);
+        ImGui::Checkbox("Use Skybox", (bool*)&scene.info.useSkybox);
+        ImGui::End();
+
         //-----------------------------------------------------------------------------
         // directional shadow pass
         //-----------------------------------------------------------------------------
