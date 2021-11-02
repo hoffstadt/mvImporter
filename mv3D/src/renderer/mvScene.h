@@ -20,7 +20,7 @@ struct mvSceneInfo
 {
 
     mvVec3 ambientColor = { 0.04f, 0.04f, 0.04f };
-    b32    useShadows = false;
+    b32    useShadows = true;
     //-------------------------- ( 16 bytes )
 
     b32  useSkybox = true;
@@ -34,6 +34,7 @@ struct mvScene
     mvSceneInfo   info;
     mvAssetID     nodes[256];
     u32           nodeCount = 0u;
+    u32           meshOffset = 0u;
 };
 
 mvScene mvCreateScene();

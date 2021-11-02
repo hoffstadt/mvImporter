@@ -1,11 +1,11 @@
 #include "mv3D.h"
 
-mv_internal const char* gltfModel = "OrientationTest";
+mv_internal const char* gltfModel = "FlightHelmet";
 mv_internal const char* sponzaPath = "C:/dev/MarvelAssets/Sponza/";
 mv_internal const char* gltfPath = "C://dev//glTF-Sample-Models//2.0//";
-mv_internal b8 loadGLTF = true;
+mv_internal b8 loadGLTF = false;
 mv_internal b8 loadSponza = false;
-mv_internal f32 shadowWidth = 15.0f;
+mv_internal f32 shadowWidth = 25.0f;
 
 mvGLTFModel LoadTestModel(const char* name);
 
@@ -43,8 +43,9 @@ int main()
     camera.aspect = GContext->viewport.width / GContext->viewport.height;
 
     // lights
-    mvPointLight light = mvCreatePointLight(&am, { 0.0f, 5.0f, 0.0f });
+    mvPointLight light = mvCreatePointLight(&am, { 0.0f, 15.0f, 0.0f });
     mvDirectionLight dlight = mvCreateDirectionLight({ 0.0f, -1.0f, 0.0f });
+    mvMat4 lightTransform = mvTranslate(mvIdentityMat4(), mvVec3{ 0.0f, 15.0f, 0.0f });
 
     // shadows
     mvOrthoCamera orthoCamera{};
@@ -60,6 +61,7 @@ int main()
     mvCamera perspecCamera{};
     perspecCamera.pos = { light.info.viewLightPos.x, light.info.viewLightPos.y, light.info.viewLightPos.z };
     perspecCamera.aspect = 1.0f;
+    perspecCamera.yaw = 0.0f;
 
     mvShadowCamera dshadowCamera = mvCreateShadowCamera();
 
@@ -75,23 +77,31 @@ int main()
 
     mvSkyboxPass skyboxPass = mvCreateSkyboxPass(&am, "../../Resources/Skybox");
 
-    mvMesh texturedQuad = mvCreateTexturedQuad(am, 10.0f);
-    texturedQuad.rot.x = -M_PI_2;
-    texturedQuad.pos = { 5.0f, -3.0f, 5.0f };
-    mvRegistryMeshAsset(&am, texturedQuad);
+    mvMesh texturedQuad = mvCreateTexturedQuad(am, 30.0f);
+    mvVec3 texturedQuad_rot = { -M_PI_2, 0.0f, 0.0f };
+    mvVec3 texturedQuad_pos = { 5.0f, -3.0f, 5.0f };
+    mvMat4 texturedQuadTrans = mvTranslate(mvIdentityMat4(), texturedQuad_pos) * mvRotate(mvIdentityMat4(), -M_PI_2, mvVec3{1.0f, 0.0f, 0.0f});
+    //mvRegistryMeshAsset(&am, texturedQuad);
+
+    mvMesh room = mvCreateRoom(am, 15.0f);
+    mvMat4 roomTransform = mvTranslate(mvIdentityMat4(), mvVec3{-5.0f, -3.0f, -5.0f});
 
     mvMesh texturedCube = mvCreateTexturedCube(am, 1.0f);
-    texturedCube.pos = { 5.0f, 5.0f, 5.0f };
+    mvVec3 texturedCube_pos = { 5.0f, 5.0f, 5.0f };
+    mvMat4 texturedCubeTrans = mvTranslate(mvIdentityMat4(), texturedCube_pos) * mvRotate(mvIdentityMat4(), M_PI_4, mvVec3{ 1.0f, 1.0f, 1.0f });
     //texturedCube.rot = { M_PI_4, M_PI_4, M_PI_4 };
     texturedCube.diffuseTexture = mvGetTextureAsset(&am, "../../Resources/test_image.png");
-    u32 cubeIndex = mvRegistryMeshAsset(&am, texturedCube);
+
+    dshadowCamera.info.directShadowView = mvLookAtRH(orthoCamera.pos, orthoCamera.pos + orthoCamera.dir, mvVec3{ 0.0f, 1.0f, 0.0f });
+    dshadowCamera.info.directShadowProjection = mvOrthoRH(orthoCamera.left, orthoCamera.right, orthoCamera.bottom, orthoCamera.top, orthoCamera.nearZ, orthoCamera.farZ);
 
     mvTimer timer;
     while (true)
     {
         const auto dt = timer.mark() * 1.0f;
 
-        //texturedCube.rot.y += dt;
+        //texturedQuad_rot.y += dt;
+        //texturedCubeTrans = mvTranslate(mvIdentityMat4(), texturedCube_pos) * mvRotate(mvIdentityMat4(), texturedQuad_rot.y, mvVec3{ 0.0f, 1.0f, 0.0f });
 
         if (const auto ecode = mvProcessViewportEvents()) break;
 
@@ -134,8 +144,11 @@ int main()
 
         // controls
         ImGui::Begin("Light Controls");
-        if (ImGui::SliderFloat3("Position", &light.info.viewLightPos.x, -25.0f, 25.0f))
+        if (ImGui::SliderFloat3("Position", &light.info.viewLightPos.x, -25.0f, 50.0f))
+        {
             perspecCamera.pos = { light.info.viewLightPos.x, light.info.viewLightPos.y, light.info.viewLightPos.z };
+            lightTransform = mvTranslate(mvIdentityMat4(), perspecCamera.pos);
+        }
         ImGui::SliderFloat3("DLight", &orthoCamera.dir.x, -1.0f, 1.0f);
         ImGui::End();
 
@@ -144,11 +157,12 @@ int main()
         //-----------------------------------------------------------------------------
         mvRenderer_BeginPass(directionalShadowPass);
 
-        mvRenderer_RenderMeshShadows(am, texturedQuad, identityMat, dshadowCamera.info.directShadowView, dshadowCamera.info.directShadowProjection);
-        mvRenderer_RenderMeshShadows(am, texturedCube, identityMat, dshadowCamera.info.directShadowView, dshadowCamera.info.directShadowProjection);
+        //mvRenderer_RenderMeshShadows(am, room, roomTransform, dshadowCamera.info.directShadowView, dshadowCamera.info.directShadowProjection);
+        mvRenderer_RenderMeshShadows(am, texturedQuad, texturedQuadTrans, mvBuildCameraMatrix(orthoCamera), mvBuildProjectionMatrix(orthoCamera));
+        mvRenderer_RenderMeshShadows(am, texturedCube, texturedCubeTrans, mvBuildCameraMatrix(orthoCamera), mvBuildProjectionMatrix(orthoCamera));
 
         for (int i = 0; i < am.sceneCount; i++)
-             mvRenderer_RenderSceneShadows(am, am.scenes[i].scene, dshadowCamera.info.directShadowView, dshadowCamera.info.directShadowProjection);
+             mvRenderer_RenderSceneShadows(am, am.scenes[i].scene, mvBuildCameraMatrix(orthoCamera), mvBuildProjectionMatrix(orthoCamera));
 
         mvRenderer_EndPass();
 
@@ -160,13 +174,14 @@ int main()
             mvRenderer_BeginPass(omniShadowPasses[i]);
 
             mvVec3 look_target = perspecCamera.pos + omniShadowMap.cameraDirections[i];
-            mvMat4 camera_matrix = mvLookAtRH(perspecCamera.pos, look_target, omniShadowMap.cameraUps[i]);
+            mvMat4 camera_matrix = mvLookAtLH(perspecCamera.pos, look_target, omniShadowMap.cameraUps[i]);
 
-            mvRenderer_RenderMeshShadows(am, texturedQuad, identityMat, camera_matrix, mvPerspectiveRH(M_PI_2, 1.0f, 0.5f, 100.0f));
-            mvRenderer_RenderMeshShadows(am, texturedCube, identityMat, camera_matrix, mvPerspectiveRH(M_PI_2, 1.0f, 0.5f, 100.0f));
+            //mvRenderer_RenderMeshShadows(am, room, roomTransform, camera_matrix, mvPerspectiveLH(M_PI_2, 1.0f, 0.5f, 100.0f));
+            mvRenderer_RenderMeshShadows(am, texturedQuad, texturedQuadTrans, camera_matrix, mvPerspectiveLH(M_PI_2, 1.0f, 0.5f, 100.0f));
+            mvRenderer_RenderMeshShadows(am, texturedCube, texturedCubeTrans, camera_matrix, mvPerspectiveLH(M_PI_2, 1.0f, 0.5f, 100.0f));
 
             for (int i = 0; i < am.sceneCount; i++)
-                    mvRenderer_RenderSceneShadows(am, am.scenes[i].scene, camera_matrix, mvPerspectiveRH(M_PI_2, 1.0f, 0.5f, 100.0f));
+                    mvRenderer_RenderSceneShadows(am, am.scenes[i].scene, camera_matrix, mvPerspectiveLH(M_PI_2, 1.0f, 0.5f, 100.0f));
 
             mvRenderer_EndPass();
         }
@@ -185,9 +200,10 @@ int main()
         mvBindSlot_tsPS(directionalShadowMap, 3u, 1u);
         mvBindSlot_tsPS(omniShadowMap, 4u, 2u);       
 
-        mvRenderer_RenderMesh(am, texturedQuad, identityMat, viewMatrix, projMatrix);
-        mvRenderer_RenderMesh(am, texturedCube, identityMat, viewMatrix, projMatrix);
-        mvRenderer_RenderMesh(am, *light.mesh, identityMat, viewMatrix, projMatrix);
+        //mvRenderer_RenderMesh(am, room, roomTransform, viewMatrix, projMatrix);
+        mvRenderer_RenderMesh(am, texturedQuad, texturedQuadTrans, viewMatrix, projMatrix);
+        mvRenderer_RenderMesh(am, texturedCube, texturedCubeTrans, viewMatrix, projMatrix);
+        mvRenderer_RenderMesh(am, *light.mesh, lightTransform, viewMatrix, projMatrix);
 
         for (int i = 0; i < am.sceneCount; i++)
                 mvRenderer_RenderScene(am, am.scenes[i].scene, viewMatrix, projMatrix);

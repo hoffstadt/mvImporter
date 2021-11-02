@@ -31,6 +31,11 @@ struct mvVec4
 	union { f32 w, a; };
 
 	float& operator[](i32 index);
+
+	mvVec3 xyz()
+	{
+		return mvVec3{ x, y, z };
+	}
 };
 
 struct mvMat4

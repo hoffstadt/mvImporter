@@ -17,7 +17,7 @@ wrap_angle(T theta) noexcept
 mvMat4
 mvBuildCameraMatrix(mvOrthoCamera& camera)
 {
-    return mvLookAtRH(camera.pos, camera.pos + camera.dir, mvVec3{ 0.0f, 1.0f, 0.0f });
+    return mvLookAtRH(camera.pos, camera.pos + camera.dir, camera.up);
 }
 
 mvMat4

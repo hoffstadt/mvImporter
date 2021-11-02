@@ -10,10 +10,6 @@ mvCreatePointLight(mvAssetManager* manager, mvVec3 pos)
 	light.buffer = mvCreateConstBuffer(&light.info, sizeof(mvPointLightInfo));
 
 	mvMesh mesh = mvCreateTexturedCube(*manager, 0.25f);
-	mesh.pos = {
-		light.info.viewLightPos.x,
-		light.info.viewLightPos.y,
-		light.info.viewLightPos.z };
 
 	mesh.phongMaterialID = mvGetPhongMaterialAsset(manager, "Phong_VS.hlsl", "Solid_PS.hlsl", true, false, false, false);
 	manager->phongMaterials[mesh.phongMaterialID].material.data.materialColor = { 1.0f, 1.0f, 1.0f, 1.0f };
@@ -38,9 +34,6 @@ void
 mvBindSlot_bPS(u32 slot, mvPointLight& light, mvMat4 viewMatrix)
 {
 	mvVec4 posCopy = light.info.viewLightPos;
-	light.mesh->pos.x = light.info.viewLightPos.x;
-	light.mesh->pos.y = light.info.viewLightPos.y;
-	light.mesh->pos.z = light.info.viewLightPos.z;
 
 	mvVec4 out = viewMatrix * light.info.viewLightPos;
 	light.info.viewLightPos.x = out.x;
