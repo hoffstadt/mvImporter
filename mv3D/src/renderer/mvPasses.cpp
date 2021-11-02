@@ -1,6 +1,7 @@
 #include "mvPasses.h"
 #include "mvMesh.h"
 #include "mvAssetManager.h"
+#include <assert.h>
 
 mvPass
 mvCreateMainPass()
@@ -81,11 +82,15 @@ mvCreateSkyboxPass(mvAssetManager* assetManager, const std::string& path)
 
     D3D11_RASTERIZER_DESC rasterDesc = CD3D11_RASTERIZER_DESC(CD3D11_DEFAULT{});
     rasterDesc.CullMode = D3D11_CULL_NONE;
+    rasterDesc.FrontCounterClockwise = TRUE;
     rasterDesc.DepthBias = pass.pipeline.info.depthBias;
     rasterDesc.DepthBiasClamp = pass.pipeline.info.clamp;
     rasterDesc.SlopeScaledDepthBias = pass.pipeline.info.slopeBias;
 
-    GContext->graphics.device->CreateRasterizerState(&rasterDesc, pass.pipeline.rasterizationState.GetAddressOf());
+    HRESULT hResult = GContext->graphics.device->CreateRasterizerState(&rasterDesc, pass.pipeline.rasterizationState.GetAddressOf());
+    assert(SUCCEEDED(hResult));
+
+    //pass.basePass.rasterizationState = pass.pipeline.rasterizationState.GetAddressOf();
 
     D3D11_DEPTH_STENCIL_DESC dsDesc = CD3D11_DEPTH_STENCIL_DESC{ CD3D11_DEFAULT{} };
     
@@ -93,23 +98,6 @@ mvCreateSkyboxPass(mvAssetManager* assetManager, const std::string& path)
     dsDesc.DepthEnable = true;
     dsDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
     dsDesc.DepthFunc = D3D11_COMPARISON_LESS_EQUAL;
-
-    //// Stencil test parameters
-    //dsDesc.StencilEnable = true;
-    //dsDesc.StencilReadMask = 0xFF;
-    //dsDesc.StencilWriteMask = 0xFF;
-
-    //// Stencil operations if pixel is front-facing
-    //dsDesc.FrontFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
-    //dsDesc.FrontFace.StencilDepthFailOp = D3D11_STENCIL_OP_INCR;
-    //dsDesc.FrontFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
-    //dsDesc.FrontFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
-
-    //// Stencil operations if pixel is back-facing
-    //dsDesc.BackFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
-    //dsDesc.BackFace.StencilDepthFailOp = D3D11_STENCIL_OP_DECR;
-    //dsDesc.BackFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
-    //dsDesc.BackFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
 
     GContext->graphics.device->CreateDepthStencilState(&dsDesc, pass.pipeline.depthStencilState.GetAddressOf());
 

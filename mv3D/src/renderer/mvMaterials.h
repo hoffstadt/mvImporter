@@ -72,4 +72,4 @@ struct mvPBRMaterial
 };
 
 mvPhongMaterial mvCreatePhongMaterial(const std::string& vs, const std::string& ps, b8 cull, b8 useDiffusemap, b8 useNormalmap, b8 useSpecularMap);
-mvPBRMaterial   mvCreatePBRMaterial  (const std::string& vs, const std::string& ps, b8 cull, b8 useAlbedomap, b8 useNormalmap, b8 useRoughnessMap, b8 useMetalMap);
+mvPBRMaterial   mvCreatePBRMaterial  (const std::string& vs, const std::string& ps, mvPBRMaterialData& materialData);

@@ -114,7 +114,7 @@ mvRenderer_EndPass()
 }
 
 mv_internal void
-mvRenderer_RenderMeshPhong(mvAssetManager& am, mvMesh& mesh, mvMat4 cam, mvMat4 proj)
+mvRenderer_RenderMeshPhong(mvAssetManager& am, mvMesh& mesh, mvMat4 transform, mvMat4 cam, mvMat4 proj)
 {
 
     auto device = GContext->graphics.imDeviceContext;
@@ -161,11 +161,7 @@ mvRenderer_RenderMeshPhong(mvAssetManager& am, mvMesh& mesh, mvMat4 cam, mvMat4 
     device->PSSetConstantBuffers(1u, 1u, material->buffer.buffer.GetAddressOf());
 
     mvTransforms transforms{};
-    transforms.model = mvTranslate(mvIdentityMat4(), mesh.pos) *
-        mvRotate(mvIdentityMat4(), mesh.rot.x, mvVec3{ 1.0f, 0.0f, 0.0f }) *
-        mvRotate(mvIdentityMat4(), mesh.rot.y, mvVec3{ 0.0f, 1.0f, 0.0f }) *
-        mvRotate(mvIdentityMat4(), mesh.rot.z, mvVec3{ 0.0f, 0.0f, 1.0f });
-    transforms.model = transforms.model * mvScale(mvIdentityMat4(), mesh.scale);
+    transforms.model = transform;
     transforms.modelView = cam * transforms.model;
     transforms.modelViewProjection = proj * cam * transforms.model;
 
@@ -187,7 +183,7 @@ mvRenderer_RenderMeshPhong(mvAssetManager& am, mvMesh& mesh, mvMat4 cam, mvMat4 
 }
 
 mv_internal void
-mvRenderer_RenderMeshPBR(mvAssetManager& am, mvMesh& mesh, mvMat4 cam, mvMat4 proj)
+mvRenderer_RenderMeshPBR(mvAssetManager& am, mvMesh& mesh, mvMat4 transform, mvMat4 cam, mvMat4 proj)
 {
 
     auto device = GContext->graphics.imDeviceContext;
@@ -195,13 +191,7 @@ mvRenderer_RenderMeshPBR(mvAssetManager& am, mvMesh& mesh, mvMat4 cam, mvMat4 pr
     // if material not assigned, get material
     if (mesh.pbrMaterialID == -1)
     {
-        mesh.pbrMaterialID = mvGetPBRMaterialAsset(&am,
-            "Phong_VS.hlsl", "PBR_PS.hlsl",
-            mesh.albedoTexture == -1, 
-            mesh.albedoTexture > -1, 
-            mesh.normalTexture > -1, 
-            mesh.metalRoughnessTexture > -1,
-            mesh.metalRoughnessTexture > -1);
+        assert(false && "material not assigned");
     }
 
     mvPBRMaterial* material = &am.pbrMaterials[mesh.pbrMaterialID].material;
@@ -238,11 +228,7 @@ mvRenderer_RenderMeshPBR(mvAssetManager& am, mvMesh& mesh, mvMat4 cam, mvMat4 pr
     device->PSSetConstantBuffers(1u, 1u, material->buffer.buffer.GetAddressOf());
 
     mvTransforms transforms{};
-    transforms.model = mvTranslate(mvIdentityMat4(), mesh.pos) *
-        mvRotate(mvIdentityMat4(), mesh.rot.x, mvVec3{ 1.0f, 0.0f, 0.0f }) *
-        mvRotate(mvIdentityMat4(), mesh.rot.y, mvVec3{ 0.0f, 1.0f, 0.0f }) *
-        mvRotate(mvIdentityMat4(), mesh.rot.z, mvVec3{ 0.0f, 0.0f, 1.0f });
-    transforms.model = transforms.model * mvScale(mvIdentityMat4(), mesh.scale);
+    transforms.model = transform;
     transforms.modelView = cam * transforms.model;
     transforms.modelViewProjection = proj * cam * transforms.model;
 
@@ -264,16 +250,16 @@ mvRenderer_RenderMeshPBR(mvAssetManager& am, mvMesh& mesh, mvMat4 cam, mvMat4 pr
 }
 
 void
-mvRenderer_RenderMesh(mvAssetManager& am, mvMesh& mesh, mvMat4 cam, mvMat4 proj)
+mvRenderer_RenderMesh(mvAssetManager& am, mvMesh& mesh, mvMat4 transform, mvMat4 cam, mvMat4 proj)
 {
     if (mesh.pbr)
-        mvRenderer_RenderMeshPBR(am, mesh, cam, proj);
+        mvRenderer_RenderMeshPBR(am, mesh, transform, cam, proj);
     else
-        mvRenderer_RenderMeshPhong(am, mesh, cam, proj);
+        mvRenderer_RenderMeshPhong(am, mesh, transform, cam, proj);
 }
 
 void
-mvRenderer_RenderMeshShadows(mvAssetManager& am, mvMesh& mesh, mvMat4 cam, mvMat4 proj)
+mvRenderer_RenderMeshShadows(mvAssetManager& am, mvMesh& mesh, mvMat4 transform, mvMat4 cam, mvMat4 proj)
 {
 
     // if material not assigned, get material
@@ -319,11 +305,7 @@ mvRenderer_RenderMeshShadows(mvAssetManager& am, mvMesh& mesh, mvMat4 cam, mvMat
     GContext->graphics.imDeviceContext->PSSetConstantBuffers(1u, 1u, material->buffer.buffer.GetAddressOf());
 
     mvTransforms transforms{};
-    transforms.model = mvTranslate(mvIdentityMat4(), mesh.pos) *
-        mvRotate(mvIdentityMat4(), mesh.rot.x, mvVec3{ 1.0f, 0.0f, 0.0f }) *
-        mvRotate(mvIdentityMat4(), mesh.rot.y, mvVec3{ 0.0f, 1.0f, 0.0f }) *
-        mvRotate(mvIdentityMat4(), mesh.rot.z, mvVec3{ 0.0f, 0.0f, 1.0f });
-    transforms.model = transforms.model * mvScale(mvIdentityMat4(), mesh.scale);
+    transforms.model = transform;
     transforms.modelView = cam * transforms.model;
     transforms.modelViewProjection = proj * cam * transforms.model;
 
@@ -368,11 +350,7 @@ mvRenderer_RenderSkybox(mvAssetManager& am, mvSkyboxPass& skyboxPass, mvMat4 cam
     device->PSSetShaderResources(0, 1, texture->textureView.GetAddressOf());
 
     mvTransforms transforms{};
-    transforms.model = mvTranslate(mvIdentityMat4(), mesh.pos) *
-        mvRotate(mvIdentityMat4(), mesh.rot.x, mvVec3{ 1.0f, 0.0f, 0.0f }) *
-        mvRotate(mvIdentityMat4(), mesh.rot.y, mvVec3{ 0.0f, 1.0f, 0.0f }) *
-        mvRotate(mvIdentityMat4(), mesh.rot.z, mvVec3{ 0.0f, 0.0f, 1.0f });
-    transforms.model = transforms.model * mvScale(mvIdentityMat4(), mesh.scale);
+    transforms.model = mvIdentityMat4() * mvScale(mvIdentityMat4(), mvVec3{ 1.0f, 1.0f, -1.0f });
     transforms.modelView = cam * transforms.model;
     transforms.modelViewProjection = proj * cam * transforms.model;
 
@@ -391,4 +369,64 @@ mvRenderer_RenderSkybox(mvAssetManager& am, mvSkyboxPass& skyboxPass, mvMat4 cam
 
     // draw
     device->DrawIndexed(am.buffers[mesh.indexBuffer].buffer.size / sizeof(u32), 0u, 0u);
+}
+
+mv_internal void
+mvRenderer_RenderNode(mvAssetManager& am, mvNode& node, mvMat4 accumulatedTransform, mvMat4 cam, mvMat4 proj)
+{
+
+    if (node.mesh > -1)
+        mvRenderer_RenderMesh(am, am.meshes[node.mesh].mesh, accumulatedTransform * node.matrix, cam, proj);
+
+    for (u32 i = 0; i < node.childCount; i++)
+    {
+        mvRenderer_RenderNode(am, am.nodes[node.children[i]].node, accumulatedTransform* node.matrix, cam, proj);
+    }
+}
+
+void
+mvRenderer_RenderScene(mvAssetManager& am, mvScene& scene, mvMat4 cam, mvMat4 proj)
+{
+    for (u32 i = 0; i < scene.nodeCount; i++)
+    {
+        mvNode& rootNode = am.nodes[scene.nodes[i]].node;
+
+        if (rootNode.mesh > -1)
+            mvRenderer_RenderMesh(am, am.meshes[rootNode.mesh].mesh, rootNode.matrix, cam, proj);
+
+        for (u32 j = 0; j < rootNode.childCount; j++)
+        {
+            mvRenderer_RenderNode(am, am.nodes[rootNode.children[j]].node, rootNode.matrix, cam, proj);
+        }
+    }
+}
+
+mv_internal void
+mvRenderer_RenderNodeShadows(mvAssetManager& am, mvNode& node, mvMat4 accumulatedTransform, mvMat4 cam, mvMat4 proj)
+{
+
+    if (node.mesh > -1)
+        mvRenderer_RenderMeshShadows(am, am.meshes[node.mesh].mesh, accumulatedTransform * node.matrix, cam, proj);
+
+    for (u32 i = 0; i < node.childCount; i++)
+    {
+        mvRenderer_RenderNodeShadows(am, am.nodes[node.children[i]].node, accumulatedTransform * node.matrix, cam, proj);
+    }
+}
+
+void
+mvRenderer_RenderSceneShadows(mvAssetManager& am, mvScene& scene, mvMat4 cam, mvMat4 proj)
+{
+    for (u32 i = 0; i < scene.nodeCount; i++)
+    {
+        mvNode& rootNode = am.nodes[scene.nodes[i]].node;
+
+        if (rootNode.mesh > -1)
+            mvRenderer_RenderMeshShadows(am, am.meshes[rootNode.mesh].mesh, rootNode.matrix, cam, proj);
+
+        for (u32 j = 0; j < rootNode.childCount; j++)
+        {
+            mvRenderer_RenderNodeShadows(am, am.nodes[rootNode.children[j]].node, rootNode.matrix, cam, proj);
+        }
+    }
 }

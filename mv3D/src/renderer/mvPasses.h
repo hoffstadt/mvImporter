@@ -9,16 +9,16 @@ struct mvAssetManager;
 
 struct mvPass
 {
-    ID3D11RenderTargetView**   target;
-    ID3D11DepthStencilView**   depthStencil;
-    ID3D11ShaderResourceView** shaderResource;
+    ID3D11RenderTargetView**   target = nullptr;
+    ID3D11DepthStencilView**   depthStencil = nullptr;
+    ID3D11ShaderResourceView** shaderResource = nullptr;
     D3D11_VIEWPORT             viewport;
-    ID3D11RasterizerState**    rasterizationState;
+    ID3D11RasterizerState**    rasterizationState = nullptr;
 };
 
 struct mvSkyboxPass
 {
-    mvPass     basePass;
+    mvPass     basePass{};
     mvPipeline pipeline;
     mvAssetID  mesh;
     mvAssetID  cubeTexture;

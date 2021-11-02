@@ -99,6 +99,7 @@ mvFinalizePipeline(mvPipelineInfo& info)
 
     D3D11_RASTERIZER_DESC rasterDesc = CD3D11_RASTERIZER_DESC(CD3D11_DEFAULT{});
     rasterDesc.CullMode = info.cull ? D3D11_CULL_BACK : D3D11_CULL_NONE;
+    rasterDesc.FrontCounterClockwise = TRUE;
     rasterDesc.DepthBias = info.depthBias;
     rasterDesc.DepthBiasClamp = info.clamp;
     rasterDesc.SlopeScaledDepthBias = info.slopeBias;

@@ -36,7 +36,7 @@ mvCreatePhongMaterial(const std::string& vs, const std::string& ps, b8 cull, b8 
 }
 
 mvPBRMaterial
-mvCreatePBRMaterial(const std::string& vs, const std::string& ps, b8 cull, b8 useAlbedomap, b8 useNormalmap, b8 useRoughnessMap, b8 useMetalMap)
+mvCreatePBRMaterial(const std::string& vs, const std::string& ps, mvPBRMaterialData& materialData)
 {
 	mvPBRMaterial material{};
 
@@ -46,7 +46,7 @@ mvCreatePBRMaterial(const std::string& vs, const std::string& ps, b8 cull, b8 us
 	pipelineInfo.depthBias = 50;
 	pipelineInfo.slopeBias = 2.0f;
 	pipelineInfo.clamp = 0.1f;
-	pipelineInfo.cull = cull;
+	pipelineInfo.cull = !materialData.hasAlpha;
 
 	pipelineInfo.layout = mvCreateVertexLayout(
 		{
@@ -60,11 +60,7 @@ mvCreatePBRMaterial(const std::string& vs, const std::string& ps, b8 cull, b8 us
 
 	material.pipeline = mvFinalizePipeline(pipelineInfo);
 	material.colorSampler = mvCreateSampler();
-	material.data.useAlbedoMap = useAlbedomap;
-	material.data.useNormalMap = useNormalmap;
-	material.data.useRoughnessMap = useRoughnessMap;
-	material.data.useMetalMap = useMetalMap;
-	material.data.hasAlpha = !cull;
+	material.data = materialData;
 	material.buffer = mvCreateConstBuffer(&material.data, sizeof(mvPBRMaterialData));
 
 	return material;

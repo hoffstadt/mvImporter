@@ -13,9 +13,6 @@ struct mvMesh
 {
     std::string    name;
     mvVertexLayout layout;
-    mvVec3         pos                   = { 0.0f, 0.0f, 0.0f};
-    mvVec3         rot                   = { 0.0f, 0.0f, 0.0f };
-    mvVec3         scale                 = { 1.0f, 1.0f, 1.0f };
     mvAssetID      indexBuffer           = -1;
     mvAssetID      vertexBuffer          = -1;
     mvAssetID      diffuseTexture        = -1;
@@ -31,6 +28,7 @@ struct mvMesh
 
 mvMesh mvCreateTexturedCube(mvAssetManager& assetManager, f32 size = 1.0f);
 mvMesh mvCreateTexturedQuad(mvAssetManager& assetManager, f32 size = 1.0f);
+mvMesh mvCreateRoom        (mvAssetManager& assetManager, f32 size = 1.0f);
 
 void mvLoadOBJAssets (mvAssetManager& assetManager, const std::string& root, const std::string& file);
 void mvLoadGLTFAssets(mvAssetManager& assetManager, mvGLTFModel& model);

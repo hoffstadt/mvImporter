@@ -5,7 +5,7 @@ mv_internal const char* sponzaPath = "C:/dev/MarvelAssets/Sponza/";
 mv_internal const char* gltfPath = "C://dev//glTF-Sample-Models//2.0//";
 mv_internal b8 loadGLTF = false;
 mv_internal b8 loadSponza = false;
-mv_internal f32 shadowWidth = 15.0f;
+mv_internal f32 shadowWidth = 100.0f;
 
 mvGLTFModel LoadTestModel(const char* name);
 
@@ -23,6 +23,15 @@ int main()
     mvAssetManager am{};
     mvInitializeAssetManager(&am);
 
+    // assets & meshes
+    if (loadGLTF)
+    {
+        mvGLTFModel gltfmodel = LoadTestModel(gltfModel);
+        mvLoadGLTFAssets(am, gltfmodel);
+        mvCleanupGLTF(gltfmodel);
+    }
+    if (loadSponza) mvLoadOBJAssets(am, sponzaPath, "sponza");
+
     // scenes
     mvScene scene = mvCreateScene();
 
@@ -30,16 +39,18 @@ int main()
     mvCamera camera{};
     camera.pos = { -13.5f, 6.0f, 3.5f };
     camera.pitch = 0.0f;
-    camera.yaw = M_PI_2;
+    camera.yaw = M_PI;
     camera.aspect = GContext->viewport.width / GContext->viewport.height;
 
     // lights
-    mvPointLight light = mvCreatePointLight(&am, { 0.0f, 5.0f, 0.0f });
+    mvPointLight light = mvCreatePointLight(&am, { 0.0f, 15.0f, 0.0f });
     mvDirectionLight dlight = mvCreateDirectionLight({ 0.0f, -1.0f, 0.0f });
+    mvMat4 lightTransform = mvTranslate(mvIdentityMat4(), mvVec3{ 0.0f, 15.0f, 0.0f });
 
     // shadows
     mvOrthoCamera orthoCamera{};
-    orthoCamera.dir = { 0.0f, -1.0f, 0.0f };
+    orthoCamera.dir = { 0.0f, 1.0f, 0.0f };
+    orthoCamera.up = { 1.0f, 0.0f, 0.0f };
     orthoCamera.pos.y = shadowWidth/2.0f;
     orthoCamera.left = -shadowWidth;
     orthoCamera.right = shadowWidth;
@@ -51,6 +62,7 @@ int main()
     mvCamera perspecCamera{};
     perspecCamera.pos = { light.info.viewLightPos.x, light.info.viewLightPos.y, light.info.viewLightPos.z };
     perspecCamera.aspect = 1.0f;
+    perspecCamera.yaw = 0.0f;
 
     mvShadowCamera dshadowCamera = mvCreateShadowCamera();
 
@@ -66,32 +78,33 @@ int main()
 
     mvSkyboxPass skyboxPass = mvCreateSkyboxPass(&am, "../../Resources/Skybox");
 
-    // assets & meshes
-    if (loadGLTF)
-    {
-        mvGLTFModel gltfmodel = LoadTestModel(gltfModel);
-        mvLoadGLTFAssets(am, gltfmodel);
-        mvCleanupGLTF(gltfmodel);
-    }
-    if (loadSponza) mvLoadOBJAssets(am, sponzaPath, "sponza");
+    mvMesh texturedQuad = mvCreateTexturedQuad(am, 30.0f);
+    mvVec3 texturedQuad_pos = { 5.0f, -3.0f, 5.0f };
+    mvMat4 texturedQuadTrans = mvTranslate(mvIdentityMat4(), texturedQuad_pos) * mvRotate(mvIdentityMat4(), -M_PI_2, mvVec3{1.0f, 0.0f, 0.0f});
+    //mvRegistryMeshAsset(&am, texturedQuad);
 
-    mvMesh texturedQuad = mvCreateTexturedQuad(am, 10.0f);
-    texturedQuad.rot.x = M_PI_2;
-    texturedQuad.pos = { 5.0f, -3.0f, 5.0f };
-    mvRegistryMeshAsset(&am, texturedQuad);
+    mvMesh room = mvCreateRoom(am, 15.0f);
+    mvMat4 roomTransform = mvTranslate(mvIdentityMat4(), mvVec3{-5.0f, -3.0f, -5.0f});
 
     mvMesh texturedCube = mvCreateTexturedCube(am, 1.0f);
-    texturedCube.pos = { 5.0f, 5.0f, 5.0f };
-    texturedCube.rot = { M_PI_4, M_PI_4, M_PI_4 };
+    mvVec3 texturedCube_pos = { 5.0f, 5.0f, 5.0f };
+    mvVec3 texturedCube_rot = { M_PI_4, M_PI_4, M_PI_4 };
+    mvMat4 texturedCubeTrans = mvTranslate(mvIdentityMat4(), texturedCube_pos) * mvRotate(mvIdentityMat4(), M_PI_4, mvVec3{ 1.0f, 1.0f, 1.0f });
     texturedCube.diffuseTexture = mvGetTextureAsset(&am, "../../Resources/test_image.png");
-    u32 cubeIndex = mvRegistryMeshAsset(&am, texturedCube);
+
+    dshadowCamera.info.directShadowView = mvLookAtRH(orthoCamera.pos, orthoCamera.pos + orthoCamera.dir, orthoCamera.up);
+    dshadowCamera.info.directShadowProjection = mvOrthoRH(orthoCamera.left, orthoCamera.right, orthoCamera.bottom, orthoCamera.top, orthoCamera.nearZ, orthoCamera.farZ);
 
     mvTimer timer;
     while (true)
     {
         const auto dt = timer.mark() * 1.0f;
 
-        am.meshes[cubeIndex].mesh.rot.y += dt;
+        texturedCube_rot.x += dt;
+        texturedCube_rot.y += dt;
+        texturedCubeTrans = mvTranslate(mvIdentityMat4(), texturedCube_pos) 
+            * mvRotate(mvIdentityMat4(), texturedCube_rot.x, mvVec3{ 1.0f, 0.0f, 0.0f }) 
+            * mvRotate(mvIdentityMat4(), texturedCube_rot.y, mvVec3{ 0.0f, 1.0f, 0.0f });
 
         if (const auto ecode = mvProcessViewportEvents()) break;
 
@@ -117,6 +130,7 @@ int main()
 
         mvMat4 viewMatrix = mvBuildCameraMatrix(camera);
         mvMat4 projMatrix = mvBuildProjectionMatrix(camera);
+        mv_local_persist mvMat4 identityMat = mvIdentityMat4();
 
         //-----------------------------------------------------------------------------
         // clear passes
@@ -133,9 +147,15 @@ int main()
 
         // controls
         ImGui::Begin("Light Controls");
-        if (ImGui::SliderFloat3("Position", &light.info.viewLightPos.x, -25.0f, 25.0f))
+        if (ImGui::SliderFloat3("Position", &light.info.viewLightPos.x, -25.0f, 50.0f))
+        {
             perspecCamera.pos = { light.info.viewLightPos.x, light.info.viewLightPos.y, light.info.viewLightPos.z };
-        ImGui::SliderFloat3("DLight", &orthoCamera.dir.x, -1.0f, 1.0f);
+            lightTransform = mvTranslate(mvIdentityMat4(), perspecCamera.pos);
+        }
+        if (ImGui::SliderFloat3("DLight", &orthoCamera.dir.x, -1.0f, 1.0f))
+        {
+            dshadowCamera.info.directShadowView = mvLookAtRH(orthoCamera.pos, orthoCamera.pos + orthoCamera.dir, orthoCamera.up);
+        }
         ImGui::End();
 
         //-----------------------------------------------------------------------------
@@ -143,11 +163,12 @@ int main()
         //-----------------------------------------------------------------------------
         mvRenderer_BeginPass(directionalShadowPass);
 
-        for (int i = 0; i < am.meshCount; i++)
-        {
-            if(i != skyboxPass.mesh) // skip skybox
-                mvRenderer_RenderMeshShadows(am, am.meshes[i].mesh, dshadowCamera.info.directShadowView, dshadowCamera.info.directShadowProjection);
-        }
+        //mvRenderer_RenderMeshShadows(am, room, roomTransform, dshadowCamera.info.directShadowView, dshadowCamera.info.directShadowProjection);
+        mvRenderer_RenderMeshShadows(am, texturedQuad, texturedQuadTrans, mvBuildCameraMatrix(orthoCamera), mvBuildProjectionMatrix(orthoCamera));
+        mvRenderer_RenderMeshShadows(am, texturedCube, texturedCubeTrans, mvBuildCameraMatrix(orthoCamera), mvBuildProjectionMatrix(orthoCamera));
+
+        for (int i = 0; i < am.sceneCount; i++)
+             mvRenderer_RenderSceneShadows(am, am.scenes[i].scene, mvBuildCameraMatrix(orthoCamera), mvBuildProjectionMatrix(orthoCamera));
 
         mvRenderer_EndPass();
 
@@ -161,11 +182,12 @@ int main()
             mvVec3 look_target = perspecCamera.pos + omniShadowMap.cameraDirections[i];
             mvMat4 camera_matrix = mvLookAtLH(perspecCamera.pos, look_target, omniShadowMap.cameraUps[i]);
 
-            for (int i = 0; i < am.meshCount; i++)
-            {
-                if (i != skyboxPass.mesh) // skip skybox
-                    mvRenderer_RenderMeshShadows(am, am.meshes[i].mesh, camera_matrix, mvPerspectiveLH(M_PI_2, 1.0f, 0.5f, 100.0f));
-            }
+            //mvRenderer_RenderMeshShadows(am, room, roomTransform, camera_matrix, mvPerspectiveLH(M_PI_2, 1.0f, 0.5f, 100.0f));
+            mvRenderer_RenderMeshShadows(am, texturedQuad, texturedQuadTrans, camera_matrix, mvPerspectiveLH(M_PI_2, 1.0f, 0.5f, 100.0f));
+            mvRenderer_RenderMeshShadows(am, texturedCube, texturedCubeTrans, camera_matrix, mvPerspectiveLH(M_PI_2, 1.0f, 0.5f, 100.0f));
+
+            for (int i = 0; i < am.sceneCount; i++)
+                    mvRenderer_RenderSceneShadows(am, am.scenes[i].scene, camera_matrix, mvPerspectiveLH(M_PI_2, 1.0f, 0.5f, 100.0f));
 
             mvRenderer_EndPass();
         }
@@ -183,12 +205,14 @@ int main()
                                                     
         mvBindSlot_tsPS(directionalShadowMap, 3u, 1u);
         mvBindSlot_tsPS(omniShadowMap, 4u, 2u);       
-        
-        for (int i = 0; i < am.meshCount; i++)
-        {
-            if (i != skyboxPass.mesh)
-                mvRenderer_RenderMesh(am, am.meshes[i].mesh, viewMatrix, projMatrix);
-        }
+
+        //mvRenderer_RenderMesh(am, room, roomTransform, viewMatrix, projMatrix);
+        mvRenderer_RenderMesh(am, texturedQuad, texturedQuadTrans, viewMatrix, projMatrix);
+        mvRenderer_RenderMesh(am, texturedCube, texturedCubeTrans, viewMatrix, projMatrix);
+        mvRenderer_RenderMesh(am, *light.mesh, lightTransform, viewMatrix, projMatrix);
+
+        for (int i = 0; i < am.sceneCount; i++)
+                mvRenderer_RenderScene(am, am.scenes[i].scene, viewMatrix, projMatrix);
 
         mvRenderer_EndPass();
 

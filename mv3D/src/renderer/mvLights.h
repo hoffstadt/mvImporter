@@ -30,7 +30,7 @@ struct mvDirectionLightInfo
 {
 
     f32    diffuseIntensity = 1.0f;
-    mvVec3 viewLightDir = { 0.0f, 1.0f, 0.0f };
+    mvVec3 viewLightDir = { 0.0f, -1.0f, 0.0f };
     //-------------------------- ( 16 bytes )
 
     mvVec3 diffuseColor = { 1.0f, 1.0f, 1.0f };

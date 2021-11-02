@@ -11,6 +11,9 @@
 void
 mvLoadOBJAssets(mvAssetManager& assetManager, const std::string& root, const std::string& file)
 {
+    u32 nodeOffset = assetManager.nodeCount;
+    u32 meshOffset = assetManager.meshCount;
+
     std::vector<mvAssetID> diffuseTextureMaps;
     std::vector<mvAssetID> normalTextureMaps;
     std::vector<mvAssetID> specularTextureMaps;
@@ -51,8 +54,25 @@ mvLoadOBJAssets(mvAssetManager& assetManager, const std::string& root, const std
         }
 
     }
+   
+    mvScene newScene = mvCreateScene();
+    newScene.nodeCount = objModel.meshes.size();
+    for (i32 i = 0; i < newScene.nodeCount; i++)
+    {
+        newScene.nodes[i] = i + nodeOffset;
+    }
+    mvRegistrySceneAsset(&assetManager, newScene);
 
-    
+    for (u32 currentNode = 0u; currentNode < objModel.meshes.size(); currentNode++)
+    {
+        mvNode newNode{};
+        newNode.name = objModel.meshes[currentNode]->name;
+        newNode.mesh = newScene.nodes[currentNode] - nodeOffset + meshOffset;
+        newNode.childCount = 0;
+        mvRegistryNodeAsset(&assetManager, newNode);
+    }
+
+
 }
 
 mvMesh
@@ -98,13 +118,20 @@ mvCreateTexturedCube(mvAssetManager& assetManager, f32 size)
     };
 
     static auto indices = std::vector<u32>{
-        0,  2,  1,  2,  3,  1,
-        4,  5,  7,  4,  7,  6,
-        8, 10,  9, 10, 11,  9,
-        12, 13, 15, 12, 15, 14,
-        16, 17, 18, 18, 17, 19,
-        20, 23, 21, 20, 22, 23
+        1,  2,  0,  1,  3,  2,
+        7,  5,  4,  6,  7,  4,
+        9, 10,  8, 9, 11,  10,
+        15, 13, 12, 14, 15, 12,
+        18, 17, 16, 19, 17, 18,
+        21, 23, 20, 23, 22, 20
     };
+
+    //0, 2, 1, 2, 3, 1,
+    //    4, 5, 7, 4, 7, 6,
+    //    8, 10, 9, 10, 11, 9,
+    //    12, 13, 15, 12, 15, 14,
+    //    16, 17, 18, 18, 17, 19,
+    //    20, 23, 21, 20, 22, 23
 
     for (size_t i = 0; i < indices.size(); i += 3)
     {
@@ -162,8 +189,8 @@ mvCreateTexturedQuad(mvAssetManager& assetManager, f32 size)
     };
 
     static auto indices = std::vector<u32>{
-        1, 2, 0,
-        3, 1, 0
+        1, 0, 2,
+        3, 0, 1
     };
 
     for (size_t i = 0; i < indices.size(); i += 3)
@@ -191,6 +218,82 @@ mvCreateTexturedQuad(mvAssetManager& assetManager, f32 size)
     mesh.pbr = false;
     mesh.vertexBuffer = mvGetBufferAsset(&assetManager, vertices.data(), vertices.size() * sizeof(f32), D3D11_BIND_VERTEX_BUFFER, "textured_quad_vertex");
     mesh.indexBuffer = mvGetBufferAsset(&assetManager, indices.data(), indices.size()*sizeof(u32), D3D11_BIND_INDEX_BUFFER, "textured_quad_index");
+
+    return mesh;
+}
+
+mvMesh
+mvCreateRoom(mvAssetManager& assetManager, f32 size)
+{
+
+    mvVertexLayout layout = mvCreateVertexLayout(
+        {
+            mvVertexElement::Position3D,
+            mvVertexElement::Normal,
+            mvVertexElement::Texture2D,
+            mvVertexElement::Tangent,
+            mvVertexElement::Bitangent
+        }
+    );
+
+    const float side = size;
+    auto vertices = std::vector<f32>{
+         0.0f,  0.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, // 0
+         0.0f,  side, 0.0f, 0.0f, 0.0f, -1.0f, 1.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, // 1
+         0.0f,  side, side, 0.0f, 0.0f, -1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, // 2
+         0.0f,  0.0f, side, 0.0f, 0.0f, -1.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, // 3
+         0.0f,  0.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, // 4
+         0.0f,  side, 0.0f, 0.0f, 0.0f, -1.0f, 1.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, // 5
+         side,  0.0f, 0.0f, 0.0f, 0.0f, -1.0f, 1.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, // 6
+         side,  side, 0.0f, 0.0f, 0.0f, -1.0f, 1.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, // 7
+
+         0.0f,  0.0f, side, 0.0f, 0.0f, -1.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, // 8
+         0.0f,  0.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, // 9
+         side,  0.0f, 0.0f, 0.0f, 0.0f, -1.0f, 1.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, // 10
+         side,  0.0f, side, 0.0f, 0.0f, -1.0f, 1.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, // 11
+
+         side,  side, 0.0f, 0.0f, 0.0f, -1.0f, 1.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, // 12
+         side,  0.0f, 0.0f, 0.0f, 0.0f, -1.0f, 1.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, // 13
+         side,  0.0f, side, 0.0f, 0.0f, -1.0f, 1.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, // 14
+         side,  side, side, 0.0f, 0.0f, -1.0f, 1.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, // 15
+    };
+
+    static auto indices = std::vector<u32>{
+        0, 1, 2,
+        3, 0, 2,
+        4, 6, 7,
+        4, 7, 5,
+        8, 11, 9,
+        9, 11, 10,
+        14, 15, 13,
+        15, 12, 13
+    };
+
+    for (size_t i = 0; i < indices.size(); i += 3)
+    {
+        mvVec3 p0 = { vertices[14 * indices[i]], vertices[14 * indices[i] + 1], vertices[14 * indices[i] + 2] };
+        mvVec3 p1 = { vertices[14 * indices[i + 1]], vertices[14 * indices[i + 1] + 1], vertices[14 * indices[i + 1] + 2] };
+        mvVec3 p2 = { vertices[14 * indices[i + 2]], vertices[14 * indices[i + 2] + 1], vertices[14 * indices[i + 2] + 2] };
+
+        mvVec3 n = mvNormalize(mvCross(p1 - p0, p2 - p0));
+        vertices[14 * indices[i] + 3] = n[0];
+        vertices[14 * indices[i] + 4] = n[1];
+        vertices[14 * indices[i] + 5] = n[2];
+        vertices[14 * indices[i + 1] + 3] = n[0];
+        vertices[14 * indices[i + 1] + 4] = n[1];
+        vertices[14 * indices[i + 1] + 5] = n[2];
+        vertices[14 * indices[i + 2] + 3] = n[0];
+        vertices[14 * indices[i + 2] + 4] = n[1];
+        vertices[14 * indices[i + 2] + 5] = n[2];
+    }
+
+    mvMesh mesh{};
+
+    mesh.name = "room";
+    mesh.layout = layout;
+    mesh.pbr = false;
+    mesh.vertexBuffer = mvGetBufferAsset(&assetManager, vertices.data(), vertices.size() * sizeof(f32), D3D11_BIND_VERTEX_BUFFER, "room_vertex");
+    mesh.indexBuffer = mvGetBufferAsset(&assetManager, indices.data(), indices.size() * sizeof(u32), D3D11_BIND_INDEX_BUFFER, "room_index");
 
     return mesh;
 }
@@ -282,6 +385,10 @@ mvFillBuffer(mvGLTFModel& model, mvGLTFAccessor& accessor, std::vector<W>& outBu
 void
 mvLoadGLTFAssets(mvAssetManager& assetManager, mvGLTFModel& model)
 {
+
+    u32 nodeOffset = assetManager.nodeCount;
+    u32 meshOffset = assetManager.meshCount;
+
     for (u32 currentMesh = 0u; currentMesh < model.mesh_count; currentMesh++)
     {
         mvGLTFMesh& glmesh = model.meshes[currentMesh];
@@ -520,25 +627,25 @@ mvLoadGLTFAssets(mvAssetManager& assetManager, mvGLTFModel& model)
         }
 
         // left hand
-        for (size_t i = 0; i < vertexBuffer.size(); i += 14)
-        {
-            vertexBuffer[i + 2]  *= -1.0f;                    // z
-            vertexBuffer[i + 5]  *= -1.0f;                    // nz
-            vertexBuffer[i + 10] *= -1.0f;                    // tz
-            vertexBuffer[i + 13] *= -1.0f;                    // bz
-            //vertexBuffer[i + 7] = 1.0f - vertexBuffer[i + 7]; // v
-        }
+        //for (size_t i = 0; i < vertexBuffer.size(); i += 14)
+        //{
+        //    vertexBuffer[i + 2]  *= -1.0f;                    // z
+        //    vertexBuffer[i + 5]  *= -1.0f;                    // nz
+        //    vertexBuffer[i + 10] *= -1.0f;                    // tz
+        //    vertexBuffer[i + 13] *= -1.0f;                    // bz
+        //    //vertexBuffer[i + 7] = 1.0f - vertexBuffer[i + 7]; // v
+        //}
 
         // left hand
-        for (size_t i = 0; i < indexBuffer.size(); i += 3)
-        {
+        //for (size_t i = 0; i < indexBuffer.size(); i += 3)
+        //{
 
-            size_t i0 = indexBuffer[i];
-            size_t i2 = indexBuffer[i + 2];
+        //    size_t i0 = indexBuffer[i];
+        //    size_t i2 = indexBuffer[i + 2];
 
-            indexBuffer[i] = i2;
-            indexBuffer[i + 2] = i0;
-        }
+        //    indexBuffer[i] = i2;
+        //    indexBuffer[i + 2] = i0;
+        //}
         mvMesh newMesh{};
         newMesh.pbr = true;
         newMesh.name = glmesh.name;
@@ -555,13 +662,21 @@ mvLoadGLTFAssets(mvAssetManager& assetManager, mvGLTFModel& model)
         // upload index buffer
         if (glmesh.material_index != -1)
         {
+
             mvGLTFMaterial& material = model.materials[glmesh.material_index];
+
+            mvPBRMaterialData materialData{};
+            materialData.albedo = *(mvVec4*)material.base_color_factor;
+            materialData.metalness = material.metallic_factor;
+            materialData.roughness = material.roughness_factor;
+
             if (material.base_color_texture != -1)
             {
                 mvGLTFTexture& texture = model.textures[material.base_color_texture];
                 std::string uri = model.images[texture.image_index].uri;
                 newMesh.albedoTexture = mvGetTextureAsset(&assetManager, model.root + uri);
                 newMesh.diffuseTexture = newMesh.albedoTexture;
+                materialData.useAlbedoMap = true;
             }
 
             if (material.normal_texture != -1)
@@ -569,6 +684,7 @@ mvLoadGLTFAssets(mvAssetManager& assetManager, mvGLTFModel& model)
                 mvGLTFTexture& texture = model.textures[material.normal_texture];
                 std::string uri = model.images[texture.image_index].uri;
                 newMesh.normalTexture = mvGetTextureAsset(&assetManager, model.root + uri);
+                materialData.useNormalMap = true;
             }
 
             if (material.metallic_roughness_texture != -1)
@@ -576,7 +692,11 @@ mvLoadGLTFAssets(mvAssetManager& assetManager, mvGLTFModel& model)
                 mvGLTFTexture& texture = model.textures[material.metallic_roughness_texture];
                 std::string uri = model.images[texture.image_index].uri;
                 newMesh.metalRoughnessTexture = mvGetTextureAsset(&assetManager, model.root + uri);
+                materialData.useRoughnessMap = true;
+                materialData.useMetalMap = true;
             }
+
+            newMesh.pbrMaterialID = mvGetPBRMaterialAsset(&assetManager, "Phong_VS.hlsl", "PBR_PS.hlsl", materialData);
 
         }
         
@@ -590,4 +710,73 @@ mvLoadGLTFAssets(mvAssetManager& assetManager, mvGLTFModel& model)
         mvRegistryMeshAsset(&assetManager, newMesh);
     }
 
+    for (u32 currentNode = 0u; currentNode < model.node_count; currentNode++)
+    {
+        mvGLTFNode& glnode = model.nodes[currentNode];
+
+        mvNode newNode{};
+        newNode.name = glnode.name;
+        if(glnode.mesh_index > -1)
+            newNode.mesh = glnode.mesh_index;
+        newNode.childCount = glnode.child_count;
+
+        for (i32 i = 0; i < glnode.child_count; i++)
+            newNode.children[i] = (mvAssetID)glnode.children[i] + nodeOffset;
+
+        newNode.rotation = *(mvVec4*)(glnode.rotation);
+        newNode.scale = *(mvVec3*)(glnode.scale);
+        newNode.translation = *(mvVec3*)(glnode.translation);
+
+        if (glnode.hadMatrix)
+        {
+            newNode.matrix = *(mvMat4*)(glnode.matrix);
+        }
+        else
+        {
+
+            float x2 = newNode.rotation.x * newNode.rotation.x;
+            float xy = newNode.rotation.x * newNode.rotation.y;
+            float xz = newNode.rotation.x * newNode.rotation.z;
+            float xw = newNode.rotation.x * newNode.rotation.w;
+            float y2 = newNode.rotation.y * newNode.rotation.y;
+            float yz = newNode.rotation.y * newNode.rotation.z;
+            float yw = newNode.rotation.y * newNode.rotation.w;
+            float z2 = newNode.rotation.z * newNode.rotation.z;
+            float zw = newNode.rotation.z * newNode.rotation.w;
+            float w2 = newNode.rotation.w * newNode.rotation.w;
+            float m00 = x2 - y2 - z2 + w2;
+            float m01 = 2.0f * (xy - zw);
+            float m02 = 2.0f * (xz + yw);
+            float m10 = 2.0f * (xy + zw);
+            float m11 = -x2 + y2 - z2 + w2;
+            float m12 = 2.0f * (yz - xw);
+            float m20 = 2.0f * (xz - yw);
+            float m21 = 2.0f * (yz + xw);
+            float m22 = -x2 - y2 + z2 + w2;
+
+            mvMat4 rotationMat = mvCreateMatrix(
+                m00, m01, m02, 0.0f,
+                m10, m11, m12, 0.0f,
+                m20, m21, m22, 0.0f,
+                0.0f, 0.0f, 0.0f, 1.0f);
+
+            newNode.matrix = mvTranslate(mvIdentityMat4(), newNode.translation) * rotationMat * mvScale(mvIdentityMat4(), newNode.scale);
+            //newNode.matrix = mvScale(mvIdentityMat4(), newNode.scale) * rotationMat * mvScale(mvIdentityMat4(), newNode.translation);
+        }
+
+        mvRegistryNodeAsset(&assetManager, newNode);
+    }
+
+    for (u32 currentScene = 0u; currentScene < model.scene_count; currentScene++)
+    {
+        mvGLTFScene& glscene = model.scenes[currentScene];
+
+        mvScene newScene = mvCreateScene();
+        newScene.nodeCount = glscene.node_count;
+
+        for (i32 i = 0; i < glscene.node_count; i++)
+            newScene.nodes[i] = glscene.nodes[i] + nodeOffset;
+
+        mvRegistrySceneAsset(&assetManager, newScene);
+    }
 }

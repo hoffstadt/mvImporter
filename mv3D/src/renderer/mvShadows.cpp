@@ -87,6 +87,7 @@ mvCreateShadowMap(u32 resolution)
     D3D11_RASTERIZER_DESC shadowRenderStateDesc;
     ZeroMemory(&shadowRenderStateDesc, sizeof(D3D11_RASTERIZER_DESC));
     shadowRenderStateDesc.CullMode = D3D11_CULL_FRONT;
+    shadowRenderStateDesc.FrontCounterClockwise = TRUE;
     shadowRenderStateDesc.FillMode = D3D11_FILL_SOLID;
     shadowRenderStateDesc.DepthClipEnable = true;
     shadowRenderStateDesc.DepthBias = 50;
@@ -149,8 +150,9 @@ mvCreateShadowCubeMap(u32 resolution)
 
     D3D11_RASTERIZER_DESC shadowRenderStateDesc;
     ZeroMemory(&shadowRenderStateDesc, sizeof(D3D11_RASTERIZER_DESC));
-    shadowRenderStateDesc.CullMode = D3D11_CULL_BACK;
+    shadowRenderStateDesc.CullMode = D3D11_CULL_FRONT;
     shadowRenderStateDesc.FillMode = D3D11_FILL_SOLID;
+    shadowRenderStateDesc.FrontCounterClockwise = FALSE;
     shadowRenderStateDesc.DepthClipEnable = true;
     shadowRenderStateDesc.DepthBias = 50;
     shadowRenderStateDesc.DepthBiasClamp = 0.1f;
@@ -188,19 +190,19 @@ mvCreateShadowCubeMap(u32 resolution)
         shadowCube.comparisonSampler.GetAddressOf()
     );
 
-    shadowCube.cameraDirections[0] = {  1.0f,  0.0f,  0.0f };
-    shadowCube.cameraDirections[1] = { -1.0f,  0.0f,  0.0f };
-    shadowCube.cameraDirections[2] = {  0.0f,  1.0f,  0.0f };
-    shadowCube.cameraDirections[3] = {  0.0f, -1.0f,  0.0f };
-    shadowCube.cameraDirections[4] = {  0.0f,  0.0f,  1.0f };
-    shadowCube.cameraDirections[5] = {  0.0f,  0.0f, -1.0f };
+    shadowCube.cameraDirections[0] = { 0.0f,  0.0f,  -1.0f };
+    shadowCube.cameraDirections[1] = { 0.0f,  0.0f,  1.0f };
+    shadowCube.cameraDirections[2] = { 0.0f,  1.0f,  0.0f };
+    shadowCube.cameraDirections[3] = { 0.0f,  -1.0f,  0.0f };
+    shadowCube.cameraDirections[4] = { 1.0f,  0.0f,  0.0f };
+    shadowCube.cameraDirections[5] = { -1.0f,  0.0f,   0.0f };
 
-    shadowCube.cameraUps[0] = { 0.0f, 1.0f,  0.0f };
-    shadowCube.cameraUps[1] = { 0.0f, 1.0f,  0.0f };
-    shadowCube.cameraUps[2] = { 0.0f, 0.0f, -1.0f };
-    shadowCube.cameraUps[3] = { 0.0f, 0.0f,  1.0f };
-    shadowCube.cameraUps[4] = { 0.0f, 1.0f,  0.0f };
-    shadowCube.cameraUps[5] = { 0.0f, 1.0f,  0.0f };
+    shadowCube.cameraUps[0] = { 0.0f,  1.0f,  0.0f };
+    shadowCube.cameraUps[1] = { 0.0f,  1.0f,  0.0f };
+    shadowCube.cameraUps[2] = { 1.0f, 0.0f,   0.0f };
+    shadowCube.cameraUps[3] = { 1.0f, 0.0f,   0.0f };
+    shadowCube.cameraUps[4] = { 0.0f,  1.0f,  0.0f };
+    shadowCube.cameraUps[5] = { 0.0f,  1.0f,  0.0f };
 
     return shadowCube;
 }

@@ -215,6 +215,7 @@ struct mvGLTFNode
 	mvF32       rotation[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
 	mvF32       scale[3]    = { 1.0f, 1.0f, 1.0f};
 	mvF32       translation[3]    = { 0.0f, 0.0f, 0.0f};
+	bool        hadMatrix = false;
 };
 
 struct mvGLTFScene
@@ -298,24 +299,25 @@ struct mvStack
 
 struct mvToken
 {
-	char        value[256];
+	char        value[1024];
 	mvTokenType type = MV_JSON_NONE;
 };
 
 struct mvJsonValue
 {
-	char value[256];
+	char value[1024];
 };
 
 struct mvJsonMember
 {
-	char       name[256];
+	char       name[1024];
 	mvJsonType type = MV_JSON_TYPE_NONE;
 	int        index = -1;
 	mvJsonContext* context = nullptr;
 
 	operator char*         ();
 	operator int           ();
+	operator mvU32         ();
 	operator float         ();
 	operator mvJsonObject& ();
 };
@@ -351,41 +353,44 @@ ParseForTokens(char* rawData, std::vector<mvToken>& tokens)
 	char basicTokens[] = { '{', '}', '[', ']', ':', ',' };
 
 	bool inString = false;
-	char buffer[256];
+	char buffer[1024];
 	int  bufferPos = 0;
 
 	while (currentChar != 0)
 	{
 		bool tokenFound = false;
-		for (int i = 0; i < 6; i++)
+		if (!inString)
 		{
-			if (currentChar == basicTokens[i])
+			for (int i = 0; i < 6; i++)
 			{
-				if (bufferPos != 0)
+				if (currentChar == basicTokens[i])
 				{
-					mvToken primitivetoken{};
-					primitivetoken.type = MV_JSON_PRIMITIVE;
-					for (int i = 0; i < bufferPos; i++)
+					if (bufferPos != 0)
 					{
-						primitivetoken.value[i] = buffer[i];
+						mvToken primitivetoken{};
+						primitivetoken.type = MV_JSON_PRIMITIVE;
+						for (int i = 0; i < bufferPos; i++)
+						{
+							primitivetoken.value[i] = buffer[i];
+						}
+						tokens.push_back(primitivetoken);
+						bufferPos = 0;
+						buffer[0] = 0;
 					}
-					tokens.push_back(primitivetoken);
-					bufferPos = 0;
-					buffer[0] = 0;
+
+					mvToken token{};
+					if (currentChar == '{') token.type = MV_JSON_LEFT_BRACE;
+					else if (currentChar == '}') token.type = MV_JSON_RIGHT_BRACE;
+					else if (currentChar == '[') token.type = MV_JSON_LEFT_BRACKET;
+					else if (currentChar == ']') token.type = MV_JSON_RIGHT_BRACKET;
+					else if (currentChar == ',') token.type = MV_JSON_COMMA;
+					else if (currentChar == ':') token.type = MV_JSON_COLON;
+
+					token.value[0] = currentChar;
+					tokens.push_back(token);
+					tokenFound = true;
+					break;
 				}
-
-				mvToken token{};
-				if (currentChar == '{') token.type = MV_JSON_LEFT_BRACE;
-				else if (currentChar == '}') token.type = MV_JSON_RIGHT_BRACE;
-				else if (currentChar == '[') token.type = MV_JSON_LEFT_BRACKET;
-				else if (currentChar == ']') token.type = MV_JSON_RIGHT_BRACKET;
-				else if (currentChar == ',') token.type = MV_JSON_COMMA;
-				else if (currentChar == ':') token.type = MV_JSON_COLON;
-
-				token.value[0] = currentChar;
-				tokens.push_back(token);
-				tokenFound = true;
-				break;
 			}
 		}
 
@@ -453,15 +458,19 @@ RemoveWhiteSpace(char* rawData, char* spacesRemoved)
 	while (currentChar != 0)
 	{
 
-
 		if (currentChar == '"' && insideString)
 			insideString = false;
 		else if (currentChar == '"')
 			insideString = true;
 
 		if (currentChar == ' ' || currentChar == '\n'
-			|| currentChar == '\r' || currentChar == '\t' && !insideString)
+			|| currentChar == '\r' || currentChar == '\t')
 		{
+			if (insideString)
+			{
+				spacesRemoved[newCursor] = rawData[currentPos];
+				newCursor++;
+			}
 			currentPos++;
 		}
 		else
@@ -800,6 +809,12 @@ mvJsonMember::operator int()
 	return atoi(context->primitiveValues[index].value);
 }
 
+mvJsonMember::operator mvU32()
+{
+	int value = atoi(context->primitiveValues[index].value);
+	return (mvU32)value;
+}
+
 mvJsonMember::operator float()
 {
 	return atof(context->primitiveValues[index].value);
@@ -882,7 +897,7 @@ namespace mvImp {
 
 				for (int j = 0; j < childCount; j++)
 				{
-					int child = jnode.getMember("children")[j];
+					mvU32 child = jnode["children"][j];
 					node.children[node.child_count] = child;
 					node.child_count++;
 				}
@@ -910,6 +925,7 @@ namespace mvImp {
 
 			if (jnode.doesMemberExist("matrix"))
 			{
+				node.hadMatrix = true;
 				mvU32 compCount = jnode["matrix"].members.size();
 
 				for (int j = 0; j < compCount; j++)
