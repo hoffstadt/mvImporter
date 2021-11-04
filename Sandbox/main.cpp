@@ -4,7 +4,7 @@ mv_internal const char* gltfModel = "FlightHelmet";
 mv_internal const char* sponzaPath = "C:/dev/MarvelAssets/Sponza/";
 mv_internal const char* gltfPath = "C://dev//glTF-Sample-Models//2.0//";
 mv_internal b8 loadGLTF = false;
-mv_internal b8 loadSponza = false;
+mv_internal b8 loadSponza = true;
 mv_internal f32 shadowWidth = 100.0f;
 
 mvGLTFModel LoadTestModel(const char* name);
@@ -38,8 +38,9 @@ int main()
     // main camera
     mvCamera camera{};
     camera.pos = { -13.5f, 6.0f, 3.5f };
+    camera.front = { 0.0f, 0.0f, -1.0f };
     camera.pitch = 0.0f;
-    camera.yaw = M_PI;
+    camera.yaw = 0.0f;
     camera.aspect = GContext->viewport.width / GContext->viewport.height;
 
     // lights
@@ -119,17 +120,10 @@ int main()
             skyboxPass.basePass.viewport.Height = GContext->viewport.height;
         }
 
-        // for now, we will just use imgui's input
-        if (ImGui::GetIO().KeysDown['W']) mvTranslateCamera(camera, 0.0f, 0.0f, dt);
-        if (ImGui::GetIO().KeysDown['S']) mvTranslateCamera(camera, 0.0f, 0.0f, -dt);
-        if (ImGui::GetIO().KeysDown['D']) mvTranslateCamera(camera, dt, 0.0f, 0.0f);
-        if (ImGui::GetIO().KeysDown['A']) mvTranslateCamera(camera, -dt, 0.0f, 0.0f);
-        if (ImGui::GetIO().KeysDown['R']) mvTranslateCamera(camera, 0.0f, dt, 0.0f);
-        if (ImGui::GetIO().KeysDown['F']) mvTranslateCamera(camera, 0.0f, -dt, 0.0f);
-        if (ImGui::IsMouseDown(ImGuiMouseButton_Left) && !ImGui::GetIO().WantCaptureMouse) mvRotateCamera(camera, ImGui::GetIO().MouseDelta.x, ImGui::GetIO().MouseDelta.y);
+        mvUpdateCameraFPSCamera(camera, dt, 12.0f, 0.004f);
 
-        mvMat4 viewMatrix = mvBuildCameraMatrix(camera);
-        mvMat4 projMatrix = mvBuildProjectionMatrix(camera);
+        mvMat4 viewMatrix = mvCreateFPSView(camera);
+        mvMat4 projMatrix = mvCreateLookAtProjection(camera);
         mv_local_persist mvMat4 identityMat = mvIdentityMat4();
 
         //-----------------------------------------------------------------------------
@@ -170,11 +164,11 @@ int main()
         mvRenderer_BeginPass(directionalShadowPass);
 
         //mvRenderer_RenderMeshShadows(am, room, roomTransform, dshadowCamera.info.directShadowView, dshadowCamera.info.directShadowProjection);
-        mvRenderer_RenderMeshShadows(am, texturedQuad, texturedQuadTrans, mvBuildCameraMatrix(orthoCamera), mvBuildProjectionMatrix(orthoCamera));
-        mvRenderer_RenderMeshShadows(am, texturedCube, texturedCubeTrans, mvBuildCameraMatrix(orthoCamera), mvBuildProjectionMatrix(orthoCamera));
+        mvRenderer_RenderMeshShadows(am, texturedQuad, texturedQuadTrans, mvCreateOrthoView(orthoCamera), mvCreateOrthoProjection(orthoCamera));
+        mvRenderer_RenderMeshShadows(am, texturedCube, texturedCubeTrans, mvCreateOrthoView(orthoCamera), mvCreateOrthoProjection(orthoCamera));
 
         for (int i = 0; i < am.sceneCount; i++)
-             mvRenderer_RenderSceneShadows(am, am.scenes[i].scene, mvBuildCameraMatrix(orthoCamera), mvBuildProjectionMatrix(orthoCamera));
+             mvRenderer_RenderSceneShadows(am, am.scenes[i].scene, mvCreateOrthoView(orthoCamera), mvCreateOrthoProjection(orthoCamera));
 
         mvRenderer_EndPass();
 
@@ -203,7 +197,7 @@ int main()
         //-----------------------------------------------------------------------------
         mvRenderer_BeginPass(lambertian);
 
-        mvBindSlot_bVS(1u, dshadowCamera, mvBuildCameraMatrix(perspecCamera), mvBuildCameraMatrix(orthoCamera), mvBuildProjectionMatrix(orthoCamera));
+        mvBindSlot_bVS(1u, dshadowCamera, mvCreateLookAtView(perspecCamera), mvCreateOrthoView(orthoCamera), mvCreateOrthoProjection(orthoCamera));
 
         mvBindSlot_bPS(0u, light, viewMatrix);        
         mvBindSlot_bPS(2u, dlight, viewMatrix);       

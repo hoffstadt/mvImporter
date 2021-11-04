@@ -56,7 +56,7 @@ mvMat4::operator[](i32 index)
 }
 
 mvVec2
-operator+(mvVec2& left, mvVec2& right)
+operator+(mvVec2 left, mvVec2 right)
 {
 	mvVec2 result = left;
 
@@ -67,7 +67,7 @@ operator+(mvVec2& left, mvVec2& right)
 }
 
 mvVec2
-operator-(mvVec2& left, mvVec2& right)
+operator-(mvVec2 left, mvVec2 right)
 {
 	mvVec2 result = left;
 
@@ -78,7 +78,7 @@ operator-(mvVec2& left, mvVec2& right)
 }
 
 mvVec2
-operator*(mvVec2& left, mvVec2& right)
+operator*(mvVec2 left, mvVec2 right)
 {
 	mvVec2 result = left;
 
@@ -89,7 +89,7 @@ operator*(mvVec2& left, mvVec2& right)
 }
 
 mvVec2
-operator*(mvVec2& left, f32 right)
+operator*(mvVec2 left, f32 right)
 {
 	mvVec2 result = left;
 
@@ -100,7 +100,7 @@ operator*(mvVec2& left, f32 right)
 }
 
 mvVec3 
-operator+(mvVec3& left, mvVec3& right)
+operator+(mvVec3 left, mvVec3 right)
 {
 	mvVec3 result = left;
 
@@ -112,7 +112,7 @@ operator+(mvVec3& left, mvVec3& right)
 }
 
 mvVec3 
-operator-(mvVec3& left, mvVec3& right)
+operator-(mvVec3 left, mvVec3 right)
 {
 	mvVec3 result = left;
 
@@ -124,7 +124,7 @@ operator-(mvVec3& left, mvVec3& right)
 }
 
 mvVec3 
-operator*(mvVec3& left, mvVec3& right)
+operator*(mvVec3 left, mvVec3 right)
 {
 	mvVec3 result = left;
 
@@ -136,7 +136,7 @@ operator*(mvVec3& left, mvVec3& right)
 }
 
 mvVec3
-operator*(mvVec3& left, f32 right)
+operator*(mvVec3 left, f32 right)
 {
 	mvVec3 result = left;
 
@@ -148,7 +148,7 @@ operator*(mvVec3& left, f32 right)
 }
 
 mvVec4 
-operator+(mvVec4& left, mvVec4& right)
+operator+(mvVec4 left, mvVec4 right)
 {
 	mvVec4 result = left;
 
@@ -161,7 +161,7 @@ operator+(mvVec4& left, mvVec4& right)
 }
 
 mvVec4 
-operator-(mvVec4& left, mvVec4& right)
+operator-(mvVec4 left, mvVec4 right)
 {
 	mvVec4 result = left;
 
@@ -174,7 +174,7 @@ operator-(mvVec4& left, mvVec4& right)
 }
 
 mvVec4 
-operator*(mvVec4& left, mvVec4& right)
+operator*(mvVec4 left, mvVec4 right)
 {
 	mvVec4 result = left;
 
@@ -187,7 +187,7 @@ operator*(mvVec4& left, mvVec4& right)
 }
 
 mvVec4 
-operator*(mvMat4& left, mvVec4& right)
+operator*(mvMat4 left, mvVec4 right)
 {
 	mvVec4 Mov0 = { right[0], right[0], right[0], right[0] };
 	mvVec4 Mov1 = { right[1], right[1], right[1], right[1] };
@@ -204,7 +204,7 @@ operator*(mvMat4& left, mvVec4& right)
 }
 
 mvVec4 
-operator*(mvVec4& left, f32 right)
+operator*(mvVec4 left, f32 right)
 {
 	mvVec4 result = left;
 
@@ -217,7 +217,7 @@ operator*(mvVec4& left, f32 right)
 }
 
 mvMat4 
-operator*(mvMat4& left, mvMat4& right)
+operator*(mvMat4 left, mvMat4 right)
 {
 	mvVec4 SrcA0 = left[0];
 	mvVec4 SrcA1 = left[1];
@@ -240,7 +240,7 @@ operator*(mvMat4& left, mvMat4& right)
 }
 
 mvMat4
-operator*(mvMat4& left, f32 right)
+operator*(mvMat4 left, f32 right)
 {
 	mvMat4 result = left;
 
@@ -265,7 +265,7 @@ mvIdentityMat4()
 }
 
 mvMat4 
-mvTranslate(mvMat4& m, mvVec3& v)
+mvTranslate(mvMat4 m, mvVec3 v)
 {
 	mvMat4 result = m;
 
@@ -279,7 +279,7 @@ mvTranslate(mvMat4& m, mvVec3& v)
 }
 
 mvMat4 
-mvRotate(mvMat4& m, f32 angle, mvVec3& v)
+mvRotate(mvMat4 m, f32 angle, mvVec3 v)
 {
 	const f32 a = angle;
 	const f32 c = cos(a);
@@ -355,7 +355,7 @@ mvYawPitchRoll(f32 yaw, f32 pitch, f32 roll)
 }
 
 mvMat4 
-mvScale(mvMat4& m, mvVec3& v)
+mvScale(mvMat4 m, mvVec3 v)
 {
 	mvMat4 result{};
 	result[0] = m[0] * v[0];
@@ -366,7 +366,7 @@ mvScale(mvMat4& m, mvVec3& v)
 }
 
 mvVec3 
-mvNormalize(mvVec3& v)
+mvNormalize(mvVec3 v)
 {
 	f32 length = sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
 	mvVec3 result{};
@@ -377,7 +377,7 @@ mvNormalize(mvVec3& v)
 }
 
 mvVec3 
-mvCross(mvVec3& v1, mvVec3& v2)
+mvCross(mvVec3 v1, mvVec3 v2)
 {
 	mvVec3 result{};
 	result.x = v1.y * v2.z - v2.y * v1.z;
@@ -387,13 +387,13 @@ mvCross(mvVec3& v1, mvVec3& v2)
 }
 
 f32
-mvDot(mvVec3& v1, mvVec3& v2)
+mvDot(mvVec3 v1, mvVec3 v2)
 {
 	return v1.x * v2.x + v1.y * v2.y + v1.z * v2.z;
 }
 
 mvMat4 
-mvLookAtLH(mvVec3& eye, mvVec3& center, mvVec3& up)
+mvLookAtLH(mvVec3 eye, mvVec3 center, mvVec3 up)
 {
 	mvVec3 f = mvNormalize(center - eye);
 	mvVec3 s = mvNormalize(mvCross(up, f));
@@ -416,40 +416,57 @@ mvLookAtLH(mvVec3& eye, mvVec3& center, mvVec3& up)
 }
 
 mvMat4
-mvLookAtRH(mvVec3& eye, mvVec3& center, mvVec3& up)
+mvLookAtRH(mvVec3 eye, mvVec3 center, mvVec3 up)
 {
 	mvVec3 zaxis = mvNormalize(center - eye);
 	mvVec3 xaxis = mvNormalize(mvCross(up, zaxis));
 	mvVec3 yaxis = mvCross(zaxis, xaxis);
 
-	mvMat4 translation = mvIdentityMat4();
-	translation[3][0] = -eye.x;
-	translation[3][1] = -eye.y;
-	translation[3][2] = -eye.z;
-
-	mvMat4 rotation = mvIdentityMat4();
+	mvMat4 viewMatrix = mvIdentityMat4();
 
 	// row 0
-	rotation[0][0] = xaxis.x;
-	rotation[1][0] = xaxis.y;
-	rotation[2][0] = xaxis.z;
+	viewMatrix[0][0] = xaxis.x;
+	viewMatrix[1][0] = xaxis.y;
+	viewMatrix[2][0] = xaxis.z;
+	viewMatrix[3][0] = -mvDot(xaxis, eye);
 
 	// row 1
-	rotation[0][1] = yaxis.x;
-	rotation[1][1] = yaxis.y;
-	rotation[2][1] = yaxis.z;
+	viewMatrix[0][1] = yaxis.x;
+	viewMatrix[1][1] = yaxis.y;
+	viewMatrix[2][1] = yaxis.z;
+	viewMatrix[3][1] = -mvDot(yaxis, eye);
 
 	// row 2
-	rotation[0][2] = zaxis.x;
-	rotation[1][2] = zaxis.y;
-	rotation[2][2] = zaxis.z;
+	viewMatrix[0][2] = zaxis.x;
+	viewMatrix[1][2] = zaxis.y;
+	viewMatrix[2][2] = zaxis.z;
+	viewMatrix[3][2] = -mvDot(zaxis, eye);
 
-	// row 3
-	//rotation[3][0] = -mvDot(xaxis, eye);
-	//rotation[3][1] = -mvDot(yaxis, eye);
-	//rotation[3][2] = mvDot(zaxis, eye);
+	return viewMatrix;
+}
 
-	return rotation * translation;
+mvMat4 
+mvFPSViewRH(mvVec3 eye, float pitch, float yaw)
+{
+
+	// I assume the values are already converted to radians.
+	float cosPitch = cos(pitch);
+	float sinPitch = sin(pitch);
+	float cosYaw = cos(yaw);
+	float sinYaw = sin(yaw);
+
+	mvVec3 xaxis = { cosYaw, 0, -sinYaw };
+	mvVec3 yaxis = { sinYaw * sinPitch, cosPitch, cosYaw * sinPitch };
+	mvVec3 zaxis = { sinYaw * cosPitch, -sinPitch, cosPitch * cosYaw };
+
+	mvMat4 viewMatrix = mvConstructMat4(
+		mvVec4{ xaxis.x, yaxis.x, zaxis.x, 0 },
+		mvVec4{ xaxis.y, yaxis.y, zaxis.y, 0 },
+		mvVec4{ xaxis.z, yaxis.z, zaxis.z, 0 },
+		mvVec4{ -mvDot(xaxis, eye), -mvDot(yaxis, eye), -mvDot(zaxis, eye), 1 }
+	);
+
+	return viewMatrix;
 }
 
 mvMat4 
@@ -566,45 +583,13 @@ mvInvert(mvMat4& m)
 }
 
 mvMat4
-mvConstructMat4(mvVec4& c0, mvVec4& c1, mvVec4& c2, mvVec4& c3)
+mvConstructMat4(mvVec4 c0, mvVec4 c1, mvVec4 c2, mvVec4 c3)
 {
 	mvMat4 result{};
 	result[0] = c0;
 	result[1] = c1;
 	result[2] = c2;
 	result[3] = c3;
-	return result;
-}
-
-mvMat4 
-mvSwitchHand(mvMat4& m)
-{
-	mvMat4 result = mvIdentityMat4();
-
-	// row 0
-	result[0][0] = m[0][0];
-	result[1][0] = m[1][0];
-	result[2][0] = m[2][0];
-	result[3][0] = m[3][0];
-
-	// row 1
-	result[0][1] = m[0][1];
-	result[1][1] = m[1][1];
-	result[2][1] = m[2][1];
-	result[3][1] = m[3][1];
-
-	// row 2
-	result[0][2] = m[0][2];
-	result[1][2] = m[1][2];
-	result[2][2] = m[2][2];
-	result[3][2] = m[3][2];
-
-	// row 3
-	result[0][3] = m[0][3];
-	result[1][3] = m[1][3];
-	result[2][3] = m[2][3];
-	result[3][3] = m[3][3];
-
 	return result;
 }
 

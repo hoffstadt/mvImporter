@@ -1,5 +1,6 @@
 #include "mvCamera.h"
 #include <algorithm>
+#include <imgui.h>
 
 template<typename T>
 static T
@@ -14,26 +15,26 @@ wrap_angle(T theta) noexcept
     return mod;
 }
 
+mvMat4 mvCreateFPSView(mvCamera& camera)
+{
+    return mvFPSViewRH(camera.pos, camera.pitch, camera.yaw);
+}
+
 mvMat4
-mvBuildCameraMatrix(mvOrthoCamera& camera)
+mvCreateOrthoView(mvOrthoCamera& camera)
 {
     return mvLookAtRH(camera.pos, camera.pos + camera.dir, camera.up);
 }
 
 mvMat4
-mvBuildProjectionMatrix(mvOrthoCamera& camera)
+mvCreateOrthoProjection(mvOrthoCamera& camera)
 {
     return mvOrthoRH(camera.left, camera.right, camera.bottom, camera.top, camera.nearZ, camera.farZ);
 }
 
 mvMat4
-mvBuildCameraMatrix(mvCamera& camera)
+mvCreateLookAtView(mvCamera& camera)
 {
-    //mvMat4 roll_pitch_yaw = mvYawPitchRoll(camera.yaw, camera.pitch, 0.0f);
-    //mvVec4 forward_base_vector = { 0.0f, 0.0f, 1.0f, 0.0f };
-    //mvVec4 look_vector = roll_pitch_yaw * forward_base_vector;
-    //mvVec3 lpos = { look_vector.x, look_vector.y, look_vector.z };
-
     mvVec3 direction{};
     direction.x = cos((camera.yaw)) * cos((camera.pitch));
     direction.y = sin((camera.pitch));
@@ -43,20 +44,59 @@ mvBuildCameraMatrix(mvCamera& camera)
 }
 
 mvMat4
-mvBuildProjectionMatrix(mvCamera& camera)
+mvCreateLookAtProjection(mvCamera& camera)
 {
-    return mvPerspectiveRH(mvRadians(45.0f), camera.aspect, 0.1f, 400.0f);
+    return mvPerspectiveRH(camera.fieldOfView, camera.aspect, camera.nearZ, camera.farZ);
 }
 
-void
-mvRotateCamera(mvCamera& camera, f32 dx, f32 dy)
+void 
+mvUpdateCameraFPSCamera(mvCamera& camera, f32 dt, f32 travelSpeed, f32 rotationSpeed)
 {
-    camera.yaw = wrap_angle(camera.yaw + dx * CameraRotationSpeed);
-    camera.pitch = std::clamp(camera.pitch + dy * CameraRotationSpeed, 0.995f * -PI / 2.0f, 0.995f * PI / 2.0f);
+    // for now, we will just use imgui's input
+    if (ImGui::GetIO().KeysDown['W'])
+    {
+        camera.pos.x = camera.pos.x - dt * travelSpeed * sin(camera.yaw);
+        camera.pos.z = camera.pos.z - dt * travelSpeed * cos(camera.yaw);
+    }
+
+    if (ImGui::GetIO().KeysDown['S'])
+    {
+        camera.pos.x = camera.pos.x + dt * travelSpeed * sin(camera.yaw);
+        camera.pos.z = camera.pos.z + dt * travelSpeed * cos(camera.yaw);
+    }
+
+    if (ImGui::GetIO().KeysDown['A'])
+    {
+        camera.pos.x = camera.pos.x - dt * travelSpeed * cos(camera.yaw);
+        camera.pos.z = camera.pos.z + dt * travelSpeed * sin(camera.yaw);
+    }
+
+    if (ImGui::GetIO().KeysDown['D'])
+    {
+        camera.pos.x = camera.pos.x + dt * travelSpeed * cos(camera.yaw);
+        camera.pos.z = camera.pos.z - dt * travelSpeed * sin(camera.yaw);
+    }
+
+    if (ImGui::GetIO().KeysDown['R'])
+    {
+        camera.pos.y = camera.pos.y + dt * travelSpeed;
+    }
+
+    if (ImGui::GetIO().KeysDown['F'])
+    {
+        camera.pos.y = camera.pos.y - dt * travelSpeed;
+    }
+
+    if (ImGui::IsMouseDown(ImGuiMouseButton_Left) && !ImGui::GetIO().WantCaptureMouse)
+    {
+
+        camera.yaw = wrap_angle(camera.yaw + -ImGui::GetIO().MouseDelta.x * rotationSpeed);
+        camera.pitch = std::clamp(camera.pitch + -ImGui::GetIO().MouseDelta.y * rotationSpeed, 0.995f * -PI / 2.0f, 0.995f * PI / 2.0f);
+    }
 }
 
-void
-mvTranslateCamera(mvCamera& camera, f32 dx, f32 dy, f32 dz)
+mv_internal void
+mvTranslateCamera(mvCamera& camera, f32 dx, f32 dy, f32 dz, f32 travelSpeed)
 {
     mvVec3 direction{};
     direction.x = cos((camera.yaw)) * cos((camera.pitch));
@@ -66,11 +106,29 @@ mvTranslateCamera(mvCamera& camera, f32 dx, f32 dy, f32 dz)
     camera.front = direction;
 
     if (dz != 0.0f)
-        camera.pos = camera.pos - camera.front * CameraTravelSpeed*dz;
+        camera.pos = camera.pos - camera.front * travelSpeed * dz;
 
     if (dx != 0.0f)
-        camera.pos = camera.pos - mvNormalize(mvCross(camera.front, camera.up)) * CameraTravelSpeed*dx;
+        camera.pos = camera.pos - mvNormalize(mvCross(camera.front, camera.up)) * travelSpeed * dx;
 
     if (dy != 0.0f)
-        camera.pos.y += CameraTravelSpeed * dy;
+        camera.pos.y += travelSpeed * dy;
+}
+
+void
+mvUpdateCameraLookAtCamera(mvCamera& camera, f32 dt, f32 travelSpeed, f32 rotationSpeed)
+{
+    if (ImGui::GetIO().KeysDown['W']) mvTranslateCamera(camera, 0.0f, 0.0f, dt, travelSpeed);
+    if (ImGui::GetIO().KeysDown['S']) mvTranslateCamera(camera, 0.0f, 0.0f, -dt, travelSpeed);
+    if (ImGui::GetIO().KeysDown['D']) mvTranslateCamera(camera, dt, 0.0f, 0.0f, travelSpeed);
+    if (ImGui::GetIO().KeysDown['A']) mvTranslateCamera(camera, -dt, 0.0f, 0.0f, travelSpeed);
+    if (ImGui::GetIO().KeysDown['R']) mvTranslateCamera(camera, 0.0f, dt, 0.0f, travelSpeed);
+    if (ImGui::GetIO().KeysDown['F']) mvTranslateCamera(camera, 0.0f, -dt, 0.0f, travelSpeed);
+
+    if (ImGui::IsMouseDown(ImGuiMouseButton_Left) && !ImGui::GetIO().WantCaptureMouse)
+    {
+
+        camera.yaw = wrap_angle(camera.yaw + ImGui::GetIO().MouseDelta.x * rotationSpeed);
+        camera.pitch = std::clamp(camera.pitch + ImGui::GetIO().MouseDelta.y * rotationSpeed, 0.995f * -PI / 2.0f, 0.995f * PI / 2.0f);
+    }
 }
