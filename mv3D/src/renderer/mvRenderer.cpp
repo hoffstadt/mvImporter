@@ -8,14 +8,16 @@
 #include "mvVertexLayout.h"
 #include "mvAssetManager.h"
 
+namespace Renderer{
+
 void
-mvRenderer_Resize()
+mvResize()
 {
     mvRecreateSwapChain();
 }
 
 void
-mvRenderer_StartRenderer()
+mvStartRenderer()
 {
     mvInitializeViewport(1850, 900);
     mvSetupGraphics();
@@ -36,7 +38,7 @@ mvRenderer_StartRenderer()
 }
 
 void
-mvRenderer_StopRenderer()
+mvStopRenderer()
 {
     // Cleanup
     ImGui_ImplDX11_Shutdown();
@@ -48,7 +50,7 @@ mvRenderer_StopRenderer()
 }
 
 void
-mvRenderer_BeginFrame()
+mvBeginFrame()
 {
     ImGui_ImplDX11_NewFrame();
     ImGui_ImplWin32_NewFrame();
@@ -68,20 +70,20 @@ mvRenderer_BeginFrame()
 }
 
 void
-mvRenderer_EndFrame()
+mvEndFrame()
 {
     ImGui::Render();
     ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
 }
 
 void
-mvRenderer_Present()
+mvPresent()
 {
     GContext->graphics.swapChain->Present(1, 0);
 }
 
 void
-mvRenderer_ClearPass(mvPass& pass)
+mvClearPass(mvPass& pass)
 {
     // clear render target
     mv_local_persist float backgroundColor[] = { 0.0f, 0.0f, 0.0f, 1.0f };
@@ -92,7 +94,7 @@ mvRenderer_ClearPass(mvPass& pass)
 }
 
 void
-mvRenderer_BeginPass(mvPass& pass)
+mvBeginPass(mvPass& pass)
 {
     if(pass.depthStencil && pass.target)
         GContext->graphics.imDeviceContext->OMSetRenderTargets(1, pass.target, *pass.depthStencil);
@@ -108,13 +110,13 @@ mvRenderer_BeginPass(mvPass& pass)
 }
 
 void
-mvRenderer_EndPass()
+mvEndPass()
 {
 
 }
 
 mv_internal void
-mvRenderer_RenderMeshPhong(mvAssetManager& am, mvMesh& mesh, mvMat4 transform, mvMat4 cam, mvMat4 proj)
+mvRenderMeshPhong(mvAssetManager& am, mvMesh& mesh, mvMat4 transform, mvMat4 cam, mvMat4 proj)
 {
 
     auto device = GContext->graphics.imDeviceContext;
@@ -183,7 +185,7 @@ mvRenderer_RenderMeshPhong(mvAssetManager& am, mvMesh& mesh, mvMat4 transform, m
 }
 
 mv_internal void
-mvRenderer_RenderMeshPBR(mvAssetManager& am, mvMesh& mesh, mvMat4 transform, mvMat4 cam, mvMat4 proj)
+mvRenderMeshPBR(mvAssetManager& am, mvMesh& mesh, mvMat4 transform, mvMat4 cam, mvMat4 proj)
 {
 
     auto device = GContext->graphics.imDeviceContext;
@@ -250,16 +252,16 @@ mvRenderer_RenderMeshPBR(mvAssetManager& am, mvMesh& mesh, mvMat4 transform, mvM
 }
 
 void
-mvRenderer_RenderMesh(mvAssetManager& am, mvMesh& mesh, mvMat4 transform, mvMat4 cam, mvMat4 proj)
+mvRenderMesh(mvAssetManager& am, mvMesh& mesh, mvMat4 transform, mvMat4 cam, mvMat4 proj)
 {
     if (mesh.pbr)
-        mvRenderer_RenderMeshPBR(am, mesh, transform, cam, proj);
+        mvRenderMeshPBR(am, mesh, transform, cam, proj);
     else
-        mvRenderer_RenderMeshPhong(am, mesh, transform, cam, proj);
+        mvRenderMeshPhong(am, mesh, transform, cam, proj);
 }
 
 void
-mvRenderer_RenderMeshShadows(mvAssetManager& am, mvMesh& mesh, mvMat4 transform, mvMat4 cam, mvMat4 proj)
+mvRenderMeshShadows(mvAssetManager& am, mvMesh& mesh, mvMat4 transform, mvMat4 cam, mvMat4 proj)
 {
 
     // if material not assigned, get material
@@ -327,7 +329,7 @@ mvRenderer_RenderMeshShadows(mvAssetManager& am, mvMesh& mesh, mvMat4 transform,
 }
 
 void
-mvRenderer_RenderSkybox(mvAssetManager& am, mvSkyboxPass& skyboxPass, mvMat4 cam, mvMat4 proj)
+mvRenderSkybox(mvAssetManager& am, mvSkyboxPass& skyboxPass, mvMat4 cam, mvMat4 proj)
 {
     auto device = GContext->graphics.imDeviceContext;
 
@@ -372,61 +374,63 @@ mvRenderer_RenderSkybox(mvAssetManager& am, mvSkyboxPass& skyboxPass, mvMat4 cam
 }
 
 mv_internal void
-mvRenderer_RenderNode(mvAssetManager& am, mvNode& node, mvMat4 accumulatedTransform, mvMat4 cam, mvMat4 proj)
+mvRenderNode(mvAssetManager& am, mvNode& node, mvMat4 accumulatedTransform, mvMat4 cam, mvMat4 proj)
 {
 
     if (node.mesh > -1)
-        mvRenderer_RenderMesh(am, am.meshes[node.mesh].mesh, accumulatedTransform * node.matrix, cam, proj);
+        mvRenderMesh(am, am.meshes[node.mesh].mesh, accumulatedTransform * node.matrix, cam, proj);
 
     for (u32 i = 0; i < node.childCount; i++)
     {
-        mvRenderer_RenderNode(am, am.nodes[node.children[i]].node, accumulatedTransform* node.matrix, cam, proj);
+        mvRenderNode(am, am.nodes[node.children[i]].node, accumulatedTransform* node.matrix, cam, proj);
     }
 }
 
 void
-mvRenderer_RenderScene(mvAssetManager& am, mvScene& scene, mvMat4 cam, mvMat4 proj)
+mvRenderScene(mvAssetManager& am, mvScene& scene, mvMat4 cam, mvMat4 proj)
 {
     for (u32 i = 0; i < scene.nodeCount; i++)
     {
         mvNode& rootNode = am.nodes[scene.nodes[i]].node;
 
         if (rootNode.mesh > -1)
-            mvRenderer_RenderMesh(am, am.meshes[rootNode.mesh].mesh, rootNode.matrix, cam, proj);
+            mvRenderMesh(am, am.meshes[rootNode.mesh].mesh, rootNode.matrix, cam, proj);
 
         for (u32 j = 0; j < rootNode.childCount; j++)
         {
-            mvRenderer_RenderNode(am, am.nodes[rootNode.children[j]].node, rootNode.matrix, cam, proj);
+            mvRenderNode(am, am.nodes[rootNode.children[j]].node, rootNode.matrix, cam, proj);
         }
     }
 }
 
 mv_internal void
-mvRenderer_RenderNodeShadows(mvAssetManager& am, mvNode& node, mvMat4 accumulatedTransform, mvMat4 cam, mvMat4 proj)
+mvRenderNodeShadows(mvAssetManager& am, mvNode& node, mvMat4 accumulatedTransform, mvMat4 cam, mvMat4 proj)
 {
 
     if (node.mesh > -1)
-        mvRenderer_RenderMeshShadows(am, am.meshes[node.mesh].mesh, accumulatedTransform * node.matrix, cam, proj);
+        mvRenderMeshShadows(am, am.meshes[node.mesh].mesh, accumulatedTransform * node.matrix, cam, proj);
 
     for (u32 i = 0; i < node.childCount; i++)
     {
-        mvRenderer_RenderNodeShadows(am, am.nodes[node.children[i]].node, accumulatedTransform * node.matrix, cam, proj);
+        mvRenderNodeShadows(am, am.nodes[node.children[i]].node, accumulatedTransform * node.matrix, cam, proj);
     }
 }
 
 void
-mvRenderer_RenderSceneShadows(mvAssetManager& am, mvScene& scene, mvMat4 cam, mvMat4 proj)
+mvRenderSceneShadows(mvAssetManager& am, mvScene& scene, mvMat4 cam, mvMat4 proj)
 {
     for (u32 i = 0; i < scene.nodeCount; i++)
     {
         mvNode& rootNode = am.nodes[scene.nodes[i]].node;
 
         if (rootNode.mesh > -1)
-            mvRenderer_RenderMeshShadows(am, am.meshes[rootNode.mesh].mesh, rootNode.matrix, cam, proj);
+            mvRenderMeshShadows(am, am.meshes[rootNode.mesh].mesh, rootNode.matrix, cam, proj);
 
         for (u32 j = 0; j < rootNode.childCount; j++)
         {
-            mvRenderer_RenderNodeShadows(am, am.nodes[rootNode.children[j]].node, rootNode.matrix, cam, proj);
+            mvRenderNodeShadows(am, am.nodes[rootNode.children[j]].node, rootNode.matrix, cam, proj);
         }
     }
+}
+
 }

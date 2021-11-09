@@ -1,6 +1,7 @@
 #include "mvLights.h"
 #include "mv3D_internal.h"
 #include "mvAssetManager.h"
+#include <imgui.h>
 
 mvPointLight
 mvCreatePointLight(mvAssetManager* manager, mvVec3 pos)
@@ -9,14 +10,15 @@ mvCreatePointLight(mvAssetManager* manager, mvVec3 pos)
 	light.info.viewLightPos = { pos.x, pos.y, pos.z, 1.0f };
 	light.buffer = mvCreateConstBuffer(&light.info, sizeof(mvPointLightInfo));
 
-	mvMesh mesh = mvCreateTexturedCube(*manager, 0.25f);
+	light.mesh = mvCreateTexturedCube(*manager, 0.25f);
 
-	mesh.phongMaterialID = mvGetPhongMaterialAsset(manager, "Phong_VS.hlsl", "Solid_PS.hlsl", true, false, false, false);
-	manager->phongMaterials[mesh.phongMaterialID].material.data.materialColor = { 1.0f, 1.0f, 1.0f, 1.0f };
+	light.mesh.phongMaterialID = mvGetPhongMaterialAsset(manager, "Phong_VS.hlsl", "Solid_PS.hlsl", true, false, false, false);
+	manager->phongMaterials[light.mesh.phongMaterialID].material.data.materialColor = { 1.0f, 1.0f, 1.0f, 1.0f };
 
-	mvAssetID mesh_id = mvRegistryMeshAsset(manager, mesh);
-
-	light.mesh = &manager->meshes[mesh_id].mesh;
+	light.camera.pos = pos;
+	light.camera.aspect = 1.0f;
+	light.camera.yaw = 0.0f;
+	light.camera.pitch = 0.0f;
 
 	return light;
 }
@@ -63,4 +65,15 @@ mvBindSlot_bPS(u32 slot, mvDirectionLight& light, mvMat4 viewMatrix)
 	mvUpdateConstBuffer(light.buffer, &light.info);
 	GContext->graphics.imDeviceContext->PSSetConstantBuffers(slot, 1u, light.buffer.buffer.GetAddressOf());
 	light.info.viewLightDir = posCopy;
+}
+
+void
+mvShowControls(mvPointLight& light)
+{
+	ImGui::Begin("Point Light");
+	if (ImGui::SliderFloat3("Position", &light.info.viewLightPos.x, -25.0f, 50.0f))
+	{
+		light.camera.pos = { light.info.viewLightPos.x, light.info.viewLightPos.y, light.info.viewLightPos.z };
+	}
+	ImGui::End();
 }

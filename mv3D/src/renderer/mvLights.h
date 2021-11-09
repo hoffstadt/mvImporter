@@ -3,7 +3,7 @@
 #include "mvMath.h"
 #include "mvMesh.h"
 #include "mvBuffers.h"
-#include "mvBuffers.h"
+#include "mvCamera.h"
 
 struct mvAssetManager;
 
@@ -44,7 +44,8 @@ struct mvPointLight
 {
     mvConstBuffer    buffer;
     mvPointLightInfo info;
-    mvMesh*          mesh;
+    mvMesh           mesh;
+    mvCamera         camera;
 };
 
 struct mvDirectionLight
@@ -58,3 +59,5 @@ mvDirectionLight mvCreateDirectionLight(mvVec3 dir = { 0.0f,0.0f,0.5f });
     
 void mvBindSlot_bPS(u32 slot, mvPointLight& light, mvMat4 viewMatrix);
 void mvBindSlot_bPS(u32 slot, mvDirectionLight& light, mvMat4 viewMatrix);
+
+void mvShowControls(mvPointLight& light);

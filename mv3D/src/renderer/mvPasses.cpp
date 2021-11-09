@@ -3,57 +3,6 @@
 #include "mvAssetManager.h"
 #include <assert.h>
 
-mvPass
-mvCreateMainPass()
-{
-    mvPass pass{};
-
-    pass.target = GContext->graphics.target.GetAddressOf();
-    pass.depthStencil = GContext->graphics.targetDepth.GetAddressOf();
-    pass.viewport.MinDepth = 0.0f;
-    pass.viewport.MaxDepth = 1.0f;
-    pass.viewport.TopLeftX = 0.0f;
-    pass.viewport.TopLeftY = 0.0f;
-    pass.viewport.Width = GContext->viewport.width;
-    pass.viewport.Height = GContext->viewport.height;
-    pass.rasterizationState = nullptr;
-    return pass;
-}
-
-mvPass
-mvCreateShadowPass(mvShadowMap& shadowMap)
-{
-    mvPass pass{};
-
-    pass.target = nullptr;
-    pass.depthStencil = shadowMap.shadowDepthView.GetAddressOf();
-    pass.viewport.MinDepth = 0.0f;
-    pass.viewport.MaxDepth = 1.0f;
-    pass.viewport.TopLeftX = 0.0f;
-    pass.viewport.TopLeftY = 0.0f;
-    pass.viewport.Width = shadowMap.shadowMapDimension;
-    pass.viewport.Height = shadowMap.shadowMapDimension;
-    pass.rasterizationState = shadowMap.shadowRasterizationState.GetAddressOf();
-    return pass;
-}
-
-mvPass
-mvCreateShadowPass(mvShadowCubeMap& shadowMap, u32 index)
-{
-    mvPass pass{};
-
-    pass.target = nullptr;
-    pass.depthStencil = shadowMap.shadowDepthViews[index].GetAddressOf();
-    pass.viewport.MinDepth = 0.0f;
-    pass.viewport.MaxDepth = 1.0f;
-    pass.viewport.TopLeftX = 0.0f;
-    pass.viewport.TopLeftY = 0.0f;
-    pass.viewport.Width = shadowMap.shadowMapDimension;
-    pass.viewport.Height = shadowMap.shadowMapDimension;
-    pass.rasterizationState = shadowMap.shadowRasterizationState.GetAddressOf();
-    return pass;
-}
-
 mvSkyboxPass
 mvCreateSkyboxPass(mvAssetManager* assetManager, const std::string& path)
 {

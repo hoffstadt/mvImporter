@@ -7,6 +7,12 @@
 
 struct mvAssetManager;
 
+struct mvPassInfo
+{
+    f32 width = 0.0f;
+    f32 height = 0.0f;
+};
+
 struct mvPass
 {
     ID3D11RenderTargetView**   target = nullptr;
@@ -25,7 +31,4 @@ struct mvSkyboxPass
     mvAssetID  sampler;
 };
 
-mvPass       mvCreateMainPass();
-mvPass       mvCreateShadowPass(mvShadowMap& shadowMap);
-mvPass       mvCreateShadowPass(mvShadowCubeMap& shadowMap, u32 index);
 mvSkyboxPass mvCreateSkyboxPass(mvAssetManager* assetManager, const std::string& path);

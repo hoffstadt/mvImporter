@@ -18,7 +18,7 @@ int main()
     GContext->IO.shaderDirectory = "../../mv3D/shaders/";
     GContext->IO.resourceDirectory = "../../Resources/";
 
-    mvRenderer_StartRenderer();
+    Renderer::mvStartRenderer();
 
     mvAssetManager am{};
     mvInitializeAssetManager(&am);
@@ -46,72 +46,57 @@ int main()
     // lights
     mvPointLight light = mvCreatePointLight(&am, { 0.0f, 15.0f, 0.0f });
     mvDirectionLight dlight = mvCreateDirectionLight({ 0.0f, -1.0f, 0.0f });
-    mvMat4 lightTransform = mvTranslate(mvIdentityMat4(), mvVec3{ 0.0f, 15.0f, 0.0f });
 
     // shadows
-    mvOrthoCamera orthoCamera{};
-    orthoCamera.dir = { 0.0f, 1.0f, 0.0f };
-    orthoCamera.up = { 1.0f, 0.0f, 0.0f };
-    orthoCamera.pos.y = shadowWidth/2.0f;
-    orthoCamera.left = -shadowWidth;
-    orthoCamera.right = shadowWidth;
-    orthoCamera.bottom = -shadowWidth;
-    orthoCamera.top = shadowWidth;
-    orthoCamera.nearZ = -shadowWidth-1.0f;
-    orthoCamera.farZ = shadowWidth+1.0f;
-
-    mvCamera perspecCamera{};
-    perspecCamera.pos = { light.info.viewLightPos.x, light.info.viewLightPos.y, light.info.viewLightPos.z };
-    perspecCamera.aspect = 1.0f;
-    perspecCamera.yaw = 0.0f;
 
     mvShadowCamera dshadowCamera = mvCreateShadowCamera();
 
-    mvShadowMap directionalShadowMap = mvCreateShadowMap(4000);
-    mvShadowCubeMap omniShadowMap = mvCreateShadowCubeMap(2000);
-    
     // passes
-    mvPass lambertian = mvCreateMainPass();
-    mvPass directionalShadowPass = mvCreateShadowPass(directionalShadowMap);
+    mvPass lambertian
+    {
+        GContext->graphics.target.GetAddressOf(),
+        GContext->graphics.targetDepth.GetAddressOf(),
+        nullptr,
+        {0.0f, 0.0f, (f32)GContext->viewport.width, (f32)GContext->viewport.height, 0.0f, 1.0f},
+        nullptr
+    };
+
+    mvShadowMap directionalShadowMap = mvCreateShadowMap(4000, shadowWidth);
+    mvPass directionalShadowPass
+    {
+        nullptr,
+        directionalShadowMap.shadowDepthView.GetAddressOf(),
+        nullptr,
+        {0.0f, 0.0f, (f32)directionalShadowMap.shadowMapDimension, (f32)directionalShadowMap.shadowMapDimension, 0.0f, 1.0f},
+        directionalShadowMap.shadowRasterizationState.GetAddressOf()
+    };
+
+    mvShadowCubeMap omniShadowMap = mvCreateShadowCubeMap(2000);
     mvPass omniShadowPasses[6];
     for (u32 i = 0; i < 6; i++)
-        omniShadowPasses[i] = mvCreateShadowPass(omniShadowMap, i);
+    {
+        omniShadowPasses[i].target = nullptr;
+        omniShadowPasses[i].depthStencil = omniShadowMap.shadowDepthViews[i].GetAddressOf();
+        omniShadowPasses[i].shaderResource = nullptr;
+        omniShadowPasses[i].viewport = { 0.0f, 0.0f, (f32)omniShadowMap.shadowMapDimension, (f32)omniShadowMap.shadowMapDimension, 0.0f, 1.0f };
+        omniShadowPasses[i].rasterizationState = omniShadowMap.shadowRasterizationState.GetAddressOf();
+    }
 
     mvSkyboxPass skyboxPass = mvCreateSkyboxPass(&am, "../../Resources/Skybox");
 
-    mvMesh texturedQuad = mvCreateTexturedQuad(am, 30.0f);
-    mvVec3 texturedQuad_pos = { 5.0f, -3.0f, 5.0f };
-    mvMat4 texturedQuadTrans = mvTranslate(mvIdentityMat4(), texturedQuad_pos) * mvRotate(mvIdentityMat4(), -M_PI_2, mvVec3{1.0f, 0.0f, 0.0f});
-    //mvRegistryMeshAsset(&am, texturedQuad);
-
-    mvMesh room = mvCreateRoom(am, 15.0f);
-    mvMat4 roomTransform = mvTranslate(mvIdentityMat4(), mvVec3{-5.0f, -3.0f, -5.0f});
-
-    mvMesh texturedCube = mvCreateTexturedCube(am, 1.0f);
-    mvVec3 texturedCube_pos = { 5.0f, 5.0f, 5.0f };
-    mvVec3 texturedCube_rot = { M_PI_4, M_PI_4, M_PI_4 };
-    mvMat4 texturedCubeTrans = mvTranslate(mvIdentityMat4(), texturedCube_pos) * mvRotate(mvIdentityMat4(), M_PI_4, mvVec3{ 1.0f, 1.0f, 1.0f });
-    texturedCube.diffuseTexture = mvGetTextureAsset(&am, "../../Resources/test_image.png");
-
-    dshadowCamera.info.directShadowView = mvLookAtRH(orthoCamera.pos, orthoCamera.pos + orthoCamera.dir, orthoCamera.up);
-    dshadowCamera.info.directShadowProjection = mvOrthoRH(orthoCamera.left, orthoCamera.right, orthoCamera.bottom, orthoCamera.top, orthoCamera.nearZ, orthoCamera.farZ);
+    dshadowCamera.info.directShadowView = mvLookAtRH(directionalShadowMap.camera.pos, directionalShadowMap.camera.pos + directionalShadowMap.camera.dir, directionalShadowMap.camera.up);
+    dshadowCamera.info.directShadowProjection = mvOrthoRH(directionalShadowMap.camera.left, directionalShadowMap.camera.right, directionalShadowMap.camera.bottom, directionalShadowMap.camera.top, directionalShadowMap.camera.nearZ, directionalShadowMap.camera.farZ);
 
     mvTimer timer;
     while (true)
     {
         const auto dt = timer.mark() * 1.0f;
 
-        texturedCube_rot.x += dt;
-        texturedCube_rot.y += dt;
-        texturedCubeTrans = mvTranslate(mvIdentityMat4(), texturedCube_pos) 
-            * mvRotate(mvIdentityMat4(), texturedCube_rot.x, mvVec3{ 1.0f, 0.0f, 0.0f }) 
-            * mvRotate(mvIdentityMat4(), texturedCube_rot.y, mvVec3{ 0.0f, 1.0f, 0.0f });
-
         if (const auto ecode = mvProcessViewportEvents()) break;
 
         if (GContext->viewport.resized)
         {
-            mvRenderer_Resize();
+            Renderer::mvResize();
             GContext->viewport.resized = false;
             camera.aspect = (float)GContext->viewport.width / (float)GContext->viewport.height;
             lambertian.viewport.Width = GContext->viewport.width;
@@ -120,120 +105,99 @@ int main()
             skyboxPass.basePass.viewport.Height = GContext->viewport.height;
         }
 
-        mvUpdateCameraFPSCamera(camera, dt, 12.0f, 0.004f);
-
-        mvMat4 viewMatrix = mvCreateFPSView(camera);
-        mvMat4 projMatrix = mvCreateLookAtProjection(camera);
-        mv_local_persist mvMat4 identityMat = mvIdentityMat4();
-
         //-----------------------------------------------------------------------------
         // clear passes
         //-----------------------------------------------------------------------------
-        mvRenderer_ClearPass(lambertian);
-        mvRenderer_ClearPass(directionalShadowPass);
+        Renderer::mvClearPass(lambertian);
+        Renderer::mvClearPass(directionalShadowPass);
         for (u32 i = 0; i < 6; i++)
-            mvRenderer_ClearPass(omniShadowPasses[i]);
+            Renderer::mvClearPass(omniShadowPasses[i]);
 
         //-----------------------------------------------------------------------------
         // begin frame
         //-----------------------------------------------------------------------------
-        mvRenderer_BeginFrame();
+        Renderer::mvBeginFrame();
 
         // controls
-        ImGui::Begin("Light Controls");
-        if (ImGui::SliderFloat3("Position", &light.info.viewLightPos.x, -25.0f, 50.0f))
+        ImGui::Begin("Direction Light");
+        if (ImGui::SliderFloat3("DLight", &directionalShadowMap.camera.dir.x, -1.0f, 1.0f))
         {
-            perspecCamera.pos = { light.info.viewLightPos.x, light.info.viewLightPos.y, light.info.viewLightPos.z };
-            lightTransform = mvTranslate(mvIdentityMat4(), perspecCamera.pos);
-        }
-        if (ImGui::SliderFloat3("DLight", &orthoCamera.dir.x, -1.0f, 1.0f))
-        {
-            dshadowCamera.info.directShadowView = mvLookAtRH(orthoCamera.pos, orthoCamera.pos + orthoCamera.dir, orthoCamera.up);
+            dshadowCamera.info.directShadowView = mvLookAtRH(directionalShadowMap.camera.pos, directionalShadowMap.camera.pos + directionalShadowMap.camera.dir, directionalShadowMap.camera.up);
         }
         ImGui::End();
 
-        ImGui::Begin("Scene");
-        ImGui::ColorEdit3("Ambient Color", &scene.info.ambientColor.x);
-        ImGui::Checkbox("Use Shadows", (bool*)&scene.info.useShadows);
-        ImGui::Checkbox("Use Skybox", (bool*)&scene.info.useSkybox);
-        ImGui::End();
+        mvShowControls(light);
+        mvShowControls(scene);
 
         //-----------------------------------------------------------------------------
         // directional shadow pass
         //-----------------------------------------------------------------------------
-        mvRenderer_BeginPass(directionalShadowPass);
-
-        //mvRenderer_RenderMeshShadows(am, room, roomTransform, dshadowCamera.info.directShadowView, dshadowCamera.info.directShadowProjection);
-        mvRenderer_RenderMeshShadows(am, texturedQuad, texturedQuadTrans, mvCreateOrthoView(orthoCamera), mvCreateOrthoProjection(orthoCamera));
-        mvRenderer_RenderMeshShadows(am, texturedCube, texturedCubeTrans, mvCreateOrthoView(orthoCamera), mvCreateOrthoProjection(orthoCamera));
+        Renderer::mvBeginPass(directionalShadowPass);
 
         for (int i = 0; i < am.sceneCount; i++)
-             mvRenderer_RenderSceneShadows(am, am.scenes[i].scene, mvCreateOrthoView(orthoCamera), mvCreateOrthoProjection(orthoCamera));
+            Renderer::mvRenderSceneShadows(am, am.scenes[i].scene, mvCreateOrthoView(directionalShadowMap.camera), mvCreateOrthoProjection(directionalShadowMap.camera));
 
-        mvRenderer_EndPass();
+        Renderer::mvEndPass();
 
         //-----------------------------------------------------------------------------
         // omni shadow pass
         //-----------------------------------------------------------------------------
         for (u32 i = 0; i < 6; i++)
         {
-            mvRenderer_BeginPass(omniShadowPasses[i]);
+            Renderer::mvBeginPass(omniShadowPasses[i]);
 
-            mvVec3 look_target = perspecCamera.pos + omniShadowMap.cameraDirections[i];
-            mvMat4 camera_matrix = mvLookAtLH(perspecCamera.pos, look_target, omniShadowMap.cameraUps[i]);
-
-            //mvRenderer_RenderMeshShadows(am, room, roomTransform, camera_matrix, mvPerspectiveLH(M_PI_2, 1.0f, 0.5f, 100.0f));
-            mvRenderer_RenderMeshShadows(am, texturedQuad, texturedQuadTrans, camera_matrix, mvPerspectiveLH(M_PI_2, 1.0f, 0.5f, 100.0f));
-            mvRenderer_RenderMeshShadows(am, texturedCube, texturedCubeTrans, camera_matrix, mvPerspectiveLH(M_PI_2, 1.0f, 0.5f, 100.0f));
+            mvVec3 look_target = light.camera.pos + omniShadowMap.cameraDirections[i];
+            mvMat4 camera_matrix = mvLookAtLH(light.camera.pos, look_target, omniShadowMap.cameraUps[i]);
 
             for (int i = 0; i < am.sceneCount; i++)
-                    mvRenderer_RenderSceneShadows(am, am.scenes[i].scene, camera_matrix, mvPerspectiveLH(M_PI_2, 1.0f, 0.5f, 100.0f));
+                Renderer::mvRenderSceneShadows(am, am.scenes[i].scene, camera_matrix, mvPerspectiveLH(M_PI_2, 1.0f, 0.5f, 100.0f));
 
-            mvRenderer_EndPass();
+            Renderer::mvEndPass();
         }
 
         //-----------------------------------------------------------------------------
         // main pass
         //-----------------------------------------------------------------------------
-        mvRenderer_BeginPass(lambertian);
+        Renderer::mvBeginPass(lambertian);
 
-        mvBindSlot_bVS(1u, dshadowCamera, mvCreateLookAtView(perspecCamera), mvCreateOrthoView(orthoCamera), mvCreateOrthoProjection(orthoCamera));
+        mvBindSlot_bVS(1u, dshadowCamera, mvCreateLookAtView(light.camera), mvCreateOrthoView(directionalShadowMap.camera), mvCreateOrthoProjection(directionalShadowMap.camera));
 
-        mvBindSlot_bPS(0u, light, viewMatrix);        
-        mvBindSlot_bPS(2u, dlight, viewMatrix);       
-        mvBindSlot_bPS(3u, scene);                    
-                                                    
+        mvUpdateCameraFPSCamera(camera, dt, 12.0f, 0.004f);
+        mvMat4 viewMatrix = mvCreateFPSView(camera);
+        mvMat4 projMatrix = mvCreateLookAtProjection(camera);
+
+        mvBindSlot_bPS(0u, light, viewMatrix);
+        mvBindSlot_bPS(2u, dlight, viewMatrix);
+        mvBindSlot_bPS(3u, scene);
+
         mvBindSlot_tsPS(directionalShadowMap, 3u, 1u);
-        mvBindSlot_tsPS(omniShadowMap, 4u, 2u);       
+        mvBindSlot_tsPS(omniShadowMap, 4u, 2u);
 
-        //mvRenderer_RenderMesh(am, room, roomTransform, viewMatrix, projMatrix);
-        mvRenderer_RenderMesh(am, texturedQuad, texturedQuadTrans, viewMatrix, projMatrix);
-        mvRenderer_RenderMesh(am, texturedCube, texturedCubeTrans, viewMatrix, projMatrix);
-        mvRenderer_RenderMesh(am, *light.mesh, lightTransform, viewMatrix, projMatrix);
+        Renderer::mvRenderMesh(am, light.mesh, mvTranslate(mvIdentityMat4(), light.camera.pos), viewMatrix, projMatrix);
 
         for (int i = 0; i < am.sceneCount; i++)
-                mvRenderer_RenderScene(am, am.scenes[i].scene, viewMatrix, projMatrix);
+            Renderer::mvRenderScene(am, am.scenes[i].scene, viewMatrix, projMatrix);
 
-        mvRenderer_EndPass();
+        Renderer::mvEndPass();
 
 
         //-----------------------------------------------------------------------------
         // skybox pass
         //-----------------------------------------------------------------------------
-        mvRenderer_BeginPass(skyboxPass.basePass);
+        Renderer::mvBeginPass(skyboxPass.basePass);
         mvBindSlot_bPS(0u, scene);
-        mvRenderer_RenderSkybox(am, skyboxPass, viewMatrix, projMatrix);
-        mvRenderer_EndPass();
+        Renderer::mvRenderSkybox(am, skyboxPass, viewMatrix, projMatrix);
+        Renderer::mvEndPass();
 
         //-----------------------------------------------------------------------------
         // end frame & present
         //-----------------------------------------------------------------------------
-        mvRenderer_EndFrame();
-        mvRenderer_Present();
+        Renderer::mvEndFrame();
+        Renderer::mvPresent();
     }
 
     mvCleanupAssetManager(&am);
-    mvRenderer_StopRenderer();
+    Renderer::mvStopRenderer();
     mvDestroyContext();
 }
 

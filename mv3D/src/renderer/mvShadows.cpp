@@ -2,7 +2,7 @@
 #include "mv3D_internal.h"
 
 mvShadowMap 
-mvCreateShadowMap(u32 resolution)
+mvCreateShadowMap(u32 resolution, f32 width)
 {
 	mvShadowMap shadow{};
     shadow.shadowMapDimension = resolution;
@@ -98,6 +98,16 @@ mvCreateShadowMap(u32 resolution)
         &shadowRenderStateDesc,
         shadow.shadowRasterizationState.GetAddressOf()
     );
+
+    shadow.camera.dir = { 0.0f, 1.0f, 0.0f };
+    shadow.camera.up = { 1.0f, 0.0f, 0.0f };
+    shadow.camera.pos.y = width / 2.0f;
+    shadow.camera.left = -width;
+    shadow.camera.right = width;
+    shadow.camera.bottom = -width;
+    shadow.camera.top = width;
+    shadow.camera.nearZ = -width - 1.0f;
+    shadow.camera.farZ = width + 1.0f;
 
 	return shadow;
 }

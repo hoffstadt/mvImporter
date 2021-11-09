@@ -39,4 +39,5 @@ struct mvScene
 
 mvScene mvCreateScene();
 void    mvBindSlot_bPS(uint32_t slot, mvScene& scene);
+void    mvShowControls(mvScene& scene);
 

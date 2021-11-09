@@ -2,6 +2,7 @@
 
 #include "mvMath.h"
 #include "mvBuffers.h"
+#include "mvCamera.h"
 
 struct mvShadowCameraInfo
 {
@@ -24,11 +25,12 @@ struct mvShadowMap
     mvComPtr<ID3D11ShaderResourceView> shadowResourceView;
     mvComPtr<ID3D11SamplerState>       comparisonSampler;
     mvComPtr<ID3D11RasterizerState>    shadowRasterizationState;
+    mvOrthoCamera                      camera;
 };
 
 struct mvShadowCubeMap
 {
-    u32                               shadowMapDimension;
+    u32                                shadowMapDimension;
     mvComPtr<ID3D11Texture2D>          shadowMap;
     mvComPtr<ID3D11DepthStencilView>   shadowDepthViews[6];
     mvComPtr<ID3D11ShaderResourceView> shadowResourceView;
@@ -38,7 +40,7 @@ struct mvShadowCubeMap
     mvVec3                             cameraUps[6];
 };
 
-mvShadowMap     mvCreateShadowMap    (u32 resolution);
+mvShadowMap     mvCreateShadowMap    (u32 resolution, f32 width);
 mvShadowCubeMap mvCreateShadowCubeMap(u32 resolution);
 mvShadowCamera  mvCreateShadowCamera ();
 void            mvBindSlot_tsPS      (mvShadowMap& shadowMap, u32 textureSlot, u32 samplerSlot);
