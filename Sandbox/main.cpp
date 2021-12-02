@@ -1,39 +1,37 @@
-#include "mv3D.h"
+#include "helpers.h"
 
-mv_internal const char* gltfModel = "FlightHelmet";
-mv_internal const char* sponzaPath = "C:/dev/MarvelAssets/Sponza/";
-mv_internal const char* gltfPath = "C://dev//glTF-Sample-Models//2.0//";
-mv_internal b8 loadGLTF = false;
-mv_internal b8 loadSponza = true;
-mv_internal f32 shadowWidth = 100.0f;
-
-mvGLTFModel LoadTestModel(const char* name);
+// TODO: make most of this a runtime option
+static const char*        gltfModel = "FlightHelmet";
+static f32                shadowWidth = 15.0f;
 
 int main()
 {
-    if (loadSponza)
-        shadowWidth = 150.0f;
 
     mvCreateContext();
-    GContext->IO.shaderDirectory = "../../mv3D/shaders/";
+    GContext->IO.shaderDirectory = "../../Sandbox/shaders/";
     GContext->IO.resourceDirectory = "../../Resources/";
 
-    Renderer::mvStartRenderer();
+    int initialWidth = 1850;
+    int initialHeight = 900;
+    mvViewport* window = mvInitializeViewport(initialWidth, initialHeight);
+    mvSetupGraphics(*window);
+    ID3D11DeviceContext* ctx = GContext->graphics.imDeviceContext.Get();
+
+    // setup imgui
+    ImGui::CreateContext();
+    ImPlot::CreateContext();
+    ImGuiIO& io = ImGui::GetIO(); (void)io;
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+    ImGui_ImplWin32_Init(window->hWnd);
+    ImGui_ImplDX11_Init(GContext->graphics.device.Get(), GContext->graphics.imDeviceContext.Get());
 
     mvAssetManager am{};
     mvInitializeAssetManager(&am);
 
     // assets & meshes
-    if (loadGLTF)
-    {
-        mvGLTFModel gltfmodel = LoadTestModel(gltfModel);
-        mvLoadGLTFAssets(am, gltfmodel);
-        mvCleanupGLTF(gltfmodel);
-    }
-    if (loadSponza) mvLoadOBJAssets(am, sponzaPath, "sponza");
-
-    // scenes
-    mvScene scene = mvCreateScene();
+    mvGLTFModel gltfmodel = LoadTestModel(gltfModel);
+    mvLoadGLTFAssets(am, gltfmodel);
+    mvCleanupGLTF(gltfmodel);
 
     // main camera
     mvCamera camera{};
@@ -41,51 +39,21 @@ int main()
     camera.front = { 0.0f, 0.0f, -1.0f };
     camera.pitch = 0.0f;
     camera.yaw = 0.0f;
-    camera.aspect = GContext->viewport.width / GContext->viewport.height;
+    camera.aspect = initialWidth / initialHeight;
 
-    // lights
-    mvPointLight light = mvCreatePointLight(&am, { 0.0f, 15.0f, 0.0f });
-    mvDirectionLight dlight = mvCreateDirectionLight({ 0.0f, -1.0f, 0.0f });
+    // helpers
+    mvShadowMap directionalShadowMap = mvShadowMap(4096, shadowWidth);
+    mvShadowCubeMap omniShadowMap = mvShadowCubeMap(2048);
+    mvSkybox skybox = mvSkybox();
+    mvPointLight pointlight = mvPointLight(am);
+    omniShadowMap.info.view = mvCreateLookAtView(pointlight.camera);
 
-    // shadows
+    // framework constant buffers
+    DirectionLightInfo directionLightInfo{};
+    mvConstBuffer directionLightBuffer = mvCreateConstBuffer(&directionLightInfo, sizeof(DirectionLightInfo));
 
-    mvShadowCamera dshadowCamera = mvCreateShadowCamera();
-
-    // passes
-    mvPass lambertian
-    {
-        GContext->graphics.target.GetAddressOf(),
-        GContext->graphics.targetDepth.GetAddressOf(),
-        nullptr,
-        {0.0f, 0.0f, (f32)GContext->viewport.width, (f32)GContext->viewport.height, 0.0f, 1.0f},
-        nullptr
-    };
-
-    mvShadowMap directionalShadowMap = mvCreateShadowMap(4000, shadowWidth);
-    mvPass directionalShadowPass
-    {
-        nullptr,
-        directionalShadowMap.shadowDepthView.GetAddressOf(),
-        nullptr,
-        {0.0f, 0.0f, (f32)directionalShadowMap.shadowMapDimension, (f32)directionalShadowMap.shadowMapDimension, 0.0f, 1.0f},
-        directionalShadowMap.shadowRasterizationState.GetAddressOf()
-    };
-
-    mvShadowCubeMap omniShadowMap = mvCreateShadowCubeMap(2000);
-    mvPass omniShadowPasses[6];
-    for (u32 i = 0; i < 6; i++)
-    {
-        omniShadowPasses[i].target = nullptr;
-        omniShadowPasses[i].depthStencil = omniShadowMap.shadowDepthViews[i].GetAddressOf();
-        omniShadowPasses[i].shaderResource = nullptr;
-        omniShadowPasses[i].viewport = { 0.0f, 0.0f, (f32)omniShadowMap.shadowMapDimension, (f32)omniShadowMap.shadowMapDimension, 0.0f, 1.0f };
-        omniShadowPasses[i].rasterizationState = omniShadowMap.shadowRasterizationState.GetAddressOf();
-    }
-
-    mvSkyboxPass skyboxPass = mvCreateSkyboxPass(&am, "../../Resources/Skybox");
-
-    dshadowCamera.info.directShadowView = mvLookAtRH(directionalShadowMap.camera.pos, directionalShadowMap.camera.pos + directionalShadowMap.camera.dir, directionalShadowMap.camera.up);
-    dshadowCamera.info.directShadowProjection = mvOrthoRH(directionalShadowMap.camera.left, directionalShadowMap.camera.right, directionalShadowMap.camera.bottom, directionalShadowMap.camera.top, directionalShadowMap.camera.nearZ, directionalShadowMap.camera.farZ);
+    GlobalInfo globalInfo{};
+    mvConstBuffer globalInfoBuffer = mvCreateConstBuffer(&globalInfo, sizeof(GlobalInfo));
 
     mvTimer timer;
     while (true)
@@ -94,116 +62,229 @@ int main()
 
         if (const auto ecode = mvProcessViewportEvents()) break;
 
-        if (GContext->viewport.resized)
+        if (window->resized)
         {
-            Renderer::mvResize();
-            GContext->viewport.resized = false;
-            camera.aspect = (float)GContext->viewport.width / (float)GContext->viewport.height;
-            lambertian.viewport.Width = GContext->viewport.width;
-            lambertian.viewport.Height = GContext->viewport.height;
-            skyboxPass.basePass.viewport.Width = GContext->viewport.width;
-            skyboxPass.basePass.viewport.Height = GContext->viewport.height;
+            mvRecreateSwapChain(window->width, window->height);
+            window->resized = false;
+            camera.aspect = (float)window->width / (float)window->height;
         }
 
         //-----------------------------------------------------------------------------
-        // clear passes
+        // clear targets
         //-----------------------------------------------------------------------------
-        Renderer::mvClearPass(lambertian);
-        Renderer::mvClearPass(directionalShadowPass);
+        static float backgroundColor[] = { 0.0f, 0.0f, 0.0f, 1.0f };
+        ctx->ClearRenderTargetView(*GContext->graphics.target.GetAddressOf(), backgroundColor);
+        ctx->ClearDepthStencilView(*GContext->graphics.targetDepth.GetAddressOf(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0u);
+        ctx->ClearDepthStencilView(directionalShadowMap.depthView, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0u);
         for (u32 i = 0; i < 6; i++)
-            Renderer::mvClearPass(omniShadowPasses[i]);
+            ctx->ClearDepthStencilView(omniShadowMap.depthView[i], D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0u);
 
         //-----------------------------------------------------------------------------
         // begin frame
         //-----------------------------------------------------------------------------
-        Renderer::mvBeginFrame();
+        ImGui_ImplDX11_NewFrame();
+        ImGui_ImplWin32_NewFrame();
+        ImGui::NewFrame();
 
-        // controls
-        ImGui::Begin("Direction Light");
-        if (ImGui::SliderFloat3("DLight", &directionalShadowMap.camera.dir.x, -1.0f, 1.0f))
-        {
-            dshadowCamera.info.directShadowView = mvLookAtRH(directionalShadowMap.camera.pos, directionalShadowMap.camera.pos + directionalShadowMap.camera.dir, directionalShadowMap.camera.up);
-        }
+        ID3D11ShaderResourceView* const pSRV[6] = { NULL };
+        ctx->PSSetShaderResources(0, 1, pSRV);
+        ctx->PSSetShaderResources(1, 1, pSRV);
+        ctx->PSSetShaderResources(2, 1, pSRV);
+        ctx->PSSetShaderResources(3, 6, pSRV); // depth map
+        ctx->PSSetShaderResources(4, 6, pSRV); // depth map
+        ctx->PSSetShaderResources(5, 6, pSRV); // depth map
+        ctx->PSSetShaderResources(6, 1, pSRV); // depth map
+
+        ImGui::GetForegroundDrawList()->AddText(ImVec2(45, 45),
+            ImColor(0.0f, 1.0f, 0.0f), std::string(std::to_string(ImGui::GetIO().Framerate) + " FPS").c_str());
+
+        //-----------------------------------------------------------------------------
+        // user interface
+        //-----------------------------------------------------------------------------
+        directionalShadowMap.showControls();
+        if(pointlight.showControls())
+            omniShadowMap.info.view = mvCreateLookAtView(pointlight.camera);
+
+        ImGui::Begin("Global Settings");
+        ImGui::ColorEdit3("Ambient Color", &globalInfo.ambientColor.x);
+        ImGui::Checkbox("Use Shadows", (bool*)&globalInfo.useShadows);
+        ImGui::Checkbox("Use Skybox", (bool*)&globalInfo.useSkybox);
         ImGui::End();
-
-        mvShowControls(light);
-        mvShowControls(scene);
 
         //-----------------------------------------------------------------------------
         // directional shadow pass
         //-----------------------------------------------------------------------------
-        Renderer::mvBeginPass(directionalShadowPass);
+        ctx->OMSetRenderTargets(0, nullptr, directionalShadowMap.depthView);
+        ctx->RSSetViewports(1u, &directionalShadowMap.viewport);
+        ctx->RSSetState(directionalShadowMap.rasterizationState);
 
         for (int i = 0; i < am.sceneCount; i++)
-            Renderer::mvRenderSceneShadows(am, am.scenes[i].scene, mvCreateOrthoView(directionalShadowMap.camera), mvCreateOrthoProjection(directionalShadowMap.camera));
-
-        Renderer::mvEndPass();
+            Renderer::mvRenderSceneShadows(am, am.scenes[i].scene, directionalShadowMap.getViewMatrix(), directionalShadowMap.getProjectionMatrix());
 
         //-----------------------------------------------------------------------------
         // omni shadow pass
         //-----------------------------------------------------------------------------
+        ctx->RSSetViewports(1u, &omniShadowMap.viewport);
+        ctx->RSSetState(directionalShadowMap.rasterizationState);
+
         for (u32 i = 0; i < 6; i++)
         {
-            Renderer::mvBeginPass(omniShadowPasses[i]);
-
-            mvVec3 look_target = light.camera.pos + omniShadowMap.cameraDirections[i];
-            mvMat4 camera_matrix = mvLookAtLH(light.camera.pos, look_target, omniShadowMap.cameraUps[i]);
+            ctx->OMSetRenderTargets(0, nullptr, omniShadowMap.depthView[i]);
+            mvVec3 look_target = pointlight.camera.pos + omniShadowMap.cameraDirections[i];
+            mvMat4 camera_matrix = mvLookAtLH(pointlight.camera.pos, look_target, omniShadowMap.cameraUps[i]);
 
             for (int i = 0; i < am.sceneCount; i++)
                 Renderer::mvRenderSceneShadows(am, am.scenes[i].scene, camera_matrix, mvPerspectiveLH(M_PI_2, 1.0f, 0.5f, 100.0f));
-
-            Renderer::mvEndPass();
         }
 
         //-----------------------------------------------------------------------------
         // main pass
         //-----------------------------------------------------------------------------
-        Renderer::mvBeginPass(lambertian);
-
-        mvBindSlot_bVS(1u, dshadowCamera, mvCreateLookAtView(light.camera), mvCreateOrthoView(directionalShadowMap.camera), mvCreateOrthoProjection(directionalShadowMap.camera));
+        ctx->OMSetRenderTargets(1, GContext->graphics.target.GetAddressOf(), *GContext->graphics.targetDepth.GetAddressOf());
+        ctx->RSSetViewports(1u, &GContext->graphics.viewport);
 
         mvUpdateCameraFPSCamera(camera, dt, 12.0f, 0.004f);
         mvMat4 viewMatrix = mvCreateFPSView(camera);
         mvMat4 projMatrix = mvCreateLookAtProjection(camera);
 
-        mvBindSlot_bPS(0u, light, viewMatrix);
-        mvBindSlot_bPS(2u, dlight, viewMatrix);
-        mvBindSlot_bPS(3u, scene);
+        {
+            mvVec4 posCopy = pointlight.info.viewLightPos;
 
-        mvBindSlot_tsPS(directionalShadowMap, 3u, 1u);
-        mvBindSlot_tsPS(omniShadowMap, 4u, 2u);
+            mvVec4 out = viewMatrix * pointlight.info.viewLightPos;
+            pointlight.info.viewLightPos.x = out.x;
+            pointlight.info.viewLightPos.y = out.y;
+            pointlight.info.viewLightPos.z = out.z;
 
-        Renderer::mvRenderMesh(am, light.mesh, mvTranslate(mvIdentityMat4(), light.camera.pos), viewMatrix, projMatrix);
+            mvUpdateConstBuffer(pointlight.buffer, &pointlight.info);
+            pointlight.info.viewLightPos = posCopy;
+        }
+
+        {
+            mvVec3 posCopy = directionLightInfo.viewLightDir;
+
+            mvVec4 out = viewMatrix * mvVec4{
+                directionLightInfo.viewLightDir.x,
+                directionLightInfo.viewLightDir.y,
+                directionLightInfo.viewLightDir.z,
+                0.0f };
+            directionLightInfo.viewLightDir.x = out.x;
+            directionLightInfo.viewLightDir.y = out.y;
+            directionLightInfo.viewLightDir.z = out.z;
+
+            mvUpdateConstBuffer(directionLightBuffer, &directionLightInfo);
+            directionLightInfo.viewLightDir = posCopy;
+        }
+
+        // update constant buffers
+        mvUpdateConstBuffer(globalInfoBuffer, &globalInfo);
+        mvUpdateConstBuffer(directionalShadowMap.buffer, &directionalShadowMap.info);
+        mvUpdateConstBuffer(omniShadowMap.buffer, &omniShadowMap.info);
+
+        // vertex constant buffers
+        ctx->VSSetConstantBuffers(1u, 1u, &directionalShadowMap.buffer.buffer);
+        ctx->VSSetConstantBuffers(2u, 1u, &omniShadowMap.buffer.buffer);
+
+        // pixel constant buffers
+        ctx->PSSetConstantBuffers(0u, 1u, &pointlight.buffer.buffer);
+        ctx->PSSetConstantBuffers(2u, 1u, &directionLightBuffer.buffer);
+        ctx->PSSetConstantBuffers(3u, 1u, &globalInfoBuffer.buffer);
+
+        // samplers
+        ctx->PSSetSamplers(1u, 1, &directionalShadowMap.sampler);
+        ctx->PSSetSamplers(2u, 1, &omniShadowMap.sampler);
+
+        // textures
+        ctx->PSSetShaderResources(3u, 1, &directionalShadowMap.resourceView);
+        ctx->PSSetShaderResources(4u, 1, &omniShadowMap.resourceView);
+
+        // render light mesh
+        {
+            mvSetPipelineState(pointlight.pipeline);
+
+            mvTransforms transforms{};
+            transforms.model = mvTranslate(mvIdentityMat4(), pointlight.camera.pos);
+            transforms.modelView = viewMatrix * transforms.model;
+            transforms.modelViewProjection = projMatrix * viewMatrix * transforms.model;
+
+            D3D11_MAPPED_SUBRESOURCE mappedSubresource;
+            ctx->Map(GContext->graphics.tranformCBuf.Get(), 0u, D3D11_MAP_WRITE_DISCARD, 0u, &mappedSubresource);
+            memcpy(mappedSubresource.pData, &transforms, sizeof(mvTransforms));
+            ctx->Unmap(GContext->graphics.tranformCBuf.Get(), 0u);
+
+            // mesh
+            static const UINT offset = 0u;
+            ctx->VSSetConstantBuffers(0u, 1u, GContext->graphics.tranformCBuf.GetAddressOf());
+            ctx->IASetIndexBuffer(am.buffers[pointlight.mesh.indexBuffer].buffer.buffer, DXGI_FORMAT_R32_UINT, 0u);
+            static mvVertexLayout lightvertexlayout = mvCreateVertexLayout({ mvVertexElement::Position3D });
+            ctx->IASetVertexBuffers(0u, 1u,
+                &am.buffers[pointlight.mesh.vertexBuffer].buffer.buffer,
+                &lightvertexlayout.size, &offset);
+
+            // draw
+            ctx->DrawIndexed(am.buffers[pointlight.mesh.indexBuffer].buffer.size / sizeof(u32), 0u, 0u);
+        }
 
         for (int i = 0; i < am.sceneCount; i++)
+        {
             Renderer::mvRenderScene(am, am.scenes[i].scene, viewMatrix, projMatrix);
-
-        Renderer::mvEndPass();
-
+        }
 
         //-----------------------------------------------------------------------------
         // skybox pass
         //-----------------------------------------------------------------------------
-        Renderer::mvBeginPass(skyboxPass.basePass);
-        mvBindSlot_bPS(0u, scene);
-        Renderer::mvRenderSkybox(am, skyboxPass, viewMatrix, projMatrix);
-        Renderer::mvEndPass();
+        if (globalInfo.useSkybox)
+        {
+            ctx->OMSetRenderTargets(1, GContext->graphics.target.GetAddressOf(), *GContext->graphics.targetDepth.GetAddressOf());
+            ctx->RSSetViewports(1u, &GContext->graphics.viewport);
+            {
+
+                // pipeline
+                mvSetPipelineState(skybox.pipeline);
+                ctx->PSSetSamplers(0, 1, &skybox.cubeSampler);
+                ctx->PSSetShaderResources(0, 1, skybox.cubeTexture.textureView.GetAddressOf());
+
+                mvTransforms transforms{};
+                transforms.model = mvIdentityMat4() * mvScale(mvIdentityMat4(), mvVec3{ 1.0f, 1.0f, -1.0f });
+                transforms.modelView = viewMatrix * transforms.model;
+                transforms.modelViewProjection = projMatrix * viewMatrix * transforms.model;
+
+                D3D11_MAPPED_SUBRESOURCE mappedSubresource;
+                ctx->Map(GContext->graphics.tranformCBuf.Get(), 0u, D3D11_MAP_WRITE_DISCARD, 0u, &mappedSubresource);
+                memcpy(mappedSubresource.pData, &transforms, sizeof(mvTransforms));
+                ctx->Unmap(GContext->graphics.tranformCBuf.Get(), 0u);
+
+                // mesh
+                static const UINT offset = 0u;
+                ctx->VSSetConstantBuffers(0u, 1u, GContext->graphics.tranformCBuf.GetAddressOf());
+                ctx->IASetIndexBuffer(skybox.indexBuffer.buffer, DXGI_FORMAT_R32_UINT, 0u);
+                ctx->IASetVertexBuffers(0u, 1u, &skybox.vertexBuffer.buffer, &skybox.vertexLayout.size, &offset);
+
+                // draw
+                ctx->DrawIndexed(skybox.indexBuffer.size / sizeof(u32), 0u, 0u);
+            }
+        }
 
         //-----------------------------------------------------------------------------
         // end frame & present
         //-----------------------------------------------------------------------------
-        Renderer::mvEndFrame();
-        Renderer::mvPresent();
+
+        // render imgui
+        ImGui::Render();
+        ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
+
+        // present
+        GContext->graphics.swapChain->Present(1, 0);
     }
 
     mvCleanupAssetManager(&am);
-    Renderer::mvStopRenderer();
+
+    // Cleanup
+    ImGui_ImplDX11_Shutdown();
+    ImGui_ImplWin32_Shutdown();
+    ImPlot::DestroyContext();
+    ImGui::DestroyContext();
+    mvCleanupGraphics();
+
     mvDestroyContext();
 }
 
-mvGLTFModel LoadTestModel(const char* name)
-{
-    std::string root = gltfPath + std::string(name) + "//glTF//";
-    std::string file = root + std::string(name) + ".gltf";
-    return mvLoadGLTF(root.c_str(), file.c_str());
-}
