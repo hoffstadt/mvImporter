@@ -7,8 +7,8 @@
 
 struct mvBuffer
 {
-	u32                    size;
-	mvComPtr<ID3D11Buffer> buffer;
+	u32           size;
+	ID3D11Buffer* buffer;
 };
 
 struct mvConstBuffer

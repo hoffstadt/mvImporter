@@ -5,9 +5,6 @@
 #include "mvWindows.h"
 #include "mvTypes.h"
 
-void               mvInitializeViewport(i32 width, i32 height);
-std::optional<i32> mvProcessViewportEvents();
-
 struct mvViewport
 {
     i32  width   = 500;
@@ -15,3 +12,6 @@ struct mvViewport
     HWND hWnd    = nullptr;
     b8   resized = false;    
 };
+
+mvViewport*         mvInitializeViewport(i32 width, i32 height);
+std::optional<i32> mvProcessViewportEvents();

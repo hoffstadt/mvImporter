@@ -8,14 +8,18 @@ ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam
 mv_internal LRESULT CALLBACK
 HandleMsgSetup(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
-void
+mvViewport*
 mvInitializeViewport(i32 width, i32 height)
 {
-    GContext->viewport.width = width;
-    GContext->viewport.height = height;
+    mvViewport* viewport = new mvViewport{
+        width,
+        height,
+        nullptr,
+        false
+    };
 
     WNDCLASSEX wc = { 0 };
-    wc.cbSize = sizeof(wc);
+    wc.cbSize = sizeof(WNDCLASSEX);
     wc.style = CS_OWNDC;
     wc.lpfnWndProc = HandleMsgSetup;
     wc.cbClsExtra = 0;
@@ -38,14 +42,19 @@ mvInitializeViewport(i32 width, i32 height)
     AdjustWindowRect(&wr, WS_CAPTION | WS_MINIMIZEBOX | WS_SYSMENU | WS_OVERLAPPED | WS_THICKFRAME, FALSE);
 
     // create window & get hWnd
-    GContext->viewport.hWnd = CreateWindow(
-        "mv3D Window", "mv3D",
+    viewport->hWnd = CreateWindowA(
+        "mv3D Window", 
+        "mv3D",
         WS_CAPTION | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_SYSMENU | WS_OVERLAPPED | WS_THICKFRAME,
         0, 0, wr.right - wr.left, wr.bottom - wr.top,
-        nullptr, nullptr, GetModuleHandle(nullptr), nullptr);
+        nullptr, 
+        nullptr, 
+        GetModuleHandle(nullptr), 
+        viewport // app data
+    );
 
-
-    ShowWindow(GContext->viewport.hWnd, SW_SHOWDEFAULT);
+    ShowWindow(viewport->hWnd, SW_SHOWDEFAULT);
+    return viewport;
 }
     
 std::optional<i32>
@@ -75,6 +84,19 @@ HandleMsgSetup(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
     if (ImGui_ImplWin32_WndProcHandler(hWnd, msg, wParam, lParam))
         return true;
 
+    mvViewport* viewport;
+    if (msg == WM_CREATE)
+    {
+        CREATESTRUCT* pCreate = reinterpret_cast<CREATESTRUCT*>(lParam);
+        viewport = reinterpret_cast<mvViewport*>(pCreate->lpCreateParams);
+        SetWindowLongPtr(hWnd, GWLP_USERDATA, (LONG_PTR)viewport);
+    }
+    else
+    {
+        LONG_PTR ptr = GetWindowLongPtr(hWnd, GWLP_USERDATA);
+        viewport = reinterpret_cast<mvViewport*>(ptr);
+    }
+
     switch (msg)
     {
 
@@ -99,12 +121,9 @@ HandleMsgSetup(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
                 cheight = crect.bottom - crect.top;
             }
 
-            // I believe this are only used for the error logger
-            //m_width = (UINT)LOWORD(lParam);
-            //m_height = (UINT)HIWORD(lParam);
-            GContext->viewport.width = cwidth;
-            GContext->viewport.height = cheight;
-            GContext->viewport.resized = true;
+            viewport->width = cwidth;
+            viewport->height = cheight;
+            viewport->resized = true;
 
         }
         return 0;

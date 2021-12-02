@@ -14,7 +14,6 @@ struct mvIO
 struct mvContext
 {
     mvIO       IO;
-    mvViewport viewport;
     mvGraphics graphics;
 };
 

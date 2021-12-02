@@ -10,111 +10,6 @@
 
 namespace Renderer{
 
-void
-mvResize()
-{
-    mvRecreateSwapChain();
-}
-
-void
-mvStartRenderer()
-{
-    mvInitializeViewport(1850, 900);
-    mvSetupGraphics();
-
-    // Setup Dear ImGui context
-    IMGUI_CHECKVERSION();
-    ImGui::CreateContext();
-    ImPlot::CreateContext();
-    ImGuiIO& io = ImGui::GetIO(); (void)io;
-    //io.IniFilename = nullptr;
-    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;       // Enable Keyboard Controls
-    //io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;           // Enable Docking
-
-    ImGui::StyleColorsDark();
-
-    ImGui_ImplWin32_Init(GContext->viewport.hWnd);
-    ImGui_ImplDX11_Init(GContext->graphics.device.Get(), GContext->graphics.imDeviceContext.Get());
-}
-
-void
-mvStopRenderer()
-{
-    // Cleanup
-    ImGui_ImplDX11_Shutdown();
-    ImGui_ImplWin32_Shutdown();
-    ImPlot::DestroyContext();
-    ImGui::DestroyContext();
-
-    mvCleanupGraphics();
-}
-
-void
-mvBeginFrame()
-{
-    ImGui_ImplDX11_NewFrame();
-    ImGui_ImplWin32_NewFrame();
-    ImGui::NewFrame();
-
-    ID3D11ShaderResourceView* const pSRV[6] = { NULL };
-    GContext->graphics.imDeviceContext->PSSetShaderResources(0, 1, pSRV);
-    GContext->graphics.imDeviceContext->PSSetShaderResources(1, 1, pSRV);
-    GContext->graphics.imDeviceContext->PSSetShaderResources(2, 1, pSRV);
-    GContext->graphics.imDeviceContext->PSSetShaderResources(3, 6, pSRV); // depth map
-    GContext->graphics.imDeviceContext->PSSetShaderResources(4, 6, pSRV); // depth map
-    GContext->graphics.imDeviceContext->PSSetShaderResources(5, 6, pSRV); // depth map
-    GContext->graphics.imDeviceContext->PSSetShaderResources(6, 1, pSRV); // depth map
-
-    ImGui::GetForegroundDrawList()->AddText(ImVec2(45, 45),
-        ImColor(0.0f, 1.0f, 0.0f), std::string(std::to_string(ImGui::GetIO().Framerate) + " FPS").c_str());
-}
-
-void
-mvEndFrame()
-{
-    ImGui::Render();
-    ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
-}
-
-void
-mvPresent()
-{
-    GContext->graphics.swapChain->Present(1, 0);
-}
-
-void
-mvClearPass(mvPass& pass)
-{
-    // clear render target
-    mv_local_persist float backgroundColor[] = { 0.0f, 0.0f, 0.0f, 1.0f };
-    if (pass.target)
-        GContext->graphics.imDeviceContext->ClearRenderTargetView(*pass.target, backgroundColor);
-    if(pass.depthStencil)
-        GContext->graphics.imDeviceContext->ClearDepthStencilView(*pass.depthStencil, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0u);
-}
-
-void
-mvBeginPass(mvPass& pass)
-{
-    if(pass.depthStencil && pass.target)
-        GContext->graphics.imDeviceContext->OMSetRenderTargets(1, pass.target, *pass.depthStencil);
-    else if(pass.depthStencil)
-        GContext->graphics.imDeviceContext->OMSetRenderTargets(0, nullptr, *pass.depthStencil);
-    else 
-        GContext->graphics.imDeviceContext->OMSetRenderTargets(1, pass.target, nullptr);
-
-    GContext->graphics.imDeviceContext->RSSetViewports(1u, &pass.viewport);
-    
-    if(pass.rasterizationState)
-        GContext->graphics.imDeviceContext->RSSetState(*pass.rasterizationState);
-}
-
-void
-mvEndPass()
-{
-
-}
-
 mv_internal void
 mvRenderMeshPhong(mvAssetManager& am, mvMesh& mesh, mvMat4 transform, mvMat4 cam, mvMat4 proj)
 {
@@ -175,9 +70,9 @@ mvRenderMeshPhong(mvAssetManager& am, mvMesh& mesh, mvMat4 transform, mvMat4 cam
     // mesh
     mv_local_persist const UINT offset = 0u;
     device->VSSetConstantBuffers(0u, 1u, GContext->graphics.tranformCBuf.GetAddressOf());
-    device->IASetIndexBuffer(am.buffers[mesh.indexBuffer].buffer.buffer.Get(), DXGI_FORMAT_R32_UINT, 0u);
+    device->IASetIndexBuffer(am.buffers[mesh.indexBuffer].buffer.buffer, DXGI_FORMAT_R32_UINT, 0u);
     device->IASetVertexBuffers(0u, 1u,
-        am.buffers[mesh.vertexBuffer].buffer.buffer.GetAddressOf(),
+        &am.buffers[mesh.vertexBuffer].buffer.buffer,
         &material->pipeline.info.layout.size, &offset);
 
     // draw
@@ -242,9 +137,9 @@ mvRenderMeshPBR(mvAssetManager& am, mvMesh& mesh, mvMat4 transform, mvMat4 cam, 
     // mesh
     static const UINT offset = 0u;
     device->VSSetConstantBuffers(0u, 1u, GContext->graphics.tranformCBuf.GetAddressOf());
-    device->IASetIndexBuffer(am.buffers[mesh.indexBuffer].buffer.buffer.Get(), DXGI_FORMAT_R32_UINT, 0u);
+    device->IASetIndexBuffer(am.buffers[mesh.indexBuffer].buffer.buffer, DXGI_FORMAT_R32_UINT, 0u);
     device->IASetVertexBuffers(0u, 1u,
-        am.buffers[mesh.vertexBuffer].buffer.buffer.GetAddressOf(),
+        &am.buffers[mesh.vertexBuffer].buffer.buffer,
         &material->pipeline.info.layout.size, &offset);
 
     // draw
@@ -319,55 +214,10 @@ mvRenderMeshShadows(mvAssetManager& am, mvMesh& mesh, mvMat4 transform, mvMat4 c
     // mesh
     static const UINT offset = 0u;
     device->VSSetConstantBuffers(0u, 1u, GContext->graphics.tranformCBuf.GetAddressOf());
-    device->IASetIndexBuffer(am.buffers[mesh.indexBuffer].buffer.buffer.Get(), DXGI_FORMAT_R32_UINT, 0u);
+    device->IASetIndexBuffer(am.buffers[mesh.indexBuffer].buffer.buffer, DXGI_FORMAT_R32_UINT, 0u);
     device->IASetVertexBuffers(0u, 1u,
-        am.buffers[mesh.vertexBuffer].buffer.buffer.GetAddressOf(),
+        &am.buffers[mesh.vertexBuffer].buffer.buffer,
         &material->pipeline.info.layout.size, &offset);
-
-    // draw
-    device->DrawIndexed(am.buffers[mesh.indexBuffer].buffer.size / sizeof(u32), 0u, 0u);
-}
-
-void
-mvRenderSkybox(mvAssetManager& am, mvSkyboxPass& skyboxPass, mvMat4 cam, mvMat4 proj)
-{
-    auto device = GContext->graphics.imDeviceContext;
-
-    mvCubeTexture* texture = &am.cubeTextures[skyboxPass.cubeTexture].texture;
-    mvMesh& mesh = am.meshes[skyboxPass.mesh].mesh;
-    mvSampler& sampler = am.samplers[skyboxPass.sampler].sampler;
-
-    // pipeline
-    device->IASetPrimitiveTopology(skyboxPass.pipeline.topology);
-    device->RSSetState(skyboxPass.pipeline.rasterizationState.Get());
-    device->OMSetBlendState(skyboxPass.pipeline.blendState.Get(), nullptr, 0xFFFFFFFFu);
-    device->OMSetDepthStencilState(skyboxPass.pipeline.depthStencilState.Get(), 0xFF);;
-    device->IASetInputLayout(skyboxPass.pipeline.inputLayout.Get());
-    device->VSSetShader(skyboxPass.pipeline.vertexShader.Get(), nullptr, 0);
-    device->PSSetShader(skyboxPass.pipeline.pixelShader.Get(), nullptr, 0);
-    device->HSSetShader(nullptr, nullptr, 0);
-    device->DSSetShader(nullptr, nullptr, 0);
-    device->GSSetShader(nullptr, nullptr, 0);
-    device->PSSetSamplers(0, 1, sampler.state.GetAddressOf());
-    device->PSSetShaderResources(0, 1, texture->textureView.GetAddressOf());
-
-    mvTransforms transforms{};
-    transforms.model = mvIdentityMat4() * mvScale(mvIdentityMat4(), mvVec3{ 1.0f, 1.0f, -1.0f });
-    transforms.modelView = cam * transforms.model;
-    transforms.modelViewProjection = proj * cam * transforms.model;
-
-    D3D11_MAPPED_SUBRESOURCE mappedSubresource;
-    device->Map(GContext->graphics.tranformCBuf.Get(), 0u, D3D11_MAP_WRITE_DISCARD, 0u, &mappedSubresource);
-    memcpy(mappedSubresource.pData, &transforms, sizeof(mvTransforms));
-    device->Unmap(GContext->graphics.tranformCBuf.Get(), 0u);
-
-    // mesh
-    static const UINT offset = 0u;
-    device->VSSetConstantBuffers(0u, 1u, GContext->graphics.tranformCBuf.GetAddressOf());
-    device->IASetIndexBuffer(am.buffers[mesh.indexBuffer].buffer.buffer.Get(), DXGI_FORMAT_R32_UINT, 0u);
-    device->IASetVertexBuffers(0u, 1u,
-        am.buffers[mesh.vertexBuffer].buffer.buffer.GetAddressOf(),
-        &skyboxPass.pipeline.info.layout.size, &offset);
 
     // draw
     device->DrawIndexed(am.buffers[mesh.indexBuffer].buffer.size / sizeof(u32), 0u, 0u);

@@ -5,9 +5,11 @@
 #include <thread>
 #include "mvWindows.h"
 
-void mvSetupGraphics();
+struct mvViewport;
+
+void mvSetupGraphics(mvViewport& viewport);
 void mvCleanupGraphics();
-void mvRecreateSwapChain();
+void mvRecreateSwapChain(unsigned width, unsigned height);
 
 template <typename T>
 using mvComPtr = Microsoft::WRL::ComPtr<T>;

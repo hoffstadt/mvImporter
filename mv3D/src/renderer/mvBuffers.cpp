@@ -9,7 +9,7 @@ mvCreateBuffer(void* data, u32 size, D3D11_BIND_FLAG flags)
 	buffer.size = size;
 
     // Fill in a buffer description.
-    D3D11_BUFFER_DESC bufferDesc = {};
+    D3D11_BUFFER_DESC bufferDesc{};
     bufferDesc.Usage = D3D11_USAGE_DEFAULT;
     bufferDesc.CPUAccessFlags = 0u;
 

@@ -4,13 +4,13 @@
 #include "mvMath.h"
 
 void
-mvSetupGraphics()
+mvSetupGraphics(mvViewport& viewport)
 {
     GContext->graphics.threadID = std::this_thread::get_id();
 
     DXGI_SWAP_CHAIN_DESC sd = {};
-    sd.BufferDesc.Width = GContext->viewport.width;
-    sd.BufferDesc.Height = GContext->viewport.height;
+    sd.BufferDesc.Width = viewport.width;
+    sd.BufferDesc.Height = viewport.height;
     sd.BufferDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
     sd.BufferDesc.RefreshRate.Numerator = 0;
     sd.BufferDesc.RefreshRate.Denominator = 0;
@@ -20,7 +20,7 @@ mvSetupGraphics()
     sd.SampleDesc.Quality = 0;
     sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
     sd.BufferCount = 2;
-    sd.OutputWindow = GContext->viewport.hWnd;
+    sd.OutputWindow = viewport.hWnd;
     sd.Windowed = TRUE;
     sd.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD; //DXGI_SWAP_EFFECT_DISCARD;
     sd.Flags = 0;
@@ -79,8 +79,8 @@ mvSetupGraphics()
     // create depth stensil texture
     mvComPtr<ID3D11Texture2D> pDepthStencil;
     D3D11_TEXTURE2D_DESC descDepth = {};
-    descDepth.Width = GContext->viewport.width;
-    descDepth.Height = GContext->viewport.height;
+    descDepth.Width = viewport.width;
+    descDepth.Height = viewport.height;
     descDepth.MipLevels = 1u;
     descDepth.ArraySize = 1u;
     descDepth.Format = DXGI_FORMAT_R24G8_TYPELESS;
@@ -105,7 +105,7 @@ mvCleanupGraphics()
 }
 
 void
-mvRecreateSwapChain()
+mvRecreateSwapChain(unsigned width, unsigned height)
 {
     if (GContext->graphics.device)
     {
@@ -114,7 +114,7 @@ mvRecreateSwapChain()
         GContext->graphics.imDeviceContext->OMSetRenderTargets(0, 0, 0);
         GContext->graphics.frameBuffer->Release();
 
-        GContext->graphics.swapChain->ResizeBuffers(0, GContext->viewport.width, GContext->viewport.height, DXGI_FORMAT_UNKNOWN, 0);
+        GContext->graphics.swapChain->ResizeBuffers(0, width, height, DXGI_FORMAT_UNKNOWN, 0);
 
         // Create Framebuffer Render Target
         GContext->graphics.swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (void**)GContext->graphics.frameBuffer.GetAddressOf());
@@ -135,8 +135,8 @@ mvRecreateSwapChain()
         // create depth stensil texture
         mvComPtr<ID3D11Texture2D> pDepthStencil;
         D3D11_TEXTURE2D_DESC descDepth = {};
-        descDepth.Width = GContext->viewport.width;
-        descDepth.Height = GContext->viewport.height;
+        descDepth.Width = width;
+        descDepth.Height = height;
         descDepth.MipLevels = 1u;
         descDepth.ArraySize = 1u;
         descDepth.Format = DXGI_FORMAT_R24G8_TYPELESS;
