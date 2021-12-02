@@ -6,10 +6,12 @@
 #include "mvWindows.h"
 
 struct mvViewport;
+struct mvPipeline;
 
 void mvSetupGraphics(mvViewport& viewport);
 void mvCleanupGraphics();
 void mvRecreateSwapChain(unsigned width, unsigned height);
+void mvSetPipelineState(mvPipeline& pipeline);
 
 template <typename T>
 using mvComPtr = Microsoft::WRL::ComPtr<T>;

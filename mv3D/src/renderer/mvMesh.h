@@ -26,6 +26,7 @@ struct mvMesh
     b8             pbr                   = false;
 };
 
+mvMesh mvCreateCube        (mvAssetManager& assetManager, f32 size = 1.0f);
 mvMesh mvCreateTexturedCube(mvAssetManager& assetManager, f32 size = 1.0f);
 mvMesh mvCreateTexturedQuad(mvAssetManager& assetManager, f32 size = 1.0f);
 mvMesh mvCreateRoom        (mvAssetManager& assetManager, f32 size = 1.0f);

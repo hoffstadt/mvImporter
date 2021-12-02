@@ -5,17 +5,17 @@
 
 struct mvPixelShader
 {
-    mvComPtr<ID3D11PixelShader> shader;
-    mvComPtr<ID3DBlob>          blob;
-    std::string                 path;
+    ID3D11PixelShader* shader;
+    ID3DBlob*          blob;
+    std::string        path;
 };
 
 struct mvVertexShader
 {
-    mvComPtr<ID3D11VertexShader> shader;
-    mvComPtr<ID3D11InputLayout>  inputLayout;
-    mvComPtr<ID3DBlob>           blob;
-    std::string                  path;
+    ID3D11VertexShader* shader;
+    ID3D11InputLayout*  inputLayout;
+    ID3DBlob*           blob;
+    std::string         path;
 };
 
 struct mvPipelineInfo
@@ -31,14 +31,14 @@ struct mvPipelineInfo
 
 struct mvPipeline
 {
-    mvComPtr<ID3D11PixelShader>       pixelShader;
-    mvComPtr<ID3D11VertexShader>      vertexShader;
-    mvComPtr<ID3DBlob>                pixelBlob;
-    mvComPtr<ID3DBlob>                vertexBlob;
-    mvComPtr<ID3D11InputLayout>       inputLayout;
-    mvComPtr<ID3D11BlendState>        blendState;
-    mvComPtr<ID3D11DepthStencilState> depthStencilState;
-    mvComPtr<ID3D11RasterizerState>   rasterizationState;
+    ID3D11PixelShader*       pixelShader = nullptr;
+    ID3D11VertexShader*      vertexShader = nullptr;
+    ID3DBlob*                pixelBlob = nullptr;
+    ID3DBlob*                vertexBlob = nullptr;
+    ID3D11InputLayout*       inputLayout = nullptr;
+    ID3D11BlendState*        blendState = nullptr;
+    ID3D11DepthStencilState* depthStencilState = nullptr;
+    ID3D11RasterizerState*   rasterizationState = nullptr;
     D3D11_PRIMITIVE_TOPOLOGY          topology;
     mvPipelineInfo                    info;
 };

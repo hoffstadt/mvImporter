@@ -56,10 +56,10 @@ mvCreateConstBuffer(void* data, u32 size)
     {
         D3D11_SUBRESOURCE_DATA csd = {};
         csd.pSysMem = &data;
-        GContext->graphics.device->CreateBuffer(&cbd, &csd, buffer.buffer.GetAddressOf());
+        GContext->graphics.device->CreateBuffer(&cbd, &csd, &buffer.buffer);
     }
     else
-        GContext->graphics.device->CreateBuffer(&cbd, nullptr, buffer.buffer.GetAddressOf());
+        GContext->graphics.device->CreateBuffer(&cbd, nullptr, &buffer.buffer);
 
     return buffer;
 }
@@ -68,7 +68,7 @@ void
 mvUpdateConstBuffer(mvConstBuffer& buffer, void* data)
 {
     D3D11_MAPPED_SUBRESOURCE mappedSubresource;
-    GContext->graphics.imDeviceContext->Map(buffer.buffer.Get(), 0u, D3D11_MAP_WRITE_DISCARD, 0u, &mappedSubresource);
+    GContext->graphics.imDeviceContext->Map(buffer.buffer, 0u, D3D11_MAP_WRITE_DISCARD, 0u, &mappedSubresource);
     memcpy(mappedSubresource.pData, data, buffer.size);
-    GContext->graphics.imDeviceContext->Unmap(buffer.buffer.Get(), 0u);
+    GContext->graphics.imDeviceContext->Unmap(buffer.buffer, 0u);
 }

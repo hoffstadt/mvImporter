@@ -11,13 +11,11 @@
 #include "mvBuffers.h"
 #include "mvCamera.h"
 #include "mvGraphics.h"
-#include "mvLights.h"
 #include "mvMaterials.h"
 #include "mvMesh.h"
 #include "mvPipeline.h"
 #include "mvRenderer.h"
 #include "mvScene.h"
-#include "mvShadows.h"
 #include "mvTextures.h"
 #include "mvVertexLayout.h"
 

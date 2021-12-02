@@ -76,6 +76,67 @@ mvLoadOBJAssets(mvAssetManager& assetManager, const std::string& root, const std
 }
 
 mvMesh
+mvCreateCube(mvAssetManager& assetManager, f32 size)
+{
+
+    mvVertexLayout layout = mvCreateVertexLayout(
+        {
+            mvVertexElement::Position3D
+        }
+    );
+
+    const float side = size;
+    auto vertices = std::vector<f32>{
+        -side, -side, -side,  // 0 near side
+         side, -side, -side,  // 1
+        -side,  side, -side,  // 2
+         side,  side, -side,  // 3
+        -side, -side,  side,  // 4 far side
+         side, -side,  side,  // 5
+        -side,  side,  side,  // 6
+         side,  side,  side,  // 7
+        -side, -side, -side,  // 8 left side
+        -side,  side, -side,  // 9
+        -side, -side,  side,  // 10
+        -side,  side,  side,  // 11
+         side, -side, -side,  // 12 right side
+         side,  side, -side,  // 13
+         side, -side,  side,  // 14
+         side,  side,  side,  // 15
+        -side, -side, -side,  // 16 bottom side
+         side, -side, -side,  // 17
+        -side, -side,  side,  // 18
+         side, -side,  side,  // 19
+        -side,  side, -side,  // 20 top side
+         side,  side, -side,  // 21
+        -side,  side,  side,  // 22
+         side,  side,  side   // 23
+    };
+
+    static auto indices = std::vector<u32>{
+        1,  2,  0,  1,  3,  2,
+        7,  5,  4,  6,  7,  4,
+        9, 10,  8, 9, 11,  10,
+        15, 13, 12, 14, 15, 12,
+        18, 17, 16, 19, 17, 18,
+        21, 23, 20, 23, 22, 20
+    };
+
+    mvMesh mesh{};
+    mesh.pbr = false;
+    mesh.name = "cube";
+    mesh.layout = layout;
+    mesh.vertexBuffer = mvGetBufferAsset(&assetManager,
+        vertices.data(),
+        vertices.size() * sizeof(f32),
+        D3D11_BIND_VERTEX_BUFFER,
+        "cube_vertex" + std::to_string(side));
+    mesh.indexBuffer = mvGetBufferAsset(&assetManager, indices.data(), indices.size() * sizeof(u32), D3D11_BIND_INDEX_BUFFER, "cube_index");
+
+    return mesh;
+}
+
+mvMesh
 mvCreateTexturedCube(mvAssetManager& assetManager, f32 size)
 {
 
@@ -246,12 +307,10 @@ mvCreateRoom(mvAssetManager& assetManager, f32 size)
          0.0f,  side, 0.0f, 0.0f, 0.0f, -1.0f, 1.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, // 5
          side,  0.0f, 0.0f, 0.0f, 0.0f, -1.0f, 1.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, // 6
          side,  side, 0.0f, 0.0f, 0.0f, -1.0f, 1.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, // 7
-
          0.0f,  0.0f, side, 0.0f, 0.0f, -1.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, // 8
          0.0f,  0.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, // 9
          side,  0.0f, 0.0f, 0.0f, 0.0f, -1.0f, 1.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, // 10
          side,  0.0f, side, 0.0f, 0.0f, -1.0f, 1.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, // 11
-
          side,  side, 0.0f, 0.0f, 0.0f, -1.0f, 1.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, // 12
          side,  0.0f, 0.0f, 0.0f, 0.0f, -1.0f, 1.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, // 13
          side,  0.0f, side, 0.0f, 0.0f, -1.0f, 1.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, // 14

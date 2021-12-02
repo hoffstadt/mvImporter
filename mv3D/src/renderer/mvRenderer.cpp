@@ -36,16 +36,7 @@ mvRenderMeshPhong(mvAssetManager& am, mvMesh& mesh, mvMat4 transform, mvMat4 cam
     }
 
     // pipeline
-    device->IASetPrimitiveTopology(material->pipeline.topology);
-    device->RSSetState(material->pipeline.rasterizationState.Get());
-    device->OMSetBlendState(material->pipeline.blendState.Get(), nullptr, 0xFFFFFFFFu);
-    device->OMSetDepthStencilState(material->pipeline.depthStencilState.Get(), 0xFF);;
-    device->IASetInputLayout(material->pipeline.inputLayout.Get());
-    device->VSSetShader(material->pipeline.vertexShader.Get(), nullptr, 0);
-    device->PSSetShader(material->pipeline.pixelShader.Get(), nullptr, 0);
-    device->HSSetShader(nullptr, nullptr, 0);
-    device->DSSetShader(nullptr, nullptr, 0);
-    device->GSSetShader(nullptr, nullptr, 0);
+    mvSetPipelineState(material->pipeline);
     device->PSSetSamplers(0, 1, material->colorSampler.state.GetAddressOf());
 
     // maps
@@ -55,7 +46,7 @@ mvRenderMeshPhong(mvAssetManager& am, mvMesh& mesh, mvMat4 transform, mvMat4 cam
     device->PSSetShaderResources(2, 1, normMap ? normMap->textureView.GetAddressOf() : pSRV);
 
     mvUpdateConstBuffer(material->buffer, &material->data);
-    device->PSSetConstantBuffers(1u, 1u, material->buffer.buffer.GetAddressOf());
+    device->PSSetConstantBuffers(1u, 1u, &material->buffer.buffer);
 
     mvTransforms transforms{};
     transforms.model = transform;
@@ -103,16 +94,7 @@ mvRenderMeshPBR(mvAssetManager& am, mvMesh& mesh, mvMat4 transform, mvMat4 cam, 
     }
 
     // pipeline
-    device->IASetPrimitiveTopology(material->pipeline.topology);
-    device->RSSetState(material->pipeline.rasterizationState.Get());
-    device->OMSetBlendState(material->pipeline.blendState.Get(), nullptr, 0xFFFFFFFFu);
-    device->OMSetDepthStencilState(material->pipeline.depthStencilState.Get(), 0xFF);;
-    device->IASetInputLayout(material->pipeline.inputLayout.Get());
-    device->VSSetShader(material->pipeline.vertexShader.Get(), nullptr, 0);
-    device->PSSetShader(material->pipeline.pixelShader.Get(), nullptr, 0);
-    device->HSSetShader(nullptr, nullptr, 0);
-    device->DSSetShader(nullptr, nullptr, 0);
-    device->GSSetShader(nullptr, nullptr, 0);
+    mvSetPipelineState(material->pipeline);
     device->PSSetSamplers(0, 1, material->colorSampler.state.GetAddressOf());
 
     // maps
@@ -122,7 +104,7 @@ mvRenderMeshPBR(mvAssetManager& am, mvMesh& mesh, mvMat4 transform, mvMat4 cam, 
     device->PSSetShaderResources(2, 1, metalRoughMap ? metalRoughMap->textureView.GetAddressOf() : pSRV);
 
     mvUpdateConstBuffer(material->buffer, &material->data);
-    device->PSSetConstantBuffers(1u, 1u, material->buffer.buffer.GetAddressOf());
+    device->PSSetConstantBuffers(1u, 1u, &material->buffer.buffer);
 
     mvTransforms transforms{};
     transforms.model = transform;
@@ -181,11 +163,11 @@ mvRenderMeshShadows(mvAssetManager& am, mvMesh& mesh, mvMat4 transform, mvMat4 c
 
     // pipeline
     device->IASetPrimitiveTopology(material->pipeline.topology);
-    device->OMSetBlendState(material->pipeline.blendState.Get(), nullptr, 0xFFFFFFFFu);
-    device->OMSetDepthStencilState(material->pipeline.depthStencilState.Get(), 0xFF);;
-    device->IASetInputLayout(material->pipeline.inputLayout.Get());
-    device->VSSetShader(material->pipeline.vertexShader.Get(), nullptr, 0);
-    device->PSSetShader(material->data.hasAlpha ? material->pipeline.pixelShader.Get() : nullptr, nullptr, 0);
+    device->OMSetBlendState(material->pipeline.blendState, nullptr, 0xFFFFFFFFu);
+    device->OMSetDepthStencilState(material->pipeline.depthStencilState, 0xFF);;
+    device->IASetInputLayout(material->pipeline.inputLayout);
+    device->VSSetShader(material->pipeline.vertexShader, nullptr, 0);
+    device->PSSetShader(material->data.hasAlpha ? material->pipeline.pixelShader : nullptr, nullptr, 0);
     device->HSSetShader(nullptr, nullptr, 0);
     device->DSSetShader(nullptr, nullptr, 0);
     device->GSSetShader(nullptr, nullptr, 0);
@@ -199,7 +181,7 @@ mvRenderMeshShadows(mvAssetManager& am, mvMesh& mesh, mvMat4 transform, mvMat4 c
         device->PSSetShaderResources(0, 1, diffMap ? diffMap->textureView.GetAddressOf() : pSRV);
 
     mvUpdateConstBuffer(material->buffer, &material->data);
-    GContext->graphics.imDeviceContext->PSSetConstantBuffers(1u, 1u, material->buffer.buffer.GetAddressOf());
+    GContext->graphics.imDeviceContext->PSSetConstantBuffers(1u, 1u, &material->buffer.buffer);
 
     mvTransforms transforms{};
     transforms.model = transform;

@@ -13,8 +13,8 @@ struct mvBuffer
 
 struct mvConstBuffer
 {
-	u32                    size;
-	mvComPtr<ID3D11Buffer> buffer;
+	u32           size;
+	ID3D11Buffer* buffer;
 };
 
 mvBuffer      mvCreateBuffer     (void* data, u32 size, D3D11_BIND_FLAG flags);

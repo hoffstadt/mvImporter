@@ -2,6 +2,7 @@
 #include <assert.h>
 #include "mv3D_internal.h"
 #include "mvMath.h"
+#include "mvPipeline.h"
 
 void
 mvSetupGraphics(mvViewport& viewport)
@@ -155,4 +156,20 @@ mvRecreateSwapChain(unsigned width, unsigned height)
         GContext->graphics.device->CreateDepthStencilView(pDepthStencil.Get(), &descDSV, GContext->graphics.targetDepth.GetAddressOf());
 
     }
+}
+
+void 
+mvSetPipelineState(mvPipeline& pipeline)
+{
+    auto device = GContext->graphics.imDeviceContext;
+    device->IASetPrimitiveTopology(pipeline.topology);
+    device->RSSetState(pipeline.rasterizationState);
+    device->OMSetBlendState(pipeline.blendState, nullptr, 0xFFFFFFFFu);
+    device->OMSetDepthStencilState(pipeline.depthStencilState, 0xFF);;
+    device->IASetInputLayout(pipeline.inputLayout);
+    device->VSSetShader(pipeline.vertexShader, nullptr, 0);
+    device->PSSetShader(pipeline.pixelShader, nullptr, 0);
+    device->HSSetShader(nullptr, nullptr, 0);
+    device->DSSetShader(nullptr, nullptr, 0);
+    device->GSSetShader(nullptr, nullptr, 0);
 }

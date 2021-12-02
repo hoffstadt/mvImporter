@@ -20,7 +20,7 @@ mvCreatePixelShader(const std::string& path)
     mvComPtr<ID3DBlob> shaderCompileErrorsBlob;
     HRESULT hResult = D3DCompileFromFile(ToWide(path).c_str(),
         nullptr, D3D_COMPILE_STANDARD_FILE_INCLUDE, "main", "ps_5_0", 0, 0,
-        shader.blob.GetAddressOf(), shaderCompileErrorsBlob.GetAddressOf());
+        &shader.blob, shaderCompileErrorsBlob.GetAddressOf());
 
     if (FAILED(hResult))
     {
@@ -33,7 +33,7 @@ mvCreatePixelShader(const std::string& path)
         MessageBoxA(0, errorString, "Shader Compiler Error", MB_ICONERROR | MB_OK);
     }
 
-    hResult = GContext->graphics.device->CreatePixelShader(shader.blob->GetBufferPointer(), shader.blob->GetBufferSize(), nullptr, shader.shader.GetAddressOf());
+    hResult = GContext->graphics.device->CreatePixelShader(shader.blob->GetBufferPointer(), shader.blob->GetBufferSize(), nullptr, &shader.shader);
     assert(SUCCEEDED(hResult));
     return shader;
 }
@@ -47,7 +47,7 @@ mvCreateVertexShader(const std::string& path, mvVertexLayout& layout)
     mvComPtr<ID3DBlob> shaderCompileErrorsBlob;
     HRESULT hResult = D3DCompileFromFile(ToWide(path).c_str(),
         nullptr, D3D_COMPILE_STANDARD_FILE_INCLUDE, "main", "vs_5_0",
-        0, 0, shader.blob.GetAddressOf(), shaderCompileErrorsBlob.GetAddressOf());
+        0, 0, &shader.blob, shaderCompileErrorsBlob.GetAddressOf());
 
     if (FAILED(hResult))
     {
@@ -61,7 +61,7 @@ mvCreateVertexShader(const std::string& path, mvVertexLayout& layout)
     }
 
     hResult = GContext->graphics.device->CreateVertexShader(shader.blob->GetBufferPointer(),
-        shader.blob->GetBufferSize(), nullptr, shader.shader.GetAddressOf());
+        shader.blob->GetBufferSize(), nullptr, &shader.shader);
 
     assert(SUCCEEDED(hResult));
 
@@ -82,7 +82,7 @@ mvCreateVertexShader(const std::string& path, mvVertexLayout& layout)
         (uint32_t)layout.d3dLayout.size(),
         shader.blob->GetBufferPointer(),
         shader.blob->GetBufferSize(),
-        shader.inputLayout.GetAddressOf());
+        &shader.inputLayout);
 
     assert(SUCCEEDED(hResult));
 
@@ -104,7 +104,7 @@ mvFinalizePipeline(mvPipelineInfo& info)
     rasterDesc.DepthBiasClamp = info.clamp;
     rasterDesc.SlopeScaledDepthBias = info.slopeBias;
 
-    GContext->graphics.device->CreateRasterizerState(&rasterDesc, pipeline.rasterizationState.GetAddressOf());
+    GContext->graphics.device->CreateRasterizerState(&rasterDesc, &pipeline.rasterizationState);
 
 	D3D11_DEPTH_STENCIL_DESC dsDesc = CD3D11_DEPTH_STENCIL_DESC{ CD3D11_DEFAULT{} };
     // Depth test parameters
@@ -129,14 +129,14 @@ mvFinalizePipeline(mvPipelineInfo& info)
     dsDesc.BackFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
     dsDesc.BackFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
 
-    GContext->graphics.device->CreateDepthStencilState(&dsDesc, pipeline.depthStencilState.GetAddressOf());
+    GContext->graphics.device->CreateDepthStencilState(&dsDesc, &pipeline.depthStencilState);
 
     D3D11_BLEND_DESC blendDesc = CD3D11_BLEND_DESC{ CD3D11_DEFAULT{} };
     auto& brt = blendDesc.RenderTarget[0];
     brt.BlendEnable = TRUE;
     brt.SrcBlend = D3D11_BLEND_SRC_ALPHA;
     brt.DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
-    GContext->graphics.device->CreateBlendState(&blendDesc, pipeline.blendState.GetAddressOf());
+    GContext->graphics.device->CreateBlendState(&blendDesc, &pipeline.blendState);
 
     mvPixelShader pixelShader = mvCreatePixelShader(GContext->IO.shaderDirectory + info.pixelShader);
     mvVertexShader vertexShader = mvCreateVertexShader(GContext->IO.shaderDirectory + info.vertexShader, info.layout);

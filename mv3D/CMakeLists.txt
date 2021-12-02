@@ -33,9 +33,7 @@ target_sources(mv3d
 		"src/renderer/mvTextures.cpp"
 		"src/renderer/mvPipeline.cpp"
 		"src/renderer/mvMaterials.cpp"
-		"src/renderer/mvLights.cpp"
 		"src/renderer/mvScene.cpp"
-		"src/renderer/mvShadows.cpp"
 		"src/renderer/mvObjLoader.cpp"
 
 		# implot
