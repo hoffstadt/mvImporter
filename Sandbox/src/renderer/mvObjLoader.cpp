@@ -3,7 +3,7 @@
 #include <sstream>
 #include <assert.h>
 
-mv_internal void
+static void
 ProcessMaterialLine(const std::string& line, mvObjMaterial** currentMaterial, std::vector<mvObjMaterial>& materials)
 {
 
@@ -141,7 +141,7 @@ ProcessMaterialLine(const std::string& line, mvObjMaterial** currentMaterial, st
 	(*currentMaterial)->displacementMap = tokens[1];
 }
 
-mv_internal void
+static void
 ProcessMeshLine(const std::string& line, mvObjMesh** currentMesh, mvObjModel& model)
 {
 
@@ -251,7 +251,7 @@ ProcessMeshLine(const std::string& line, mvObjMesh** currentMesh, mvObjModel& mo
 
 }
 
-mv_internal void
+static void
 PostProcess(std::vector<mvObjMesh*>& meshes)
 {
 	for (auto mesh : meshes)

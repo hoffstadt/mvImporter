@@ -1,11 +1,11 @@
 #include "mvViewport.h"
-#include "mv3D_internal.h"
+#include "mvSandbox.h"
 #include <imgui_impl_win32.h>
 
 extern IMGUI_IMPL_API LRESULT
 ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
-mv_internal LRESULT CALLBACK
+static LRESULT CALLBACK
 HandleMsgSetup(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 mvViewport*
@@ -78,7 +78,7 @@ mvProcessViewportEvents()
     return {};
 }
 
-mv_internal LRESULT CALLBACK
+static LRESULT CALLBACK
 HandleMsgSetup(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
     if (ImGui_ImplWin32_WndProcHandler(hWnd, msg, wParam, lParam))

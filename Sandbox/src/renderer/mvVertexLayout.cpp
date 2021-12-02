@@ -1,7 +1,7 @@
 #include "mvVertexLayout.h"
 #include <string>
 #include <assert.h>
-#include "mv3D_internal.h"
+#include "mvSandbox.h"
 
 struct mvVertexElementTemp
 {
@@ -14,7 +14,7 @@ struct mvVertexElementTemp
 	mvVertexElement type;
 };
 
-mv_internal mvVertexElementTemp
+static mvVertexElementTemp
 mvGetVertexElementInfo(mvVertexElement element)
 {
 	mvVertexElementTemp newelement{};

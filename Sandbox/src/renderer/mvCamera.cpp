@@ -95,7 +95,7 @@ mvUpdateCameraFPSCamera(mvCamera& camera, f32 dt, f32 travelSpeed, f32 rotationS
     }
 }
 
-mv_internal void
+static void
 mvTranslateCamera(mvCamera& camera, f32 dx, f32 dy, f32 dz, f32 travelSpeed)
 {
     mvVec3 direction{};

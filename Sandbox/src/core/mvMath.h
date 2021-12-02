@@ -3,8 +3,8 @@
 #include <cmath>
 #include "mvTypes.h"
 
-mv_global constexpr f32 PI = 3.14159265f;
-mv_global constexpr f64 PI_D = 3.1415926535897932;
+static constexpr f32 PI = 3.14159265f;
+static constexpr f64 PI_D = 3.1415926535897932;
 
 struct mvVec2
 {

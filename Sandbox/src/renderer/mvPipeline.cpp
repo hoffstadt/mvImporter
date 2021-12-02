@@ -1,9 +1,9 @@
 #include "mvPipeline.h"
 #include <assert.h>
 #include <d3dcompiler.h>
-#include "mv3D_internal.h"
+#include "mvSandbox.h"
 
-mv_internal std::wstring
+static std::wstring
 ToWide(const std::string& narrow)
 {
     wchar_t wide[512];

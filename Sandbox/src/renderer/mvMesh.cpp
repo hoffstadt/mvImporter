@@ -1,7 +1,7 @@
 #include "mvMesh.h"
 #include <assert.h>
 #include <cmath>
-#include "mv3D_internal.h"
+#include "mvSandbox.h"
 #include "mvObjLoader.h"
 #include "mvAssetManager.h"
 
@@ -357,7 +357,7 @@ mvCreateRoom(mvAssetManager& assetManager, f32 size)
     return mesh;
 }
 
-mv_internal u8
+static u8
 mvGetAccessorItemCompCount(mvGLTFAccessor& accessor)
 {
     switch (accessor.type)
@@ -372,7 +372,7 @@ mvGetAccessorItemCompCount(mvGLTFAccessor& accessor)
     }
 }
 
-mv_internal void
+static void
 mvVerifyBufferViewStride(mvGLTFModel& model, mvGLTFAccessor& accessor)
 {
     mvGLTFBufferView& bufferview = model.bufferviews[accessor.buffer_view_index];
@@ -409,7 +409,7 @@ mvVerifyBufferViewStride(mvGLTFModel& model, mvGLTFAccessor& accessor)
 }
 
 template<typename T>
-mv_internal T*
+static T*
 mvGetBufferViewStart(mvGLTFModel& model, mvGLTFAccessor& accessor)
 {
     mvGLTFBufferView& bufferview = model.bufferviews[accessor.buffer_view_index];
@@ -418,7 +418,7 @@ mvGetBufferViewStart(mvGLTFModel& model, mvGLTFAccessor& accessor)
 }
 
 template<typename T, typename W>
-mv_internal void
+static void
 mvFillBuffer(mvGLTFModel& model, mvGLTFAccessor& accessor, std::vector<W>& outBuffer, u32 componentCap = 4)
 {
     mvVerifyBufferViewStride(model, accessor);

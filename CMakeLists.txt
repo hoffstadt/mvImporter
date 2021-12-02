@@ -1,10 +1,7 @@
 ﻿cmake_minimum_required (VERSION 3.13)
 
-project ("mv3D")
+project ("mvImporter")
 
 add_definitions(-D_USE_MATH_DEFINES)
 
-add_subdirectory ("mv3D")
-#add_subdirectory ("Sandbox")
-add_subdirectory ("Sandbox2")
-add_subdirectory ("Examples")
+add_subdirectory ("Sandbox")

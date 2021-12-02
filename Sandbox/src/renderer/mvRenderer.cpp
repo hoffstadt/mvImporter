@@ -2,7 +2,7 @@
 #include <imgui_impl_win32.h>
 #include <imgui_impl_dx11.h>
 #include <implot.h>
-#include "mv3D_internal.h"
+#include "mvSandbox.h"
 #include "mvGraphics.h"
 #include "mvBuffers.h"
 #include "mvVertexLayout.h"
@@ -10,7 +10,7 @@
 
 namespace Renderer{
 
-mv_internal void
+static void
 mvRenderMeshPhong(mvAssetManager& am, mvMesh& mesh, mvMat4 transform, mvMat4 cam, mvMat4 proj)
 {
 
@@ -59,7 +59,7 @@ mvRenderMeshPhong(mvAssetManager& am, mvMesh& mesh, mvMat4 transform, mvMat4 cam
     device->Unmap(GContext->graphics.tranformCBuf.Get(), 0u);
 
     // mesh
-    mv_local_persist const UINT offset = 0u;
+    static const UINT offset = 0u;
     device->VSSetConstantBuffers(0u, 1u, GContext->graphics.tranformCBuf.GetAddressOf());
     device->IASetIndexBuffer(am.buffers[mesh.indexBuffer].buffer.buffer, DXGI_FORMAT_R32_UINT, 0u);
     device->IASetVertexBuffers(0u, 1u,
@@ -70,7 +70,7 @@ mvRenderMeshPhong(mvAssetManager& am, mvMesh& mesh, mvMat4 transform, mvMat4 cam
     device->DrawIndexed(am.buffers[mesh.indexBuffer].buffer.size / sizeof(u32), 0u, 0u);
 }
 
-mv_internal void
+static void
 mvRenderMeshPBR(mvAssetManager& am, mvMesh& mesh, mvMat4 transform, mvMat4 cam, mvMat4 proj)
 {
 
@@ -205,7 +205,7 @@ mvRenderMeshShadows(mvAssetManager& am, mvMesh& mesh, mvMat4 transform, mvMat4 c
     device->DrawIndexed(am.buffers[mesh.indexBuffer].buffer.size / sizeof(u32), 0u, 0u);
 }
 
-mv_internal void
+static void
 mvRenderNode(mvAssetManager& am, mvNode& node, mvMat4 accumulatedTransform, mvMat4 cam, mvMat4 proj)
 {
 
@@ -235,7 +235,7 @@ mvRenderScene(mvAssetManager& am, mvScene& scene, mvMat4 cam, mvMat4 proj)
     }
 }
 
-mv_internal void
+static void
 mvRenderNodeShadows(mvAssetManager& am, mvNode& node, mvMat4 accumulatedTransform, mvMat4 cam, mvMat4 proj)
 {
 

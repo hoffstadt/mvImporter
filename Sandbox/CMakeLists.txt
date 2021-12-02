@@ -1,45 +1,81 @@
 cmake_minimum_required (VERSION 3.13)
 
-add_executable(sandbox)
-set_target_properties(sandbox
-  PROPERTIES
-  CXX_STANDARD 17
-  ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}$<$<CONFIG:Release>:/cmake-build-release/>$<$<CONFIG:Debug>:/cmake-build-debug/>mv3D"
-  LIBRARY_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}$<$<CONFIG:Release>:/cmake-build-release/>$<$<CONFIG:Debug>:/cmake-build-debug/>mv3D"
-  RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}$<$<CONFIG:Release>:/cmake-build-release/>$<$<CONFIG:Debug>:/cmake-build-debug/>mv3D"
-  )
+add_executable(mvimporter_sandbox)
+set_property(TARGET mvimporter_sandbox PROPERTY CXX_STANDARD 17)
 
-target_compile_definitions(sandbox
+target_compile_definitions(mvimporter_sandbox
 
 	PRIVATE
 		$<$<CONFIG:Debug>:MV_DEBUG>
 		$<$<CONFIG:Release>:MV_RELEASE>
 )
 
-target_sources(sandbox
+target_sources(mvimporter_sandbox
 
 	PRIVATE
 
 		"main.cpp"
+
+		"mvSandbox.cpp"
+
+		# core
+		"src/core/mvViewport.cpp"
+		"src/core/mvTimer.cpp"
+		"src/core/mvMath.cpp"
+
+		# renderer
+		"src/renderer/mvAssetManager.cpp"
+		"src/renderer/mvGraphics.cpp"
+		"src/renderer/mvBuffers.cpp"
+		"src/renderer/mvRenderer.cpp"
+		"src/renderer/mvCamera.cpp"
+		"src/renderer/mvVertexLayout.cpp"
+		"src/renderer/mvMesh.cpp"
+		"src/renderer/mvTextures.cpp"
+		"src/renderer/mvPipeline.cpp"
+		"src/renderer/mvMaterials.cpp"
+		"src/renderer/mvScene.cpp"
+		"src/renderer/mvObjLoader.cpp"
+
+		# implot
+		"vendor/implot/implot.cpp"
+		"vendor/implot/implot_demo.cpp"
+		"vendor/implot/implot_items.cpp"
+
+		# imgui
+		"vendor/imgui/misc/cpp/imgui_stdlib.cpp"
+		"vendor/imgui/imgui.cpp"
+		"vendor/imgui/imgui_demo.cpp"
+		"vendor/imgui/imgui_draw.cpp"
+		"vendor/imgui/imgui_widgets.cpp"
+		"vendor/imgui/imgui_tables.cpp"
+		"vendor/imgui/backends/imgui_impl_win32.cpp"
+		"vendor/imgui/backends/imgui_impl_dx11.cpp"
 )
 
-target_include_directories(sandbox
+target_include_directories(mvimporter_sandbox
 
 	PRIVATE
 
-		"../mv3D/"
-		"../mv3D/vendor/"
-		"../mv3D/src/core/"
-		"../mv3D/src/renderer/"
+		"."
+		".."
+		"src/core/"
+		"src/renderer/"
 
-		"../mv3D/vendor/imgui/"
-		"../mv3D/vendor/imgui/backends/"
-		"../mv3D/vendor/stb/"
-		"../mv3D/vendor/implot/"
+		"shaders/"
+		"shaders/common/"
+
+		"vendor/"
+		"vendor/implot/"
+		"vendor/imgui/"
+		"vendor/imgui/backends/"
+		"vendor/stb/"
 
 )
 
-target_link_libraries(sandbox
+target_link_libraries(mvimporter_sandbox
+
 	PRIVATE
-		mv3d
+		d3d11
+		d3dcompiler
 )
