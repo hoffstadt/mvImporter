@@ -2,78 +2,10 @@
 #include <assert.h>
 #include <cmath>
 #include "mvSandbox.h"
-#include "mvObjLoader.h"
 #include "mvAssetManager.h"
 
 #define MV_IMPORTER_IMPLEMENTATION
 #include "mvImporter.h"
-
-void
-mvLoadOBJAssets(mvAssetManager& assetManager, const std::string& root, const std::string& file)
-{
-    u32 nodeOffset = assetManager.nodeCount;
-    u32 meshOffset = assetManager.meshCount;
-
-    std::vector<mvAssetID> diffuseTextureMaps;
-    std::vector<mvAssetID> normalTextureMaps;
-    std::vector<mvAssetID> specularTextureMaps;
-    std::vector<mvObjMaterial> objMaterials = mvLoadObjMaterials(root + file + ".mtl");
-    mvObjModel objModel = mvLoadObjModel(root + file + ".obj");
-
-    for (size_t i = 0; i < objModel.meshes.size(); i++)
-    {
-        for (size_t j = 0; j < objMaterials.size(); j++)
-        {
-            if (objMaterials[j].name == objModel.meshes[i]->material)
-            {
-                mvMesh newMesh{};
-                newMesh.pbr = false;
-                newMesh.name = objModel.meshes[i]->name;
-                newMesh.layout = mvCreateVertexLayout(
-                    {
-                        mvVertexElement::Position3D,
-                        mvVertexElement::Normal,
-                        mvVertexElement::Texture2D,
-                        mvVertexElement::Tangent,
-                        mvVertexElement::Bitangent
-                    }
-                );
-
-                if (!objMaterials[j].diffuseMap.empty())
-                    newMesh.diffuseTexture = mvGetTextureAsset(&assetManager, root + objMaterials[j].diffuseMap);
-                if (!objMaterials[j].normalMap.empty())
-                    newMesh.normalTexture = mvGetTextureAsset(&assetManager, root + objMaterials[j].normalMap);
-                if (!objMaterials[j].specularMap.empty())
-                    newMesh.specularTexture = mvGetTextureAsset(&assetManager, root + objMaterials[j].specularMap);
-
-                newMesh.vertexBuffer = mvGetBufferAsset(&assetManager, objModel.meshes[i]->averticies.data(), objModel.meshes[i]->averticies.size() * sizeof(f32) * 14, D3D11_BIND_VERTEX_BUFFER, newMesh.name + "_vertex");
-                newMesh.indexBuffer = mvGetBufferAsset(&assetManager, objModel.meshes[i]->indicies.data(), objModel.meshes[i]->indicies.size() * sizeof(u32), D3D11_BIND_INDEX_BUFFER, newMesh.name + "_index");
-                
-                mvRegistryMeshAsset(&assetManager, newMesh);
-            }
-        }
-
-    }
-   
-    mvScene newScene = mvCreateScene();
-    newScene.nodeCount = objModel.meshes.size();
-    for (i32 i = 0; i < newScene.nodeCount; i++)
-    {
-        newScene.nodes[i] = i + nodeOffset;
-    }
-    mvRegistrySceneAsset(&assetManager, newScene);
-
-    for (u32 currentNode = 0u; currentNode < objModel.meshes.size(); currentNode++)
-    {
-        mvNode newNode{};
-        newNode.name = objModel.meshes[currentNode]->name;
-        newNode.mesh = newScene.nodes[currentNode] - nodeOffset + meshOffset;
-        newNode.childCount = 0;
-        mvRegistryNodeAsset(&assetManager, newNode);
-    }
-
-
-}
 
 mvMesh
 mvCreateCube(mvAssetManager& assetManager, f32 size)
@@ -123,7 +55,6 @@ mvCreateCube(mvAssetManager& assetManager, f32 size)
     };
 
     mvMesh mesh{};
-    mesh.pbr = false;
     mesh.name = "cube";
     mesh.layout = layout;
     mesh.vertexBuffer = mvGetBufferAsset(&assetManager,
@@ -214,7 +145,6 @@ mvCreateTexturedCube(mvAssetManager& assetManager, f32 size)
     }
 
     mvMesh mesh{};
-    mesh.pbr = false;
     mesh.name = "textured cube";
     mesh.layout = layout;
     mesh.vertexBuffer = mvGetBufferAsset(&assetManager, 
@@ -276,7 +206,6 @@ mvCreateTexturedQuad(mvAssetManager& assetManager, f32 size)
 
     mesh.name = "textured quad";
     mesh.layout = layout;
-    mesh.pbr = false;
     mesh.vertexBuffer = mvGetBufferAsset(&assetManager, vertices.data(), vertices.size() * sizeof(f32), D3D11_BIND_VERTEX_BUFFER, "textured_quad_vertex");
     mesh.indexBuffer = mvGetBufferAsset(&assetManager, indices.data(), indices.size()*sizeof(u32), D3D11_BIND_INDEX_BUFFER, "textured_quad_index");
 
@@ -350,7 +279,6 @@ mvCreateRoom(mvAssetManager& assetManager, f32 size)
 
     mesh.name = "room";
     mesh.layout = layout;
-    mesh.pbr = false;
     mesh.vertexBuffer = mvGetBufferAsset(&assetManager, vertices.data(), vertices.size() * sizeof(f32), D3D11_BIND_VERTEX_BUFFER, "room_vertex");
     mesh.indexBuffer = mvGetBufferAsset(&assetManager, indices.data(), indices.size() * sizeof(u32), D3D11_BIND_INDEX_BUFFER, "room_index");
 
@@ -706,7 +634,6 @@ mvLoadGLTFAssets(mvAssetManager& assetManager, mvGLTFModel& model)
         //    indexBuffer[i + 2] = i0;
         //}
         mvMesh newMesh{};
-        newMesh.pbr = true;
         newMesh.name = glmesh.name;
         newMesh.layout = mvCreateVertexLayout(
             {
@@ -724,7 +651,7 @@ mvLoadGLTFAssets(mvAssetManager& assetManager, mvGLTFModel& model)
 
             mvGLTFMaterial& material = model.materials[glmesh.material_index];
 
-            mvPBRMaterialData materialData{};
+            mvMaterialData materialData{};
             materialData.albedo = *(mvVec4*)material.base_color_factor;
             materialData.metalness = material.metallic_factor;
             materialData.roughness = material.roughness_factor;
@@ -734,7 +661,6 @@ mvLoadGLTFAssets(mvAssetManager& assetManager, mvGLTFModel& model)
                 mvGLTFTexture& texture = model.textures[material.base_color_texture];
                 std::string uri = model.images[texture.image_index].uri;
                 newMesh.albedoTexture = mvGetTextureAsset(&assetManager, model.root + uri);
-                newMesh.diffuseTexture = newMesh.albedoTexture;
                 materialData.useAlbedoMap = true;
             }
 
@@ -755,7 +681,7 @@ mvLoadGLTFAssets(mvAssetManager& assetManager, mvGLTFModel& model)
                 materialData.useMetalMap = true;
             }
 
-            newMesh.pbrMaterialID = mvGetPBRMaterialAsset(&assetManager, "Phong_VS.hlsl", "PBR_PS.hlsl", materialData);
+            newMesh.materialID = mvGetMaterialAsset(&assetManager, "PBR_VS.hlsl", "PBR_PS.hlsl", materialData);
 
         }
         
@@ -830,7 +756,7 @@ mvLoadGLTFAssets(mvAssetManager& assetManager, mvGLTFModel& model)
     {
         mvGLTFScene& glscene = model.scenes[currentScene];
 
-        mvScene newScene = mvCreateScene();
+        mvScene newScene{};
         newScene.nodeCount = glscene.node_count;
 
         for (i32 i = 0; i < glscene.node_count; i++)

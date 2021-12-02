@@ -6,31 +6,7 @@
 #include "mvPipeline.h"
 #include "mvTextures.h"
 
-struct mvObjMaterial;
-
-struct mvPhongMaterialData
-{
-    mvVec4 materialColor = { 0.45f, 0.45f, 0.85f, 1.0f };
-    //-------------------------- ( 16 bytes )
-
-    mvVec3 specularColor = { 0.18f, 0.18f, 0.18f };
-    f32    specularGloss = 8.0f;
-    //-------------------------- ( 16 bytes )
-
-    f32 normalMapWeight = 1.0f;
-    b32 useTextureMap   = false;
-    b32 useNormalMap    = false;
-    b32 useSpecularMap  = false;
-    //-------------------------- ( 16 bytes )
-
-    b32 useGlossAlpha = false;
-    b32 hasAlpha      = false;
-    char _pad1[8];
-    //-------------------------- ( 16 bytes )
-    //-------------------------- ( 4 * 16 = 64 bytes )
-};
-
-struct mvPBRMaterialData
+struct mvMaterialData
 {
     mvVec4 albedo = { 0.45f, 0.45f, 0.85f, 1.0f };
     //-------------------------- ( 16 bytes )
@@ -55,21 +31,12 @@ struct mvPBRMaterialData
     //-------------------------- ( 4 * 16 = 64 bytes )
 };
 
-struct mvPhongMaterial
+struct mvMaterial
 {
-    mvConstBuffer       buffer;
-    mvPhongMaterialData data;
-    mvPipeline          pipeline;
-    mvSampler           colorSampler;
+    mvConstBuffer  buffer;
+    mvMaterialData data;
+    mvPipeline     pipeline;
+    mvSampler      colorSampler;
 };
 
-struct mvPBRMaterial
-{
-    mvConstBuffer     buffer;
-    mvPBRMaterialData data;
-    mvPipeline        pipeline;
-    mvSampler         colorSampler;
-};
-
-mvPhongMaterial mvCreatePhongMaterial(const std::string& vs, const std::string& ps, b8 cull, b8 useDiffusemap, b8 useNormalmap, b8 useSpecularMap);
-mvPBRMaterial   mvCreatePBRMaterial  (const std::string& vs, const std::string& ps, mvPBRMaterialData& materialData);
+mvMaterial mvCreateMaterial(const std::string& vs, const std::string& ps, mvMaterialData& materialData);

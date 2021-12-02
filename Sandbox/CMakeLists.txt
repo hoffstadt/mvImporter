@@ -34,8 +34,6 @@ target_sources(mvimporter_sandbox
 		"src/renderer/mvTextures.cpp"
 		"src/renderer/mvPipeline.cpp"
 		"src/renderer/mvMaterials.cpp"
-		"src/renderer/mvScene.cpp"
-		"src/renderer/mvObjLoader.cpp"
 
 		# implot
 		"vendor/implot/implot.cpp"

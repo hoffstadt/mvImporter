@@ -1,4 +1,10 @@
-#include "common/transform.hlsli"
+
+cbuffer TransformCBuf : register(b0)
+{
+    matrix model;
+    matrix modelView;
+    matrix modelViewProj;
+};
 
 float4 main(float3 pos : Position) : SV_Position
 {

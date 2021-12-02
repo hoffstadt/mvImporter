@@ -1,5 +1,66 @@
-#include "common/equations.hlsli"
-#include "common/structs.hlsli"
+#include "equations.hlsli"
+
+struct mvPointLight
+{
+    float3 viewLightPos;
+    //-------------------------- ( 16 bytes )
+
+    float3 diffuseColor;
+    float diffuseIntensity;
+    //-------------------------- ( 16 bytes )
+
+    float attConst;
+    float attLin;
+    float attQuad;
+    //-------------------------- ( 16 bytes )
+
+    //-------------------------- ( 4*16 = 64 bytes )
+};
+
+struct mvMaterial
+{
+    float4 albedo;
+    //-------------------------- ( 16 bytes )
+    
+    float metalness;
+    float roughness;
+    float radiance;
+    float fresnel;
+    //-------------------------- ( 16 bytes )
+    
+    bool useAlbedoMap;
+    bool useNormalMap;
+    bool useRoughnessMap;
+    bool useMetalMap;
+    //-------------------------- ( 16 bytes )
+    
+    bool hasAlpha;
+    //-------------------------- ( 16 bytes )
+   
+    //-------------------------- ( 4 * 16 = 64 bytes )
+};
+
+struct mvDirectionalLight
+{
+    float diffuseIntensity;
+    float3 viewLightDir;
+    //-------------------------- ( 16 bytes )
+    
+    float3 diffuseColor;
+    //-------------------------- ( 16 bytes )
+    
+    //-------------------------- ( 2*16 = 32 bytes )
+};
+
+struct mvGlobalInfo
+{
+
+    float3 ambientColor;
+    bool useShadows;
+    bool useSkybox;
+    //-------------------------- ( 16 bytes )
+    //-------------------------- ( 1*16 = 16 bytes )
+};
 
 // Constant normal incidence Fresnel factor for all dielectrics.
 static const float Epsilon = 0.00001;
@@ -27,9 +88,9 @@ SamplerComparisonState OShadowSampler : register(s2);
 // constant buffers
 //-----------------------------------------------------------------------------
 cbuffer mvPointLightCBuf       : register(b0) { mvPointLight PointLight; };
-cbuffer mvMaterialCBuf         : register(b1) { mvPBRMaterial material; };
+cbuffer mvMaterialCBuf         : register(b1) { mvMaterial material; };
 cbuffer mvDirectionalLightCBuf : register(b2) { mvDirectionalLight DirectionalLight; };
-cbuffer mvSceneCBuf            : register(b3) { mvScene Scene; };
+cbuffer mvGlobalCBuf           : register(b3) { mvGlobalInfo info; };
 
 struct VSOut
 {
@@ -105,7 +166,7 @@ float4 main(VSOut input) : SV_Target
     // point light
     //-----------------------------------------------------------------------------
     float shadowLevel = Shadow(input.oshadowWorldPos, ShadowMap, OShadowSampler);
-    if (shadowLevel != 0.0f && Scene.useShadows)
+    if (shadowLevel != 0.0f && info.useShadows)
     {
     
         // fragment to light vector data
@@ -151,8 +212,7 @@ float4 main(VSOut input) : SV_Target
         directLighting += (diffuseBRDF + specularBRDF) * PointLight.diffuseIntensity * att * cosLi;
         directLighting *= shadowLevel;
     }
-    
-    else if (!Scene.useShadows)
+    else if (!info.useShadows)
     {
     
         // fragment to light vector data
@@ -213,8 +273,8 @@ float4 main(VSOut input) : SV_Target
         projectTexCoord.x = 0.5f * input.dshadowWorldPos.x / input.dshadowWorldPos.w + 0.5f;
         projectTexCoord.y = -0.5f * input.dshadowWorldPos.y / input.dshadowWorldPos.w + 0.5f;
         
-                // Determine if the projected coordinates are in the 0 to 1 range.  If so then this pixel is in the view of the light.
-        if ((saturate(projectTexCoord.x) == projectTexCoord.x) && (saturate(projectTexCoord.y) == projectTexCoord.y)  && Scene.useShadows)
+        // Determine if the projected coordinates are in the 0 to 1 range.  If so then this pixel is in the view of the light.
+        if ((saturate(projectTexCoord.x) == projectTexCoord.x) && (saturate(projectTexCoord.y) == projectTexCoord.y) && info.useShadows)
         {
             
             // Calculate the depth of the light.
@@ -299,7 +359,7 @@ float4 main(VSOut input) : SV_Target
     //-----------------------------------------------------------------------------
     // ambient lighting
     //-----------------------------------------------------------------------------
-    float3 ambientLighting = Scene.ambientColor;
+    float3 ambientLighting = info.ambientColor;
     {
         
         // Sample diffuse irradiance at normal direction.

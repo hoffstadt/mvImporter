@@ -1,5 +1,10 @@
-#include "common/structs.hlsli"
-#include "common/transform.hlsli"
+
+cbuffer TransformCBuf : register(b0)
+{
+    matrix model;
+    matrix modelView;
+    matrix modelViewProj;
+};
 
 struct VSOut
 {

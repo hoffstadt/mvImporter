@@ -1,44 +1,9 @@
 #include "mvMaterials.h"
-#include "mvObjLoader.h"
 
-mvPhongMaterial
-mvCreatePhongMaterial(const std::string& vs, const std::string& ps, b8 cull, b8 useDiffusemap, b8 useNormalmap, b8 useSpecularMap)
+mvMaterial
+mvCreateMaterial(const std::string& vs, const std::string& ps, mvMaterialData& materialData)
 {
-	mvPhongMaterial material{};
-
-	mvPipelineInfo pipelineInfo{};
-	pipelineInfo.pixelShader = ps;
-	pipelineInfo.vertexShader = vs;
-	pipelineInfo.depthBias = 50;
-	pipelineInfo.slopeBias = 2.0f;
-	pipelineInfo.clamp = 0.1f;
-	pipelineInfo.cull = cull;
-
-	pipelineInfo.layout = mvCreateVertexLayout(
-			{
-				mvVertexElement::Position3D,
-				mvVertexElement::Normal,
-				mvVertexElement::Texture2D,
-				mvVertexElement::Tangent,
-				mvVertexElement::Bitangent
-			}
-	);
-
-	material.pipeline = mvFinalizePipeline(pipelineInfo);
-	material.colorSampler = mvCreateSampler();
-	material.data.useTextureMap = useDiffusemap;
-	material.data.useSpecularMap = useSpecularMap;
-	material.data.useNormalMap = useNormalmap;
-	material.data.hasAlpha = !cull;
-	material.buffer = mvCreateConstBuffer(&material.data, sizeof(mvPhongMaterialData));
-
-	return material;
-}
-
-mvPBRMaterial
-mvCreatePBRMaterial(const std::string& vs, const std::string& ps, mvPBRMaterialData& materialData)
-{
-	mvPBRMaterial material{};
+	mvMaterial material{};
 
 	mvPipelineInfo pipelineInfo{};
 	pipelineInfo.pixelShader = ps;
@@ -61,7 +26,7 @@ mvCreatePBRMaterial(const std::string& vs, const std::string& ps, mvPBRMaterialD
 	material.pipeline = mvFinalizePipeline(pipelineInfo);
 	material.colorSampler = mvCreateSampler();
 	material.data = materialData;
-	material.buffer = mvCreateConstBuffer(&material.data, sizeof(mvPBRMaterialData));
+	material.buffer = mvCreateConstBuffer(&material.data, sizeof(mvMaterialData));
 
 	return material;
 }

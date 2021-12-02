@@ -5,8 +5,7 @@ mvInitializeAssetManager(mvAssetManager* manager)
 {
 	manager->textures = new mvTextureAsset[manager->maxTextureCount];
 	manager->samplers = new mvSamplerAsset[manager->maxSamplerCount];
-	manager->phongMaterials = new mvPhongMaterialAsset[manager->maxPhongMaterialCount];
-	manager->pbrMaterials = new mvPBRMaterialAsset[manager->maxPbrMaterialCount];
+	manager->materials = new mvMaterialAsset[manager->maxMaterialCount];
 	manager->buffers = new mvBufferAsset[manager->maxBufferCount];
 	manager->meshes = new mvMeshAsset[manager->maxMeshCount];
 	manager->cubeTextures = new mvCubeTextureAsset[manager->maxCubeTextureCount];
@@ -20,8 +19,7 @@ mvCleanupAssetManager(mvAssetManager* manager)
 	delete[] manager->textures;
 	delete[] manager->cubeTextures;
 	delete[] manager->samplers;
-	delete[] manager->phongMaterials;
-	delete[] manager->pbrMaterials;
+	delete[] manager->materials;
 	delete[] manager->buffers;
 	delete[] manager->meshes;
 	delete[] manager->nodes;
@@ -29,29 +27,7 @@ mvCleanupAssetManager(mvAssetManager* manager)
 }
 
 mvAssetID
-mvGetPhongMaterialAsset(mvAssetManager* manager, const std::string& vs, const std::string& ps, b8 cull, b8 useDiffusemap, b8 useNormalmap, b8 useSpecularMap)
-{
-	std::string hash = ps + vs + 
-		std::string(cull ? "T" : "F") +
-		std::string(useDiffusemap ? "T" : "F") +
-		std::string(useNormalmap ? "T" : "F") +
-		std::string(useSpecularMap ? "T" : "F");
-
-	for (s32 i = 0; i < manager->phongMaterialCount; i++)
-	{
-		if (manager->phongMaterials[i].hash == hash)
-			return i;
-	}
-
-	manager->phongMaterials[manager->phongMaterialCount].hash = hash;
-	manager->phongMaterials[manager->phongMaterialCount].material = mvCreatePhongMaterial(vs, ps, cull, useDiffusemap, useNormalmap, useSpecularMap);
-	manager->phongMaterials[manager->phongMaterialCount].material.data.hasAlpha = !cull;
-	manager->phongMaterialCount++;
-	return manager->phongMaterialCount - 1;
-}
-
-mvAssetID
-mvGetPBRMaterialAsset(mvAssetManager* manager, const std::string& vs, const std::string& ps, mvPBRMaterialData& materialData)
+mvGetMaterialAsset(mvAssetManager* manager, const std::string& vs, const std::string& ps, mvMaterialData& materialData)
 {
 	std::string hash = ps + vs +
 		std::to_string(materialData.albedo.x) +
@@ -68,16 +44,16 @@ mvGetPBRMaterialAsset(mvAssetManager* manager, const std::string& vs, const std:
 		std::string(materialData.useRoughnessMap ? "T" : "F") +
 		std::string(materialData.useMetalMap ? "T" : "F");
 
-	for (s32 i = 0; i < manager->pbrMaterialCount; i++)
+	for (s32 i = 0; i < manager->materialCount; i++)
 	{
-		if (manager->pbrMaterials[i].hash == hash)
+		if (manager->materials[i].hash == hash)
 			return i;
 	}
 
-	manager->pbrMaterials[manager->pbrMaterialCount].hash = hash;
-	manager->pbrMaterials[manager->pbrMaterialCount].material = mvCreatePBRMaterial(vs, ps, materialData);
-	manager->pbrMaterialCount++;
-	return manager->pbrMaterialCount - 1;
+	manager->materials[manager->materialCount].hash = hash;
+	manager->materials[manager->materialCount].material = mvCreateMaterial(vs, ps, materialData);
+	manager->materialCount++;
+	return manager->materialCount - 1;
 }
 
 mvAssetID

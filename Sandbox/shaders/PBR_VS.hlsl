@@ -1,4 +1,10 @@
-#include "common/transform.hlsli"
+
+cbuffer TransformCBuf : register(b0)
+{
+    matrix model;
+    matrix modelView;
+    matrix modelViewProj;
+};
 
 struct VSOut
 {
@@ -12,11 +18,15 @@ struct VSOut
     float4 oshadowWorldPos  : oshadowPosition; // light pos           (world space)
 };
 
-cbuffer ShadowTransformCBuf : register(b1)
+cbuffer DirectionalShadowTransformCBuf : register(b1)
 {
-    matrix pointShadowView;
     matrix directShadowView;
     matrix directShadowProjection;
+};
+
+cbuffer OmniShadowTransformCBuf : register(b2)
+{
+    matrix pointShadowView;
 };
 
 float4 ToShadowHomoSpace(const in float3 pos, uniform matrix modelTransform)

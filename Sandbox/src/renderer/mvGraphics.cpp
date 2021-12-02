@@ -98,6 +98,8 @@ mvSetupGraphics(mvViewport& viewport)
     descDSV.Texture2D.MipSlice = 0u;
     descDSV.Flags = 0;
     GContext->graphics.device->CreateDepthStencilView(pDepthStencil.Get(), &descDSV, GContext->graphics.targetDepth.GetAddressOf());
+
+    GContext->graphics.viewport = { 0.0f, 0.0f, (f32)viewport.width, (f32)viewport.height, 0.0f, 1.0f };
 }
 
 void
@@ -154,6 +156,9 @@ mvRecreateSwapChain(unsigned width, unsigned height)
         descDSV.Texture2D.MipSlice = 0u;
         descDSV.Flags = 0;
         GContext->graphics.device->CreateDepthStencilView(pDepthStencil.Get(), &descDSV, GContext->graphics.targetDepth.GetAddressOf());
+
+        GContext->graphics.viewport.Width = width;
+        GContext->graphics.viewport.Height = height;
 
     }
 }

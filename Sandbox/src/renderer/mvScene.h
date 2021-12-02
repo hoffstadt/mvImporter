@@ -16,26 +16,10 @@ struct mvNode
     mvVec3      scale       = { 1.0f, 1.0f, 1.0f };
 };
 
-struct mvSceneInfo
-{
-
-    mvVec3 ambientColor = { 0.04f, 0.04f, 0.04f };
-    b32    useShadows = true;
-    //-------------------------- ( 16 bytes )
-
-    b32  useSkybox = true;
-    char _pad[12];
-    //-------------------------- ( 2*16 = 32 bytes )
-};
-
 struct mvScene
 {
-    mvConstBuffer buffer;
-    mvSceneInfo   info;
     mvAssetID     nodes[256];
     u32           nodeCount = 0u;
     u32           meshOffset = 0u;
 };
-
-mvScene mvCreateScene();
 
