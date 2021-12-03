@@ -16,11 +16,27 @@ mvInitializeAssetManager(mvAssetManager* manager)
 void 
 mvCleanupAssetManager(mvAssetManager* manager)
 {
+	for (int i = 0; i < manager->bufferCount; i++)
+		manager->buffers[i].buffer.buffer->Release();
+
+	for (int i = 0; i < manager->materialCount; i++)
+	{
+		manager->materials[i].material.buffer.buffer->Release();
+		manager->materials[i].material.pipeline.pixelShader->Release();
+		manager->materials[i].material.pipeline.vertexShader->Release();
+		manager->materials[i].material.pipeline.pixelBlob->Release();
+		manager->materials[i].material.pipeline.vertexBlob->Release();
+		manager->materials[i].material.pipeline.inputLayout->Release();
+		manager->materials[i].material.pipeline.blendState->Release();
+		manager->materials[i].material.pipeline.depthStencilState->Release();
+		manager->materials[i].material.pipeline.rasterizationState->Release();
+	}
+
+	delete[] manager->buffers;
 	delete[] manager->textures;
 	delete[] manager->cubeTextures;
 	delete[] manager->samplers;
 	delete[] manager->materials;
-	delete[] manager->buffers;
 	delete[] manager->meshes;
 	delete[] manager->nodes;
 	delete[] manager->scenes;

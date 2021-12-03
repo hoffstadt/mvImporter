@@ -13,7 +13,7 @@ struct mvTexture
 
 struct mvCubeTexture
 {
-    mvComPtr<ID3D11ShaderResourceView> textureView;
+    ID3D11ShaderResourceView* textureView;
 };
 
 struct mvSampler

@@ -394,68 +394,108 @@ LoadTestModel(const char* name)
     return mvLoadGLTF(root.c_str(), file.c_str());
 }
 
-mvPipeline 
-create_light_pipeline()
-{
-    mvPipeline pipeline{};
-
-    pipeline.topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-
-    D3D11_RASTERIZER_DESC rasterDesc = CD3D11_RASTERIZER_DESC(CD3D11_DEFAULT{});
-    rasterDesc.CullMode = D3D11_CULL_BACK;
-    rasterDesc.FrontCounterClockwise = TRUE;
-
-    GContext->graphics.device->CreateRasterizerState(&rasterDesc, &pipeline.rasterizationState);
-
-    D3D11_DEPTH_STENCIL_DESC dsDesc = CD3D11_DEPTH_STENCIL_DESC{ CD3D11_DEFAULT{} };
-
-    // Depth test parameters
-    dsDesc.DepthEnable = true;
-    dsDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
-    dsDesc.DepthFunc = D3D11_COMPARISON_LESS;
-
-    // Stencil test parameters
-    dsDesc.StencilEnable = true;
-    dsDesc.StencilReadMask = 0xFF;
-    dsDesc.StencilWriteMask = 0xFF;
-
-    // Stencil operations if pixel is front-facing
-    dsDesc.FrontFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
-    dsDesc.FrontFace.StencilDepthFailOp = D3D11_STENCIL_OP_INCR;
-    dsDesc.FrontFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
-    dsDesc.FrontFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
-
-    // Stencil operations if pixel is back-facing
-    dsDesc.BackFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
-    dsDesc.BackFace.StencilDepthFailOp = D3D11_STENCIL_OP_DECR;
-    dsDesc.BackFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
-    dsDesc.BackFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
-
-    GContext->graphics.device->CreateDepthStencilState(&dsDesc, &pipeline.depthStencilState);
-
-    D3D11_BLEND_DESC blendDesc = CD3D11_BLEND_DESC{ CD3D11_DEFAULT{} };
-    auto& brt = blendDesc.RenderTarget[0];
-    brt.BlendEnable = TRUE;
-    brt.SrcBlend = D3D11_BLEND_SRC_ALPHA;
-    brt.DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
-    GContext->graphics.device->CreateBlendState(&blendDesc, &pipeline.blendState);
-
-    mvPixelShader pixelShader = mvCreatePixelShader(GContext->IO.shaderDirectory + "Solid_PS.hlsl");
-    mvVertexShader vertexShader = mvCreateVertexShader(GContext->IO.shaderDirectory + "Solid_VS.hlsl", mvCreateVertexLayout({ mvVertexElement::Position3D }));
-
-    pipeline.pixelShader = pixelShader.shader;
-    pipeline.pixelBlob = pixelShader.blob;
-    pipeline.vertexShader = vertexShader.shader;
-    pipeline.vertexBlob = vertexShader.blob;
-    pipeline.inputLayout = vertexShader.inputLayout;
-    pipeline.topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-
-    return pipeline;
-}
-
 //-----------------------------------------------------------------------------
 // helper classes
 //-----------------------------------------------------------------------------
+
+struct mvOffscreen
+{
+    ID3D11RenderTargetView*   targetView = nullptr;
+    ID3D11DepthStencilView*   depthView = nullptr;
+    ID3D11ShaderResourceView* resourceView = nullptr;
+    D3D11_VIEWPORT            viewport;
+
+    mvOffscreen(float width, float height)
+    {
+        viewport = { 0.0f, 0.0f, width, height, 0.0f, 1.0f };
+
+        resize(width, height);
+    }
+
+    void resize(float width, float height)
+    {
+        ID3D11Texture2D* texture;
+        ID3D11Texture2D* depthTexture;
+
+        // render target texture
+        {
+            D3D11_TEXTURE2D_DESC textureDesc{};
+            textureDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+            textureDesc.MipLevels = 1;
+            textureDesc.ArraySize = 1;
+            textureDesc.SampleDesc.Count = 1;
+            textureDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET;
+            textureDesc.Height = static_cast<UINT>(height);
+            textureDesc.Width = static_cast<UINT>(width);
+
+            GContext->graphics.device->CreateTexture2D(
+                &textureDesc,
+                nullptr,
+                &texture
+            );
+        }
+
+        // depth stencil texture
+        {
+            D3D11_TEXTURE2D_DESC textureDesc{};
+            textureDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+            textureDesc.MipLevels = 1;
+            textureDesc.ArraySize = 1;
+            textureDesc.SampleDesc.Count = 1;
+            textureDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
+            textureDesc.Height = static_cast<UINT>(height);
+            textureDesc.Width = static_cast<UINT>(width);
+
+            GContext->graphics.device->CreateTexture2D(
+                &textureDesc,
+                nullptr,
+                &depthTexture
+            );
+        }
+
+        // render target view
+        {
+            D3D11_RENDER_TARGET_VIEW_DESC depthStencilViewDesc{};
+            depthStencilViewDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+            depthStencilViewDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
+            depthStencilViewDesc.Texture2D.MipSlice = 0;
+
+            GContext->graphics.device->CreateRenderTargetView(
+                texture,
+                &depthStencilViewDesc,
+                &targetView
+            );
+        }
+
+        // depth stencil view
+        {
+            D3D11_DEPTH_STENCIL_VIEW_DESC depthStencilViewDesc{};
+            depthStencilViewDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+            depthStencilViewDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
+            depthStencilViewDesc.Texture2D.MipSlice = 0;
+
+            GContext->graphics.device->CreateDepthStencilView(
+                depthTexture,
+                &depthStencilViewDesc,
+                &depthView
+            );
+        }
+
+        // shader resource view for render target
+        {
+            D3D11_SHADER_RESOURCE_VIEW_DESC shaderResourceViewDesc{};
+            shaderResourceViewDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+            shaderResourceViewDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+            shaderResourceViewDesc.Texture2D.MipLevels = 1;
+
+            GContext->graphics.device->CreateShaderResourceView(
+                texture,
+                &shaderResourceViewDesc,
+                &resourceView
+            );
+        }
+    }
+};
 
 struct mvPointLight
 {
@@ -476,11 +516,60 @@ struct mvPointLight
         // create mesh
         mesh = mvCreateCube(am, 0.25f);
 
-        // create pipeline
-        pipeline = create_light_pipeline();
-
         // create constant buffer
         buffer = mvCreateConstBuffer(&info, sizeof(PointLightInfo));
+
+        // create pipeline
+        pipeline.topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+
+        D3D11_RASTERIZER_DESC rasterDesc = CD3D11_RASTERIZER_DESC(CD3D11_DEFAULT{});
+        rasterDesc.CullMode = D3D11_CULL_BACK;
+        rasterDesc.FrontCounterClockwise = TRUE;
+
+        GContext->graphics.device->CreateRasterizerState(&rasterDesc, &pipeline.rasterizationState);
+
+        D3D11_DEPTH_STENCIL_DESC dsDesc = CD3D11_DEPTH_STENCIL_DESC{ CD3D11_DEFAULT{} };
+
+        // Depth test parameters
+        dsDesc.DepthEnable = true;
+        dsDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
+        dsDesc.DepthFunc = D3D11_COMPARISON_LESS;
+
+        // Stencil test parameters
+        dsDesc.StencilEnable = true;
+        dsDesc.StencilReadMask = 0xFF;
+        dsDesc.StencilWriteMask = 0xFF;
+
+        // Stencil operations if pixel is front-facing
+        dsDesc.FrontFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
+        dsDesc.FrontFace.StencilDepthFailOp = D3D11_STENCIL_OP_INCR;
+        dsDesc.FrontFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
+        dsDesc.FrontFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
+
+        // Stencil operations if pixel is back-facing
+        dsDesc.BackFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
+        dsDesc.BackFace.StencilDepthFailOp = D3D11_STENCIL_OP_DECR;
+        dsDesc.BackFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
+        dsDesc.BackFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
+
+        GContext->graphics.device->CreateDepthStencilState(&dsDesc, &pipeline.depthStencilState);
+
+        D3D11_BLEND_DESC blendDesc = CD3D11_BLEND_DESC{ CD3D11_DEFAULT{} };
+        auto& brt = blendDesc.RenderTarget[0];
+        brt.BlendEnable = TRUE;
+        brt.SrcBlend = D3D11_BLEND_SRC_ALPHA;
+        brt.DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
+        GContext->graphics.device->CreateBlendState(&blendDesc, &pipeline.blendState);
+
+        mvPixelShader pixelShader = mvCreatePixelShader(GContext->IO.shaderDirectory + "Solid_PS.hlsl");
+        mvVertexShader vertexShader = mvCreateVertexShader(GContext->IO.shaderDirectory + "Solid_VS.hlsl", mvCreateVertexLayout({ mvVertexElement::Position3D }));
+
+        pipeline.pixelShader = pixelShader.shader;
+        pipeline.pixelBlob = pixelShader.blob;
+        pipeline.vertexShader = vertexShader.shader;
+        pipeline.vertexBlob = vertexShader.blob;
+        pipeline.inputLayout = vertexShader.inputLayout;
+        pipeline.topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
     }
 
     bool showControls()

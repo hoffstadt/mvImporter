@@ -87,7 +87,7 @@ mvUpdateCameraFPSCamera(mvCamera& camera, f32 dt, f32 travelSpeed, f32 rotationS
         camera.pos.y = camera.pos.y - dt * travelSpeed;
     }
 
-    if (ImGui::IsMouseDown(ImGuiMouseButton_Left) && !ImGui::GetIO().WantCaptureMouse)
+    if (ImGui::IsMouseDown(ImGuiMouseButton_Left) && ImGui::GetIO().WantCaptureMouse)
     {
 
         camera.yaw = wrap_angle(camera.yaw + -ImGui::GetIO().MouseDelta.x * rotationSpeed);

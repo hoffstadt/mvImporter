@@ -1,8 +1,11 @@
 #include "helpers.h"
 
-// TODO: make most of this a runtime option
-static const char*        gltfModel = "FlightHelmet";
-static f32                shadowWidth = 15.0f;
+// TODO: make most of these runtime options
+static const char* gltfModel = "FlightHelmet";
+static f32         shadowWidth = 15.0f;
+static int         initialWidth = 1850;
+static int         initialHeight = 900;
+static ImVec2      oldContentRegion = ImVec2(500, 500);
 
 int main()
 {
@@ -11,8 +14,6 @@ int main()
     GContext->IO.shaderDirectory = "../../Sandbox/shaders/";
     GContext->IO.resourceDirectory = "../../Resources/";
 
-    int initialWidth = 1850;
-    int initialHeight = 900;
     mvViewport* window = mvInitializeViewport(initialWidth, initialHeight);
     mvSetupGraphics(*window);
     ID3D11DeviceContext* ctx = GContext->graphics.imDeviceContext.Get();
@@ -22,6 +23,7 @@ int main()
     ImPlot::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
     ImGui_ImplWin32_Init(window->hWnd);
     ImGui_ImplDX11_Init(GContext->graphics.device.Get(), GContext->graphics.imDeviceContext.Get());
 
@@ -39,7 +41,7 @@ int main()
     camera.front = { 0.0f, 0.0f, -1.0f };
     camera.pitch = 0.0f;
     camera.yaw = 0.0f;
-    camera.aspect = initialWidth / initialHeight;
+    camera.aspect = 500.0f / 500.0f;
 
     // helpers
     mvShadowMap directionalShadowMap = mvShadowMap(4096, shadowWidth);
@@ -55,6 +57,7 @@ int main()
     GlobalInfo globalInfo{};
     mvConstBuffer globalInfoBuffer = mvCreateConstBuffer(&globalInfo, sizeof(GlobalInfo));
 
+    mvOffscreen offscreen = mvOffscreen(500.0f, 500.0f);
     mvTimer timer;
     while (true)
     {
@@ -66,16 +69,18 @@ int main()
         {
             mvRecreateSwapChain(window->width, window->height);
             window->resized = false;
-            camera.aspect = (float)window->width / (float)window->height;
         }
 
         //-----------------------------------------------------------------------------
         // clear targets
         //-----------------------------------------------------------------------------
         static float backgroundColor[] = { 0.0f, 0.0f, 0.0f, 1.0f };
+        static float backgroundColor2[] = { 0.1f, 0.1f, 0.1f, 1.0f };
         ctx->ClearRenderTargetView(*GContext->graphics.target.GetAddressOf(), backgroundColor);
-        ctx->ClearDepthStencilView(*GContext->graphics.targetDepth.GetAddressOf(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0u);
+        ctx->ClearRenderTargetView(*GContext->graphics.target.GetAddressOf(), backgroundColor);
+        ctx->ClearRenderTargetView(offscreen.targetView, backgroundColor2);
         ctx->ClearDepthStencilView(directionalShadowMap.depthView, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0u);
+        ctx->ClearDepthStencilView(offscreen.depthView, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0u);
         for (u32 i = 0; i < 6; i++)
             ctx->ClearDepthStencilView(omniShadowMap.depthView[i], D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0u);
 
@@ -94,22 +99,6 @@ int main()
         ctx->PSSetShaderResources(4, 6, pSRV); // depth map
         ctx->PSSetShaderResources(5, 6, pSRV); // depth map
         ctx->PSSetShaderResources(6, 1, pSRV); // depth map
-
-        ImGui::GetForegroundDrawList()->AddText(ImVec2(45, 45),
-            ImColor(0.0f, 1.0f, 0.0f), std::string(std::to_string(ImGui::GetIO().Framerate) + " FPS").c_str());
-
-        //-----------------------------------------------------------------------------
-        // user interface
-        //-----------------------------------------------------------------------------
-        directionalShadowMap.showControls();
-        if(pointlight.showControls())
-            omniShadowMap.info.view = mvCreateLookAtView(pointlight.camera);
-
-        ImGui::Begin("Global Settings");
-        ImGui::ColorEdit3("Ambient Color", &globalInfo.ambientColor.x);
-        ImGui::Checkbox("Use Shadows", (bool*)&globalInfo.useShadows);
-        ImGui::Checkbox("Use Skybox", (bool*)&globalInfo.useSkybox);
-        ImGui::End();
 
         //-----------------------------------------------------------------------------
         // directional shadow pass
@@ -138,12 +127,11 @@ int main()
         }
 
         //-----------------------------------------------------------------------------
-        // main pass
+        // offscreen pass
         //-----------------------------------------------------------------------------
-        ctx->OMSetRenderTargets(1, GContext->graphics.target.GetAddressOf(), *GContext->graphics.targetDepth.GetAddressOf());
-        ctx->RSSetViewports(1u, &GContext->graphics.viewport);
+        ctx->OMSetRenderTargets(1, &offscreen.targetView, offscreen.depthView);
+        ctx->RSSetViewports(1u, &offscreen.viewport);
 
-        mvUpdateCameraFPSCamera(camera, dt, 12.0f, 0.004f);
         mvMat4 viewMatrix = mvCreateFPSView(camera);
         mvMat4 projMatrix = mvCreateLookAtProjection(camera);
 
@@ -234,14 +222,14 @@ int main()
         //-----------------------------------------------------------------------------
         if (globalInfo.useSkybox)
         {
-            ctx->OMSetRenderTargets(1, GContext->graphics.target.GetAddressOf(), *GContext->graphics.targetDepth.GetAddressOf());
-            ctx->RSSetViewports(1u, &GContext->graphics.viewport);
+            ctx->OMSetRenderTargets(1, &offscreen.targetView, offscreen.depthView);
+            ctx->RSSetViewports(1u, &offscreen.viewport);
             {
 
                 // pipeline
                 mvSetPipelineState(skybox.pipeline);
                 ctx->PSSetSamplers(0, 1, &skybox.cubeSampler);
-                ctx->PSSetShaderResources(0, 1, skybox.cubeTexture.textureView.GetAddressOf());
+                ctx->PSSetShaderResources(0, 1, &skybox.cubeTexture.textureView);
 
                 mvTransforms transforms{};
                 transforms.model = mvIdentityMat4() * mvScale(mvIdentityMat4(), mvVec3{ 1.0f, 1.0f, -1.0f });
@@ -265,8 +253,55 @@ int main()
         }
 
         //-----------------------------------------------------------------------------
-        // end frame & present
+        // main pass
         //-----------------------------------------------------------------------------
+        ctx->OMSetRenderTargets(1, GContext->graphics.target.GetAddressOf(), *GContext->graphics.targetDepth.GetAddressOf());
+        ctx->RSSetViewports(1u, &GContext->graphics.viewport);
+
+        ImGui::DockSpaceOverViewport(0, ImGuiDockNodeFlags_AutoHideTabBar);
+
+        ImGui::GetForegroundDrawList()->AddText(ImVec2(45, 45),
+            ImColor(0.0f, 1.0f, 0.0f), std::string(std::to_string(ImGui::GetIO().Framerate) + " FPS").c_str());
+
+        directionalShadowMap.showControls();
+        if (pointlight.showControls())
+            omniShadowMap.info.view = mvCreateLookAtView(pointlight.camera);
+
+        ImGui::Begin("Global Settings", 0);
+        ImGui::ColorEdit3("Ambient Color", &globalInfo.ambientColor.x);
+        ImGui::Checkbox("Use Shadows", (bool*)&globalInfo.useShadows);
+        ImGui::Checkbox("Use Skybox", (bool*)&globalInfo.useSkybox);
+        ImGui::End();
+
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+        ImGui::Begin("Model", 0, ImGuiWindowFlags_NoDecoration);
+
+        if(ImGui::IsWindowHovered())
+            mvUpdateCameraFPSCamera(camera, dt, 12.0f, 0.004f);
+
+        ImVec2 contentSize = ImGui::GetWindowContentRegionMax();
+        offscreen.viewport = { 0.0f, 0.0f, contentSize.x, contentSize.y, 0.0f, 1.0f };
+        camera.aspect = offscreen.viewport.Width / offscreen.viewport.Height;
+
+        ImGui::Image(offscreen.resourceView, contentSize);
+        if (contentSize.x == oldContentRegion.x && contentSize.y == oldContentRegion.y)
+        {
+
+        }
+        else
+        {
+            offscreen.targetView->Release();
+            offscreen.depthView->Release();
+            offscreen.resize(offscreen.viewport.Width, offscreen.viewport.Height);
+        }
+
+        oldContentRegion = contentSize;
+
+        ImGui::End();
+
+        ImGui::PopStyleVar();
+        ImGui::PopStyleVar();
 
         // render imgui
         ImGui::Render();
@@ -275,6 +310,45 @@ int main()
         // present
         GContext->graphics.swapChain->Present(1, 0);
     }
+
+    directionLightBuffer.buffer->Release();
+    globalInfoBuffer.buffer->Release();
+
+    pointlight.buffer.buffer->Release();
+    pointlight.pipeline.pixelShader->Release();
+    pointlight.pipeline.vertexShader->Release();
+    pointlight.pipeline.pixelBlob->Release();
+    pointlight.pipeline.vertexBlob->Release();
+    pointlight.pipeline.inputLayout->Release();
+    pointlight.pipeline.blendState->Release();
+    pointlight.pipeline.depthStencilState->Release();
+    pointlight.pipeline.rasterizationState->Release();
+
+    skybox.cubeSampler->Release();
+    skybox.vertexBuffer.buffer->Release();
+    skybox.indexBuffer.buffer->Release();
+    skybox.cubeTexture.textureView->Release();
+    skybox.pipeline.pixelShader->Release();
+    skybox.pipeline.vertexShader->Release();
+    skybox.pipeline.pixelBlob->Release();
+    skybox.pipeline.vertexBlob->Release();
+    skybox.pipeline.inputLayout->Release();
+    skybox.pipeline.blendState->Release();
+    skybox.pipeline.depthStencilState->Release();
+    skybox.pipeline.rasterizationState->Release();
+
+    directionalShadowMap.texture->Release();
+    directionalShadowMap.depthView->Release();
+    directionalShadowMap.resourceView->Release();
+    directionalShadowMap.rasterizationState->Release();
+    directionalShadowMap.sampler->Release();
+    directionalShadowMap.buffer.buffer->Release();
+
+    for(int i = 0; i < 6; i++)
+        omniShadowMap.depthView[i]->Release();
+    omniShadowMap.resourceView->Release();
+    omniShadowMap.sampler->Release();
+    omniShadowMap.buffer.buffer->Release();
 
     mvCleanupAssetManager(&am);
 

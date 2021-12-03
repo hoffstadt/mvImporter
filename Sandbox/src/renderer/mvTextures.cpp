@@ -170,7 +170,7 @@ mvCreateCubeTexture(const std::string& path)
 	srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURECUBE;
 	srvDesc.Texture2D.MostDetailedMip = 0;
 	srvDesc.Texture2D.MipLevels = 1;
-	GContext->graphics.device->CreateShaderResourceView(pTexture.Get(), &srvDesc, texture.textureView.GetAddressOf());
+	GContext->graphics.device->CreateShaderResourceView(pTexture.Get(), &srvDesc, &texture.textureView);
 
 	return texture;
 }
