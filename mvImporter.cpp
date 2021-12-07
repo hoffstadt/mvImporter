@@ -263,7 +263,7 @@ DecodeDataURI(std::vector<unsigned char>* out, std::string& mime_type,
 }
 
 static void
-ParseForTokens(char* rawData, std::vector<mvToken>& tokens)
+ParseForTokens(char* rawData, std::vector<mvToken*>& tokens)
 {
 	int currentPos = 0u;
 	char currentChar = rawData[currentPos];
@@ -271,8 +271,6 @@ ParseForTokens(char* rawData, std::vector<mvToken>& tokens)
 
 	bool inString = false;
 	std::vector<char> buffer;
-
-	//int  bufferPos = 0;
 
 	while (currentChar != 0)
 	{
@@ -285,25 +283,29 @@ ParseForTokens(char* rawData, std::vector<mvToken>& tokens)
 				{
 					if (!buffer.empty())
 					{
-						mvToken primitivetoken{};
-						primitivetoken.type = MV_JSON_PRIMITIVE;
+						mvToken* primitivetoken = new mvToken();
+						primitivetoken->type = MV_JSON_PRIMITIVE;
+						buffer.push_back('\0');
 						for (int i = 0; i < buffer.size(); i++)
 						{
-							primitivetoken.value.push_back(buffer[i]);
+							primitivetoken->value+=buffer[i];
 						}
 						tokens.push_back(primitivetoken);
 						buffer.clear();
 					}
 
-					mvToken token{};
-					if (currentChar == '{') token.type = MV_JSON_LEFT_BRACE;
-					else if (currentChar == '}') token.type = MV_JSON_RIGHT_BRACE;
-					else if (currentChar == '[') token.type = MV_JSON_LEFT_BRACKET;
-					else if (currentChar == ']') token.type = MV_JSON_RIGHT_BRACKET;
-					else if (currentChar == ',') token.type = MV_JSON_COMMA;
-					else if (currentChar == ':') token.type = MV_JSON_COLON;
+					mvToken* token = new mvToken();
+					if (currentChar == '{') token->type = MV_JSON_LEFT_BRACE;
+					else if (currentChar == '}') token->type = MV_JSON_RIGHT_BRACE;
+					else if (currentChar == '[') token->type = MV_JSON_LEFT_BRACKET;
+					else if (currentChar == ']') token->type = MV_JSON_RIGHT_BRACKET;
+					else if (currentChar == ',') token->type = MV_JSON_COMMA;
+					else if (currentChar == ':') token->type = MV_JSON_COLON;
 
-					token.value = currentChar;
+					char cc[2];
+					cc[0] = currentChar;
+					cc[1] = 0;
+					token->value = std::string(cc);
 					tokens.push_back(token);
 					tokenFound = true;
 					break;
@@ -318,16 +320,18 @@ ParseForTokens(char* rawData, std::vector<mvToken>& tokens)
 			{
 				if (inString)
 				{
-					mvToken token{};
+					mvToken* token = new mvToken();
+					buffer.push_back('\0');
 					for (int i = 0; i < buffer.size(); i++)
 					{
-						token.value.push_back(buffer[i]);
+						token->value+=buffer[i];
 					}
+					
 
 					if (rawData[currentPos + 1] == ':')
-						token.type = MV_JSON_MEMBER;
+						token->type = MV_JSON_MEMBER;
 					else
-						token.type = MV_JSON_STRING;
+						token->type = MV_JSON_STRING;
 					tokens.push_back(token);
 					tokenFound = true;
 					inString = false;
@@ -411,8 +415,8 @@ ParseJSON(char* rawData, int size)
 	char* spacesRemoved = new char[size];
 	RemoveWhiteSpace(rawData, spacesRemoved);
 
-	std::vector<mvToken> tokens;
-	ParseForTokens(spacesRemoved, tokens);
+	std::vector<mvToken*>* tokens = new std::vector<mvToken*>();
+	ParseForTokens(spacesRemoved, *tokens);
 
 	//for (auto& token : tokens)
 	//	std::cout << token.value << std::endl;
@@ -428,10 +432,10 @@ ParseJSON(char* rawData, int size)
 	while (true)
 	{
 
-		if (i >= tokens.size())
+		if (i >= tokens->size())
 			break;
 
-		switch (tokens[i].type)
+		switch ((*tokens)[i]->type)
 		{
 
 		case MV_JSON_LEFT_BRACE:
@@ -505,8 +509,8 @@ ParseJSON(char* rawData, int size)
 			int parentId = jsonObjectStack.top();
 			mvJsonObject& parent = context.jsonObjects[parentId];
 			mvJsonMember member{};
-			member.name = tokens[i].value;
-			mvTokenType valueType = tokens[i + 2].type;
+			member.name = (*tokens)[i]->value;
+			mvTokenType valueType = (*tokens)[i + 2]->type;
 			if (valueType == MV_JSON_LEFT_BRACKET)
 			{
 				member.index = context.jsonObjects.size();
@@ -543,7 +547,7 @@ ParseJSON(char* rawData, int size)
 			{
 				int valueId = context.primitiveValues.size();
 				context.primitiveValues.push_back({});
-				context.primitiveValues.back().value = tokens[i].value;
+				context.primitiveValues.back().value = (*tokens)[i]->value;
 				int memberId = jsonMemberStack.top();
 				parent.members[memberId].index = valueId;
 				jsonMemberStack.pop();
@@ -553,7 +557,7 @@ ParseJSON(char* rawData, int size)
 
 				int valueId = context.primitiveValues.size();
 				context.primitiveValues.push_back({});
-				context.primitiveValues.back().value = tokens[i].value;
+				context.primitiveValues.back().value = (*tokens)[i]->value;
 
 				mvJsonMember member{};
 				member.type = MV_JSON_TYPE_PRIMITIVE;
@@ -572,7 +576,7 @@ ParseJSON(char* rawData, int size)
 			{
 				int valueId = context.primitiveValues.size();
 				context.primitiveValues.push_back({});
-				context.primitiveValues.back().value = tokens[i].value;
+				context.primitiveValues.back().value = (*tokens)[i]->value;
 				int memberId = jsonMemberStack.top();
 				parent.members[memberId].index = valueId;
 				jsonMemberStack.pop();
@@ -583,7 +587,7 @@ ParseJSON(char* rawData, int size)
 
 				int valueId = context.primitiveValues.size();
 				context.primitiveValues.push_back({});
-				context.primitiveValues.back().value = tokens[i].value;
+				context.primitiveValues.back().value = (*tokens)[i]->value;
 
 				mvJsonMember member{};
 				member.type = MV_JSON_TYPE_PRIMITIVE;
@@ -866,79 +870,75 @@ namespace mvImp {
 		if (!j.doesMemberExist("meshes"))
 			return nullptr;
 
-		mvU32 basecount = j["meshes"].members.size();
-		mvU32 realcount = basecount;
+		mvU32 meshCount = j["meshes"].members.size();
 
-		for (int i = 0; i < basecount; i++)
+		mvGLTFMesh* meshes = new mvGLTFMesh[meshCount];
+
+		for (int i = 0; i < meshCount; i++)
 		{
 			mvJsonObject& jmesh = j["meshes"][i];
-			mvU32 subcount = jmesh["primitives"].members.size();
-			realcount += subcount;
-		}
+			mvGLTFMesh& mesh = meshes[i];
 
-		mvGLTFMesh* meshes = new mvGLTFMesh[realcount];
-
-		for (int i = 0; i < basecount; i++)
-		{
-			mvJsonObject& jmesh = j["meshes"][i];
+			if (jmesh.doesMemberExist("name"))
+				mesh.name = jmesh.getMember("name");
 
 			if (jmesh.doesMemberExist("primitives"))
 			{
-				mvU32 subcount = jmesh["primitives"].members.size();
-				for (int j = 0; j < subcount; j++)
-				{
-					mvGLTFMesh& mesh = meshes[size];
+				
+				mesh.primitives_count = jmesh["primitives"].members.size();
+				mesh.primitives = new mvGLTFMeshPrimitive[mesh.primitives_count];
 
-					if (jmesh.doesMemberExist("name"))
-					{
-						mesh.name = jmesh.getMember("name");
-						mesh.name.append(std::to_string(j));
-					}
+				for (int j = 0; j < mesh.primitives_count; j++)
+				{
+					
+					mvGLTFMeshPrimitive& primitive = mesh.primitives[j];
+
+
 
 					mvJsonObject jprimitive = jmesh["primitives"][j];
 
 					if (jprimitive.doesMemberExist("indices"))
-						mesh.indices_index = jprimitive.getMember("indices");
+						primitive.indices_index = jprimitive.getMember("indices");
 
 					if (jprimitive.doesMemberExist("material"))
-						mesh.material_index = jprimitive.getMember("material");
+						primitive.material_index = jprimitive.getMember("material");
 
 					if (jprimitive.doesMemberExist("attributes"))
 					{
 						mvU32 attrCount = jprimitive["attributes"].members.size();
-						mesh.attributes = new mvGLTFAttribute[attrCount];
+						primitive.attributes = new mvGLTFAttribute[attrCount];
 
 						if (jprimitive["attributes"].doesMemberExist("POSITION"))
 						{
-							mesh.attributes[mesh.attribute_count] = { MV_IMP_POSITION , jprimitive["attributes"].getMember("POSITION") };
-							mesh.attribute_count++;
+							primitive.attributes[primitive.attribute_count] = { MV_IMP_POSITION , jprimitive["attributes"].getMember("POSITION") };
+							primitive.attribute_count++;
 						}
 
 
 						if (jprimitive["attributes"].doesMemberExist("TANGENT"))
 						{
-							mesh.attributes[mesh.attribute_count] = { MV_IMP_TANGENT , jprimitive["attributes"].getMember("TANGENT") };
-							mesh.attribute_count++;
+							primitive.attributes[primitive.attribute_count] = { MV_IMP_TANGENT , jprimitive["attributes"].getMember("TANGENT") };
+							primitive.attribute_count++;
 						}
 
 						if (jprimitive["attributes"].doesMemberExist("NORMAL"))
 						{
-							mesh.attributes[mesh.attribute_count] = { MV_IMP_NORMAL , jprimitive["attributes"].getMember("NORMAL") };
-							mesh.attribute_count++;
+							primitive.attributes[primitive.attribute_count] = { MV_IMP_NORMAL , jprimitive["attributes"].getMember("NORMAL") };
+							primitive.attribute_count++;
 						}
 
 						if (jprimitive["attributes"].doesMemberExist("TEXCOORD_0"))
 						{
-							mesh.attributes[mesh.attribute_count] = { MV_IMP_TEXTCOORD , jprimitive["attributes"].getMember("TEXCOORD_0") };
-							mesh.attribute_count++;
+							primitive.attributes[primitive.attribute_count] = { MV_IMP_TEXTCOORD , jprimitive["attributes"].getMember("TEXCOORD_0") };
+							primitive.attribute_count++;
 						}
 					}
 
-					size++;
+					
 				}
 			}
 
-			
+			size++;
 		}
 
 		return meshes;
@@ -1490,7 +1490,14 @@ mvCleanupGLTF(mvGLTFModel& model)
 {
 
 	for (mvU32 i = 0; i < model.mesh_count; i++)
-		delete[] model.meshes[i].attributes;
+	{
+		for (mvU32 j = 0; j < model.meshes[i].primitives_count; j++)
+		{
+			delete[] model.meshes[i].primitives[j].attributes;
+		}
+		delete[] model.meshes[i].primitives;
+	}
+		
 
 	for (mvU32 i = 0; i < model.node_count; i++)
 	{

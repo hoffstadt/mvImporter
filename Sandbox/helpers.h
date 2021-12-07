@@ -175,6 +175,7 @@ struct mvShadowMap
     D3D11_VIEWPORT                 viewport;
     mvConstBuffer                  buffer;
     DirectionalShadowTransformInfo info;
+    f32                            angle = 10.0f;
 
     mvShadowMap(u32 resolution, f32 width)
     {
@@ -183,15 +184,18 @@ struct mvShadowMap
         buffer = mvCreateConstBuffer(&info, sizeof(DirectionalShadowTransformInfo));
 
         // setup camera
-        camera.dir = { 0.0f, 1.0f, 0.0f };
+        f32 zcomponent = sinf(M_PI * angle / 180.0f);
+        f32 ycomponent = cosf(M_PI * angle / 180.0f);
+
+        camera.pos = { 0.0f, 100.0f, 0.0f };
+        camera.dir = { 0.0f, -ycomponent, zcomponent };
         camera.up = { 1.0f, 0.0f, 0.0f };
-        camera.pos.y = width / 2.0f;
         camera.left = -width;
         camera.right = width;
         camera.bottom = -width;
         camera.top = width;
-        camera.nearZ = -width - 1.0f;
-        camera.farZ = width + 1.0f;
+        camera.nearZ = -121.0f;
+        camera.farZ = 121.0f;
 
         D3D11_TEXTURE2D_DESC shadowMapDesc;
         ZeroMemory(&shadowMapDesc, sizeof(D3D11_TEXTURE2D_DESC));
@@ -269,7 +273,7 @@ struct mvShadowMap
 
     mvMat4 getViewMatrix()
     {
-        return mvLookAtRH(camera.pos, camera.pos + camera.dir, camera.up);
+        return mvLookAtRH(camera.pos, camera.pos - camera.dir, camera.up);
     }
 
     mvMat4 getProjectionMatrix()
@@ -280,11 +284,17 @@ struct mvShadowMap
     void showControls()
     {
         ImGui::Begin("Direction Light");
-        if (ImGui::SliderFloat3("DLight", &camera.dir.x, -1.0f, 1.0f))
+
+        if (ImGui::SliderFloat("Directional Light Angle", &angle, -45.0f, 45.0f))
         {
-            info.view = mvLookAtRH(camera.pos, camera.pos + camera.dir, camera.up);
+            f32 zcomponent = sinf(M_PI * angle / 180.0f);
+            f32 ycomponent = cosf(M_PI * angle / 180.0f);
+
+            camera.dir = { 0.0f, -ycomponent, zcomponent };
+            info.view = mvLookAtRH(camera.pos, camera.pos - camera.dir, camera.up);
             info.projection = mvOrthoRH(camera.left, camera.right, camera.bottom, camera.top, camera.nearZ, camera.farZ);
         }
+
         ImGui::End();
     }
 };

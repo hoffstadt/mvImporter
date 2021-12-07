@@ -13,18 +13,19 @@
 //-----------------------------------------------------------------------------
 // Forward Declarations
 //-----------------------------------------------------------------------------
-struct mvGLTFNode;       // GLTF -> "nodes"
-struct mvGLTFScene;      // GLTF -> "scenes"
-struct mvGLTFMesh;       // GLTF -> "meshes"
-struct mvGLTFMaterial;   // GLTF -> "materials"
-struct mvGLTFTexture;    // GLTF -> "textures"
-struct mvGLTFSampler;    // GLTF -> "samplers"
-struct mvGLTFImage;      // GLTF -> "images"
-struct mvGLTFBuffer;     // GLTF -> "buffers"
-struct mvGLTFBufferView; // GLTF -> "bufferViews"
-struct mvGLTFAccessor;   // GLTF -> "accessors
-struct mvGLTFAttribute;  // GLTF -> "meshes" > "primitives" > "attributes"
-struct mvGLTFModel;      // contains arrays of the above and counts
+struct mvGLTFNode;          // GLTF -> "nodes"
+struct mvGLTFScene;         // GLTF -> "scenes"
+struct mvGLTFMeshPrimitive; // GLTF -> "meshPrimitives"
+struct mvGLTFMesh;          // GLTF -> "meshes"
+struct mvGLTFMaterial;      // GLTF -> "materials"
+struct mvGLTFTexture;       // GLTF -> "textures"
+struct mvGLTFSampler;       // GLTF -> "samplers"
+struct mvGLTFImage;         // GLTF -> "images"
+struct mvGLTFBuffer;        // GLTF -> "buffers"
+struct mvGLTFBufferView;    // GLTF -> "bufferViews"
+struct mvGLTFAccessor;      // GLTF -> "accessors
+struct mvGLTFAttribute;     // GLTF -> "meshes" > "primitives" > "attributes"
+struct mvGLTFModel;         // contains arrays of the above and counts
 
 //-----------------------------------------------------------------------------
 // mvImporter End-User API
@@ -158,14 +159,20 @@ struct mvGLTFBufferView
 	mvS32       byte_stride  = -1;
 };
 
-struct mvGLTFMesh
+struct mvGLTFMeshPrimitive
 {
-	std::string      name;
-	mvS32            indices_index  = -1; // accessor index
+	mvS32            indices_index = -1; // accessor index
 	mvS32            material_index = -1;
 	mvGLTFPrimMode   mode = MV_IMP_TRIANGLES;
 	mvGLTFAttribute* attributes = nullptr;
 	mvU32            attribute_count = 0u;
+};
+
+struct mvGLTFMesh
+{
+	std::string          name;
+	mvGLTFMeshPrimitive* primitives = nullptr;
+	mvU32                primitives_count = 0u;
 };
 
 struct mvGLTFMaterial

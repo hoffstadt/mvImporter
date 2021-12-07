@@ -2,7 +2,8 @@
 
 // TODO: make most of these runtime options
 static const char* gltfModel = "Cerberus";
-static f32         shadowWidth = 15.0f;
+//static const char* gltfModel = "Lantern";
+static f32         shadowWidth = 75.0f;
 static int         initialWidth = 1850;
 static int         initialHeight = 900;
 static ImVec2      oldContentRegion = ImVec2(500, 500);
@@ -43,12 +44,14 @@ int main()
     camera.yaw = 0.0f;
     camera.aspect = 500.0f / 500.0f;
 
+
+
     // helpers
     mvShadowMap directionalShadowMap = mvShadowMap(4096, shadowWidth);
     mvShadowCubeMap omniShadowMap = mvShadowCubeMap(2048);
     mvSkybox skybox = mvSkybox();
     mvPointLight pointlight = mvPointLight(am);
-    omniShadowMap.info.view = mvCreateLookAtView(pointlight.camera);
+    //omniShadowMap.info.view = mvCreateLookAtView(pointlight.camera);
 
     // framework constant buffers
     DirectionLightInfo directionLightInfo{};
@@ -148,6 +151,7 @@ int main()
         }
 
         {
+            directionLightInfo.viewLightDir = directionalShadowMap.camera.dir;
             mvVec3 posCopy = directionLightInfo.viewLightDir;
 
             mvVec4 out = viewMatrix * mvVec4{
@@ -202,14 +206,14 @@ int main()
             // mesh
             static const UINT offset = 0u;
             ctx->VSSetConstantBuffers(0u, 1u, GContext->graphics.tranformCBuf.GetAddressOf());
-            ctx->IASetIndexBuffer(am.buffers[pointlight.mesh.indexBuffer].buffer.buffer, DXGI_FORMAT_R32_UINT, 0u);
+            ctx->IASetIndexBuffer(am.buffers[pointlight.mesh.primitives.back().indexBuffer].buffer.buffer, DXGI_FORMAT_R32_UINT, 0u);
             static mvVertexLayout lightvertexlayout = mvCreateVertexLayout({ mvVertexElement::Position3D });
             ctx->IASetVertexBuffers(0u, 1u,
-                &am.buffers[pointlight.mesh.vertexBuffer].buffer.buffer,
+                &am.buffers[pointlight.mesh.primitives.back().vertexBuffer].buffer.buffer,
                 &lightvertexlayout.size, &offset);
 
             // draw
-            ctx->DrawIndexed(am.buffers[pointlight.mesh.indexBuffer].buffer.size / sizeof(u32), 0u, 0u);
+            ctx->DrawIndexed(am.buffers[pointlight.mesh.primitives.back().indexBuffer].buffer.size / sizeof(u32), 0u, 0u);
         }
 
         for (int i = 0; i < am.sceneCount; i++)
