@@ -15,6 +15,7 @@ target_sources(mvimporter_sandbox
 	PRIVATE
 
 		"main.cpp"
+		"../mvImporter.cpp"
 
 		"mvSandbox.cpp"
 

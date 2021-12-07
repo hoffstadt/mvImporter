@@ -274,7 +274,8 @@ float4 main(VSOut input) : SV_Target
         projectTexCoord.y = -0.5f * input.dshadowWorldPos.y / input.dshadowWorldPos.w + 0.5f;
         
         // Determine if the projected coordinates are in the 0 to 1 range.  If so then this pixel is in the view of the light.
-        if ((saturate(projectTexCoord.x) == projectTexCoord.x) && (saturate(projectTexCoord.y) == projectTexCoord.y) && info.useShadows)
+        //if ((saturate(projectTexCoord.x) == projectTexCoord.x) && (saturate(projectTexCoord.y) == projectTexCoord.y) && info.useShadows)
+        if (false)
         {
             
             // Calculate the depth of the light.

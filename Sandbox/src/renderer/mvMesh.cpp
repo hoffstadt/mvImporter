@@ -662,7 +662,7 @@ mvLoadGLTFAssets(mvAssetManager& assetManager, mvGLTFModel& model)
                 std::string uri = model.images[texture.image_index].uri;
                 if (model.images[texture.image_index].embedded)
                 {
-                    newMesh.albedoTexture = mvGetTextureAsset(&assetManager, model.root + uri, model.images[texture.image_index].data);
+                    newMesh.albedoTexture = mvGetTextureAsset(&assetManager, model.root + uri + "_a", model.images[texture.image_index].data);
                 }
                 else
                     newMesh.albedoTexture = mvGetTextureAsset(&assetManager, model.root + uri);
@@ -675,7 +675,7 @@ mvLoadGLTFAssets(mvAssetManager& assetManager, mvGLTFModel& model)
                 std::string uri = model.images[texture.image_index].uri;
                 if (model.images[texture.image_index].embedded)
                 {
-                    newMesh.normalTexture = mvGetTextureAsset(&assetManager, model.root + uri, model.images[texture.image_index].data);
+                    newMesh.normalTexture = mvGetTextureAsset(&assetManager, model.root + uri + "_n", model.images[texture.image_index].data);
                 }
                 else
                     newMesh.normalTexture = mvGetTextureAsset(&assetManager, model.root + uri);
@@ -688,7 +688,7 @@ mvLoadGLTFAssets(mvAssetManager& assetManager, mvGLTFModel& model)
                 std::string uri = model.images[texture.image_index].uri;
                 if (model.images[texture.image_index].embedded)
                 {
-                    newMesh.metalRoughnessTexture = mvGetTextureAsset(&assetManager, model.root + uri, model.images[texture.image_index].data);
+                    newMesh.metalRoughnessTexture = mvGetTextureAsset(&assetManager, model.root + uri + "_m", model.images[texture.image_index].data);
                 }
                 else
                     newMesh.metalRoughnessTexture = mvGetTextureAsset(&assetManager, model.root + uri);

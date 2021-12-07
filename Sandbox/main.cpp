@@ -1,8 +1,7 @@
 #include "helpers.h"
 
 // TODO: make most of these runtime options
-//static const char* gltfModel = "donut";
-static const char* gltfModel = "DamagedHelmet";
+static const char* gltfModel = "Cerberus";
 static f32         shadowWidth = 15.0f;
 static int         initialWidth = 1850;
 static int         initialHeight = 900;
