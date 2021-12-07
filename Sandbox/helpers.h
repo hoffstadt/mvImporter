@@ -389,7 +389,7 @@ mvGLTFModel
 LoadTestModel(const char* name)
 {
     static const char* gltfPath = "../../data/glTF-Sample-Models/2.0/";
-    std::string root = gltfPath + std::string(name) + "//glTF//";
+    std::string root = gltfPath + std::string(name) + "//glTF-Embedded//";
     std::string file = root + std::string(name) + ".gltf";
     return mvLoadGLTF(root.c_str(), file.c_str());
 }

@@ -87,6 +87,21 @@ mvGetTextureAsset(mvAssetManager* manager, const std::string& path)
 	return manager->textureCount - 1;
 }
 
+mvAssetID 
+mvGetTextureAsset(mvAssetManager* manager, const std::string& path, std::vector<unsigned char> data)
+{
+	for (s32 i = 0; i < manager->textureCount; i++)
+	{
+		if (manager->textures[i].hash == path)
+			return i;
+	}
+
+	manager->textures[manager->textureCount].hash = path;
+	manager->textures[manager->textureCount].texture = mvCreateTexture(data);
+	manager->textureCount++;
+	return manager->textureCount - 1;
+}
+
 mvAssetID
 mvGetCubeTextureAsset(mvAssetManager* manager, const std::string& path)
 {

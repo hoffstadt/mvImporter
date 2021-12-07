@@ -351,7 +351,7 @@ mvFillBuffer(mvGLTFModel& model, mvGLTFAccessor& accessor, std::vector<W>& outBu
 {
     mvVerifyBufferViewStride(model, accessor);
     mvGLTFBufferView bufferView = model.bufferviews[accessor.buffer_view_index];
-    char* bufferRawData = model.buffers[bufferView.buffer_index].data;
+    char* bufferRawData = (char*)model.buffers[bufferView.buffer_index].data.data();
     char* bufferRawSection = &bufferRawData[bufferView.byte_offset + accessor.byteOffset]; // start of buffer section
 
     u8 actualItemCompCount = mvGetAccessorItemCompCount(accessor);
@@ -660,7 +660,12 @@ mvLoadGLTFAssets(mvAssetManager& assetManager, mvGLTFModel& model)
             {
                 mvGLTFTexture& texture = model.textures[material.base_color_texture];
                 std::string uri = model.images[texture.image_index].uri;
-                newMesh.albedoTexture = mvGetTextureAsset(&assetManager, model.root + uri);
+                if (model.images[texture.image_index].embedded)
+                {
+                    newMesh.albedoTexture = mvGetTextureAsset(&assetManager, model.root + uri, model.images[texture.image_index].data);
+                }
+                else
+                    newMesh.albedoTexture = mvGetTextureAsset(&assetManager, model.root + uri);
                 materialData.useAlbedoMap = true;
             }
 
@@ -668,7 +673,12 @@ mvLoadGLTFAssets(mvAssetManager& assetManager, mvGLTFModel& model)
             {
                 mvGLTFTexture& texture = model.textures[material.normal_texture];
                 std::string uri = model.images[texture.image_index].uri;
-                newMesh.normalTexture = mvGetTextureAsset(&assetManager, model.root + uri);
+                if (model.images[texture.image_index].embedded)
+                {
+                    newMesh.normalTexture = mvGetTextureAsset(&assetManager, model.root + uri, model.images[texture.image_index].data);
+                }
+                else
+                    newMesh.normalTexture = mvGetTextureAsset(&assetManager, model.root + uri);
                 materialData.useNormalMap = true;
             }
 
@@ -676,7 +686,12 @@ mvLoadGLTFAssets(mvAssetManager& assetManager, mvGLTFModel& model)
             {
                 mvGLTFTexture& texture = model.textures[material.metallic_roughness_texture];
                 std::string uri = model.images[texture.image_index].uri;
-                newMesh.metalRoughnessTexture = mvGetTextureAsset(&assetManager, model.root + uri);
+                if (model.images[texture.image_index].embedded)
+                {
+                    newMesh.metalRoughnessTexture = mvGetTextureAsset(&assetManager, model.root + uri, model.images[texture.image_index].data);
+                }
+                else
+                    newMesh.metalRoughnessTexture = mvGetTextureAsset(&assetManager, model.root + uri);
                 materialData.useRoughnessMap = true;
                 materialData.useMetalMap = true;
             }

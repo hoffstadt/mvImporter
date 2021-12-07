@@ -66,6 +66,7 @@ void mvCleanupAssetManager   (mvAssetManager* manager);
 
 mvAssetID mvGetMaterialAsset     (mvAssetManager* manager, const std::string& vs, const std::string& ps, mvMaterialData& materialData);
 mvAssetID mvGetTextureAsset      (mvAssetManager* manager, const std::string& path);
+mvAssetID mvGetTextureAsset      (mvAssetManager* manager, const std::string& path, std::vector<unsigned char> data);
 mvAssetID mvGetCubeTextureAsset  (mvAssetManager* manager, const std::string& path);
 mvAssetID mvGetBufferAsset       (mvAssetManager* manager, void* data, u32 size, D3D11_BIND_FLAG flags, const std::string& tag);
 mvAssetID mvGetSamplerAsset      (mvAssetManager* manager, D3D11_FILTER mode, D3D11_TEXTURE_ADDRESS_MODE addressing, b8 hwPcf);

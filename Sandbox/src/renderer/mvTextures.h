@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <vector>
 #include "mvTypes.h"
 #include "mvGraphics.h"
 
@@ -22,5 +23,6 @@ struct mvSampler
 };
 
 mvTexture     mvCreateTexture    (const std::string& path);
+mvTexture     mvCreateTexture    (std::vector<unsigned char> data);
 mvCubeTexture mvCreateCubeTexture(const std::string& path);
 mvSampler     mvCreateSampler    (D3D11_FILTER mode = D3D11_FILTER_ANISOTROPIC, D3D11_TEXTURE_ADDRESS_MODE addressing = D3D11_TEXTURE_ADDRESS_WRAP, b8 hwPcf=false);
