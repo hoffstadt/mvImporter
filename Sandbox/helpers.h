@@ -400,6 +400,8 @@ LoadTestModel(const char* name)
 
 struct mvOffscreen
 {
+    ID3D11Texture2D* texture;
+    ID3D11Texture2D* depthTexture;
     ID3D11RenderTargetView*   targetView = nullptr;
     ID3D11DepthStencilView*   depthView = nullptr;
     ID3D11ShaderResourceView* resourceView = nullptr;
@@ -414,8 +416,7 @@ struct mvOffscreen
 
     void resize(float width, float height)
     {
-        ID3D11Texture2D* texture;
-        ID3D11Texture2D* depthTexture;
+
 
         // render target texture
         {

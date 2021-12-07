@@ -277,7 +277,7 @@ int main()
         ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
         ImGui::Begin("Model", 0, ImGuiWindowFlags_NoDecoration);
 
-        if(ImGui::IsWindowHovered())
+        if (ImGui::IsWindowHovered())
             mvUpdateCameraFPSCamera(camera, dt, 12.0f, 0.004f);
 
         ImVec2 contentSize = ImGui::GetWindowContentRegionMax();
@@ -293,6 +293,9 @@ int main()
         {
             offscreen.targetView->Release();
             offscreen.depthView->Release();
+            offscreen.resourceView->Release();
+            offscreen.texture->Release();
+            offscreen.depthTexture->Release();
             offscreen.resize(offscreen.viewport.Width, offscreen.viewport.Height);
         }
 
@@ -313,6 +316,12 @@ int main()
 
     directionLightBuffer.buffer->Release();
     globalInfoBuffer.buffer->Release();
+
+    offscreen.targetView->Release();
+    offscreen.depthView->Release();
+    offscreen.resourceView->Release();
+    offscreen.texture->Release();
+    offscreen.depthTexture->Release();
 
     pointlight.buffer.buffer->Release();
     pointlight.pipeline.pixelShader->Release();
@@ -344,7 +353,7 @@ int main()
     directionalShadowMap.sampler->Release();
     directionalShadowMap.buffer.buffer->Release();
 
-    for(int i = 0; i < 6; i++)
+    for (int i = 0; i < 6; i++)
         omniShadowMap.depthView[i]->Release();
     omniShadowMap.resourceView->Release();
     omniShadowMap.sampler->Release();
