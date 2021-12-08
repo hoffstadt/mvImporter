@@ -2,9 +2,11 @@
 //#include <crtdbg.h>
 
 // TODO: make most of these runtime options
-//static const char* gltfModel = "TestImport";
-static const char* gltfModel = "WaterBottle";
-//static const char* gltfModel = "Sponza";
+static const char* gltfAssetDirectory = "../../data/glTF-Sample-Models/2.0/DamagedHelmet/glTF-Binary/";
+static const char* gltfModel = "../../data/glTF-Sample-Models/2.0/DamagedHelmet/glTF-Binary/DamagedHelmet.glb";
+
+//static const char* gltfAssetDirectory = "../../data/glTF-Sample-Models/2.0/Sponza/glTF/";
+//static const char* gltfModel = "../../data/glTF-Sample-Models/2.0/Sponza/glTF/Sponza.gltf";
 static f32         shadowWidth = 95.0f;
 static int         initialWidth = 1850;
 static int         initialHeight = 900;
@@ -34,7 +36,7 @@ int main()
     mvInitializeAssetManager(&am);
 
     // assets & meshes
-    mvGLTFModel gltfmodel = LoadTestModel(gltfModel);
+    mvGLTFModel gltfmodel = mvLoadGLTF(gltfAssetDirectory, gltfModel);
     mvLoadGLTFAssets(am, gltfmodel);
     mvCleanupGLTF(gltfmodel);
 
@@ -46,14 +48,12 @@ int main()
     camera.yaw = 0.0f;
     camera.aspect = 500.0f / 500.0f;
 
-
-
     // helpers
     mvShadowMap directionalShadowMap = mvShadowMap(4096, shadowWidth);
     mvShadowCubeMap omniShadowMap = mvShadowCubeMap(2048);
     mvSkybox skybox = mvSkybox();
     mvPointLight pointlight = mvPointLight(am);
-    //omniShadowMap.info.view = mvCreateLookAtView(pointlight.camera);
+    omniShadowMap.info.view = mvCreateLookAtView(pointlight.camera);
 
     // framework constant buffers
     DirectionLightInfo directionLightInfo{};
@@ -65,7 +65,7 @@ int main()
     mvOffscreen offscreen = mvOffscreen(500.0f, 500.0f);
     mvTimer timer;
     bool recreatePrimary = false;
-    f32 scale = 1.0f;
+    f32 scale = 5.0f;
     while (true)
     {
         const auto dt = timer.mark() * 1.0f;
@@ -95,7 +95,7 @@ int main()
         // clear targets
         //-----------------------------------------------------------------------------
         static float backgroundColor[] = { 0.0f, 0.0f, 0.0f, 1.0f };
-        static float backgroundColor2[] = { 0.1f, 0.1f, 0.1f, 1.0f };
+        static float backgroundColor2[] = { 0.2f, 0.2f, 0.2f, 1.0f };
         ctx->ClearRenderTargetView(*GContext->graphics.target.GetAddressOf(), backgroundColor);
         ctx->ClearRenderTargetView(offscreen.targetView, backgroundColor2);
         ctx->ClearDepthStencilView(directionalShadowMap.depthView, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0u);
@@ -109,6 +109,8 @@ int main()
         ImGui_ImplDX11_NewFrame();
         ImGui_ImplWin32_NewFrame();
         ImGui::NewFrame();
+
+        globalInfo.camPos = camera.pos;
 
         ID3D11ShaderResourceView* const pSRV[6] = { NULL };
         ctx->PSSetShaderResources(0, 1, pSRV);
@@ -139,10 +141,10 @@ int main()
         {
             ctx->OMSetRenderTargets(0, nullptr, omniShadowMap.depthView[i]);
             mvVec3 look_target = pointlight.camera.pos + omniShadowMap.cameraDirections[i];
-            mvMat4 camera_matrix = mvLookAtLH(pointlight.camera.pos, look_target, omniShadowMap.cameraUps[i]);
+            mvMat4 camera_matrix = mvLookAtRH(pointlight.camera.pos, look_target, omniShadowMap.cameraUps[i]);
 
             for (int i = 0; i < am.sceneCount; i++)
-                Renderer::mvRenderSceneShadows(am, am.scenes[i].scene, camera_matrix, mvPerspectiveLH(M_PI_2, 1.0f, 0.5f, 100.0f), mvScale(mvIdentityMat4(), scaleVec));
+                Renderer::mvRenderSceneShadows(am, am.scenes[i].scene, camera_matrix, mvPerspectiveRH(M_PI_2, 1.0f, 0.5f, 100.0f), mvScale(mvIdentityMat4(), scaleVec));
         }
 
         //-----------------------------------------------------------------------------
@@ -155,32 +157,32 @@ int main()
         mvMat4 projMatrix = mvCreateLookAtProjection(camera);
 
         {
-            mvVec4 posCopy = pointlight.info.viewLightPos;
+            //mvVec4 posCopy = pointlight.info.viewLightPos;
 
-            mvVec4 out = viewMatrix * pointlight.info.viewLightPos;
-            pointlight.info.viewLightPos.x = out.x;
-            pointlight.info.viewLightPos.y = out.y;
-            pointlight.info.viewLightPos.z = out.z;
+            //mvVec4 out = viewMatrix * pointlight.info.viewLightPos;
+            //pointlight.info.viewLightPos.x = out.x;
+            //pointlight.info.viewLightPos.y = out.y;
+            //pointlight.info.viewLightPos.z = out.z;
 
             mvUpdateConstBuffer(pointlight.buffer, &pointlight.info);
-            pointlight.info.viewLightPos = posCopy;
+            //pointlight.info.viewLightPos = posCopy;
         }
 
         {
             directionLightInfo.viewLightDir = directionalShadowMap.camera.dir;
-            mvVec3 posCopy = directionLightInfo.viewLightDir;
+            //mvVec3 posCopy = directionLightInfo.viewLightDir;
 
-            mvVec4 out = viewMatrix * mvVec4{
-                directionLightInfo.viewLightDir.x,
-                directionLightInfo.viewLightDir.y,
-                directionLightInfo.viewLightDir.z,
-                0.0f };
-            directionLightInfo.viewLightDir.x = out.x;
-            directionLightInfo.viewLightDir.y = out.y;
-            directionLightInfo.viewLightDir.z = out.z;
+            //mvVec4 out = viewMatrix * mvVec4{
+            //    directionLightInfo.viewLightDir.x,
+            //    directionLightInfo.viewLightDir.y,
+            //    directionLightInfo.viewLightDir.z,
+            //    0.0f };
+            //directionLightInfo.viewLightDir.x = out.x;
+            //directionLightInfo.viewLightDir.y = out.y;
+            //directionLightInfo.viewLightDir.z = out.z;
 
             mvUpdateConstBuffer(directionLightBuffer, &directionLightInfo);
-            directionLightInfo.viewLightDir = posCopy;
+            //directionLightInfo.viewLightDir = posCopy;
         }
 
         // update constant buffers
@@ -200,10 +202,13 @@ int main()
         // samplers
         ctx->PSSetSamplers(1u, 1, &directionalShadowMap.sampler);
         ctx->PSSetSamplers(2u, 1, &omniShadowMap.sampler);
+        ctx->PSSetSamplers(3u, 1, &skybox.cubeSampler);
+        
 
         // textures
-        ctx->PSSetShaderResources(3u, 1, &directionalShadowMap.resourceView);
-        ctx->PSSetShaderResources(4u, 1, &omniShadowMap.resourceView);
+        ctx->PSSetShaderResources(5u, 1, &directionalShadowMap.resourceView);
+        ctx->PSSetShaderResources(6u, 1, &omniShadowMap.resourceView);
+        ctx->PSSetShaderResources(7u, 1, &skybox.cubeTexture.textureView);
 
         // render light mesh
         {
@@ -293,6 +298,14 @@ int main()
         ImGui::Checkbox("Use Shadows", (bool*)&globalInfo.useShadows);
         ImGui::Checkbox("Use Omni Shadows", (bool*)&globalInfo.useOmniShadows);
         ImGui::Checkbox("Use Skybox", (bool*)&globalInfo.useSkybox);
+        ImGui::Checkbox("Use Albedo", (bool*)&globalInfo.useAlbedo);
+        ImGui::Checkbox("Use Normal", (bool*)&globalInfo.useNormalMap);
+        ImGui::Checkbox("Use Metalness", (bool*)&globalInfo.useMetalness);
+        ImGui::Checkbox("Use Roughness", (bool*)&globalInfo.useRoughness);
+        ImGui::Checkbox("Use Irradiance", (bool*)&globalInfo.useIrradiance);
+        ImGui::Checkbox("Use Reflection", (bool*)&globalInfo.useReflection);
+        ImGui::Checkbox("Use Emissive", (bool*)&globalInfo.useEmissiveMap);
+        ImGui::Checkbox("Use Occlusion", (bool*)&globalInfo.useOcclusionMap);
         ImGui::End();
 
         ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));

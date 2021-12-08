@@ -29,14 +29,31 @@
 struct GlobalInfo
 {
 
-    mvVec3 ambientColor = { 0.04f, 0.04f, 0.04f };
+    mvVec3 ambientColor = { 0.2f, 0.2f, 0.2f };
     b32    useShadows = true;
     //-------------------------- ( 16 bytes )
 
     b32  useOmniShadows = true;
     b32  useSkybox = true;
-    char _pad[8];
+    b32  useAlbedo = true;
+    b32  useMetalness = true;
     //-------------------------- ( 2*16 = 32 bytes )
+
+    b32 useRoughness = true;
+    b32 useIrradiance = false;
+    b32 useReflection = false;
+    b32 useEmissiveMap = true;
+    //-------------------------- ( 2*16 = 32 bytes )
+
+    mvMat4 projection;
+    mvMat4 model;
+    mvMat4 view;
+    
+    mvVec3 camPos;
+    b32 useOcclusionMap = true;
+
+    b32 useNormalMap = true;
+    char _pad0[12];
 };
 
 struct PointLightInfo
@@ -356,17 +373,17 @@ struct mvShadowCubeMap
             GContext->graphics.device->CreateDepthStencilView(pTexture.Get(), &descView, &(depthView[face]));
         }
 
-        cameraDirections[0] = { 0.0f,  0.0f,  -1.0f };
-        cameraDirections[1] = { 0.0f,  0.0f,  1.0f };
-        cameraDirections[2] = { 0.0f,  1.0f,  0.0f };
-        cameraDirections[3] = { 0.0f,  -1.0f,  0.0f };
+        cameraDirections[0] = { 0.0f,  0.0f,  1.0f };
+        cameraDirections[1] = { 0.0f,  0.0f,  -1.0f };
+        cameraDirections[2] = { 0.0f,  -1.0f,  0.0f };
+        cameraDirections[3] = { 0.0f,  1.0f,  0.0f };
         cameraDirections[4] = { 1.0f,  0.0f,  0.0f };
         cameraDirections[5] = { -1.0f,  0.0f,   0.0f };
 
         cameraUps[0] = { 0.0f,  1.0f,  0.0f };
         cameraUps[1] = { 0.0f,  1.0f,  0.0f };
         cameraUps[2] = { 1.0f, 0.0f,   0.0f };
-        cameraUps[3] = { 1.0f, 0.0f,   0.0f };
+        cameraUps[3] = { -1.0f, 0.0f,   0.0f };
         cameraUps[4] = { 0.0f,  1.0f,  0.0f };
         cameraUps[5] = { 0.0f,  1.0f,  0.0f };
 
@@ -396,16 +413,16 @@ struct mvShadowCubeMap
 // helper functions
 //-----------------------------------------------------------------------------
 
-mvGLTFModel 
-LoadTestModel(const char* name)
-{
-    static const char* gltfPath = "../../data/glTF-Sample-Models/2.0/";
-    //std::string root = gltfPath + std::string(name) + "/glTF-Binary/";
-    std::string root = gltfPath + std::string(name) + "/glTF/";
-    std::string file = root + std::string(name) + ".gltf";
-    return mvLoadGLTF(root.c_str(), file.c_str());
-    //return mvLoadGLTF(file.c_str());
-}
+//mvGLTFModel 
+//LoadTestModel(const char* name)
+//{
+//    static const char* gltfPath = "../../data/glTF-Sample-Models/2.0/";
+//    std::string root = gltfPath + std::string(name) + "/glTF-Binary/";
+//    //std::string root = gltfPath + std::string(name) + "/glTF/";
+//    std::string file = root + std::string(name) + ".glb";
+//    //return mvLoadGLTF(root.c_str(), file.c_str());
+//    return mvLoadBinaryGLTF(root.c_str(), file.c_str());
+//}
 
 //-----------------------------------------------------------------------------
 // helper classes

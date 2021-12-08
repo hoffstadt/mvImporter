@@ -7,15 +7,16 @@ cbuffer TransformCBuf : register(b0)
 };
 
 struct VSOut
-{
-    float3 viewPos          : Position;        // pixel pos           (view space)
-    float3 viewNormal       : Normal;          // pixel norm          (view space)
-    float3 worldNormal      : WorldNormal;     // pixel normal        (view space)
-    float2 tc               : Texcoord;        // texture coordinates (model space)
-    float3x3 tangentBasis   : TangentBasis;    // tangent basis       (view space)
-    float4 pixelPos         : SV_Position;     // pixel pos           (screen space)
-    float4 dshadowWorldPos  : dshadowPosition; // light pos           (world space)
-    float4 oshadowWorldPos  : oshadowPosition; // light pos           (world space)
+{   
+    float4 Pos              : SV_Position;
+    float3 WorldPos         : POSITION0;
+    float3 ViewPos          : POSITION1;
+    float3 Normal           : NORMAL0;
+    float3 ViewNormal       : NORMAL1;
+    float2 UV               : TEXCOORD0;
+    float3 Tangent          : TEXCOORD1;
+    float4 dshadowWorldPos  : dshadowPosition; // light pos
+    float4 oshadowWorldPos  : oshadowPosition; // light pos
 };
 
 cbuffer DirectionalShadowTransformCBuf : register(b1)
@@ -44,16 +45,16 @@ float4 ToDirectShadowHomoSpace(const in float3 pos, uniform matrix modelTransfor
 
 VSOut main(float3 pos : Position, float3 n : Normal, float2 tc : Texcoord, float3 tan : Tangent, float3 bitan : Bitangent)
 {
-    VSOut vso;
-    vso.viewPos = (float3) mul(modelView, float4(pos, 1.0f));
-    vso.viewNormal = mul((float3x3) modelView, n);
-    vso.worldNormal = mul((float3x3) model, n);
-    vso.tangentBasis._m00_m10_m20 = mul((float3x3) modelView, tan);
-    vso.tangentBasis._m01_m11_m21 = mul((float3x3) modelView, bitan);
-    vso.tangentBasis._m02_m12_m22 = mul((float3x3) modelView, n);
-    vso.pixelPos = mul(modelViewProj, float4(pos, 1.0f));
-    vso.dshadowWorldPos = ToDirectShadowHomoSpace(pos, model);
-    vso.oshadowWorldPos = ToShadowHomoSpace(pos, model);
-    vso.tc = tc;
-    return vso;
+    VSOut output;
+    float3 locPos = mul(model, float4(pos, 1.0)).xyz;
+    output.ViewPos = (float3) mul(modelView, float4(pos, 1.0f));
+    output.WorldPos = locPos;
+    output.Normal = mul((float3x3)model, n);
+    output.Tangent = mul((float3x3) model, tan);
+    output.UV = tc;
+    output.Pos = mul(modelViewProj, float4(pos, 1.0f));
+    output.dshadowWorldPos = ToDirectShadowHomoSpace(pos, model);
+    output.oshadowWorldPos = ToShadowHomoSpace(pos, model);
+    output.ViewNormal = mul((float3x3) modelView, n);
+    return output;
 }

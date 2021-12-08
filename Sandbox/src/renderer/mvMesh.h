@@ -17,6 +17,8 @@ struct mvMeshPrimitive
     mvAssetID      normalTexture = -1;
     mvAssetID      specularTexture = -1;
     mvAssetID      albedoTexture = -1;
+    mvAssetID      emissiveTexture = -1;
+    mvAssetID      occlusionTexture = -1;
     mvAssetID      metalRoughnessTexture = -1;
     mvAssetID      materialID = -1;
     mvAssetID      shadowMaterialID = -1;

@@ -594,6 +594,8 @@ mvLoadGLTFAssets(mvAssetManager& assetManager, mvGLTFModel& model)
                 materialData.metalness = material.metallic_factor;
                 materialData.roughness = material.roughness_factor;
                 materialData.hasAlpha = material.double_sided;
+                materialData.emisiveFactor = *(mvVec3*)material.emissive_factor;
+                materialData.occlusionStrength = material.occlusion_texture_strength;
 
                 if (material.base_color_texture != -1)
                 {
@@ -633,6 +635,32 @@ mvLoadGLTFAssets(mvAssetManager& assetManager, mvGLTFModel& model)
                         newMesh.primitives.back().metalRoughnessTexture = mvGetTextureAsset(&assetManager, model.root + uri);
                     materialData.useRoughnessMap = true;
                     materialData.useMetalMap = true;
+                }
+
+                if (material.emissive_texture != -1)
+                {
+                    mvGLTFTexture& texture = model.textures[material.emissive_texture];
+                    std::string uri = model.images[texture.image_index].uri;
+                    if (model.images[texture.image_index].embedded)
+                    {
+                        newMesh.primitives.back().emissiveTexture = mvGetTextureAsset(&assetManager, model.root + newMesh.name + std::to_string(currentPrimitive) + uri + "_e", model.images[texture.image_index].data);
+                    }
+                    else
+                        newMesh.primitives.back().emissiveTexture = mvGetTextureAsset(&assetManager, model.root + uri);
+                    materialData.useEmissiveMap = true;
+                }
+
+                if (material.occlusion_texture != -1)
+                {
+                    mvGLTFTexture& texture = model.textures[material.occlusion_texture];
+                    std::string uri = model.images[texture.image_index].uri;
+                    if (model.images[texture.image_index].embedded)
+                    {
+                        newMesh.primitives.back().occlusionTexture = mvGetTextureAsset(&assetManager, model.root + newMesh.name + std::to_string(currentPrimitive) + uri + "_o", model.images[texture.image_index].data);
+                    }
+                    else
+                        newMesh.primitives.back().occlusionTexture = mvGetTextureAsset(&assetManager, model.root + uri);
+                    materialData.useOcclusionMap = true;
                 }
 
                 newMesh.primitives.back().materialID = mvGetMaterialAsset(&assetManager, "PBR_VS.hlsl", "PBR_PS.hlsl", materialData);

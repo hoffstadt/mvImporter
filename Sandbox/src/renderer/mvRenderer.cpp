@@ -29,6 +29,8 @@ mvRenderMesh(mvAssetManager& am, mvMesh& mesh, mvMat4 transform, mvMat4 cam, mvM
         mvTexture* albedoMap = primitive.albedoTexture == -1 ? nullptr : &am.textures[primitive.albedoTexture].texture;
         mvTexture* normMap = primitive.normalTexture == -1 ? nullptr : &am.textures[primitive.normalTexture].texture;
         mvTexture* metalRoughMap = primitive.metalRoughnessTexture == -1 ? nullptr : &am.textures[primitive.metalRoughnessTexture].texture;
+        mvTexture* emissiveMap = primitive.emissiveTexture == -1 ? nullptr : &am.textures[primitive.emissiveTexture].texture;
+        mvTexture* occlussionMap = primitive.occlusionTexture == -1 ? nullptr : &am.textures[primitive.occlusionTexture].texture;
 
         if (material->pipeline.info.layout != primitive.layout)
         {
@@ -45,6 +47,8 @@ mvRenderMesh(mvAssetManager& am, mvMesh& mesh, mvMat4 transform, mvMat4 cam, mvM
         device->PSSetShaderResources(0, 1, albedoMap ? albedoMap->textureView.GetAddressOf() : pSRV);
         device->PSSetShaderResources(1, 1, normMap ? normMap->textureView.GetAddressOf() : pSRV);
         device->PSSetShaderResources(2, 1, metalRoughMap ? metalRoughMap->textureView.GetAddressOf() : pSRV);
+        device->PSSetShaderResources(3, 1, emissiveMap ? emissiveMap->textureView.GetAddressOf() : pSRV);
+        device->PSSetShaderResources(4, 1, occlussionMap ? occlussionMap->textureView.GetAddressOf() : pSRV);
 
         mvUpdateConstBuffer(material->buffer, &material->data);
         device->PSSetConstantBuffers(1u, 1u, &material->buffer.buffer);
