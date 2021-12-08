@@ -36,6 +36,7 @@ struct mvMaterial
     mvConstBuffer  buffer;
     mvMaterialData data;
     mvPipeline     pipeline;
+    mvPipeline     shadowPipeline;
     mvSampler      colorSampler;
 };
 

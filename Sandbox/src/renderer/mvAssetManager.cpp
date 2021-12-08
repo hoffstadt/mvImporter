@@ -30,6 +30,18 @@ mvCleanupAssetManager(mvAssetManager* manager)
 		manager->materials[i].material.pipeline.blendState->Release();
 		manager->materials[i].material.pipeline.depthStencilState->Release();
 		manager->materials[i].material.pipeline.rasterizationState->Release();
+
+		if (manager->materials[i].material.shadowPipeline.pixelShader)
+		{
+			manager->materials[i].material.shadowPipeline.pixelBlob->Release();
+			manager->materials[i].material.shadowPipeline.pixelShader->Release();
+		}
+		manager->materials[i].material.shadowPipeline.vertexShader->Release();
+		manager->materials[i].material.shadowPipeline.vertexBlob->Release();
+		manager->materials[i].material.shadowPipeline.inputLayout->Release();
+		manager->materials[i].material.shadowPipeline.blendState->Release();
+		manager->materials[i].material.shadowPipeline.depthStencilState->Release();
+		manager->materials[i].material.shadowPipeline.rasterizationState->Release();
 	}
 
 	delete[] manager->buffers;

@@ -593,6 +593,7 @@ mvLoadGLTFAssets(mvAssetManager& assetManager, mvGLTFModel& model)
                 materialData.albedo = *(mvVec4*)material.base_color_factor;
                 materialData.metalness = material.metallic_factor;
                 materialData.roughness = material.roughness_factor;
+                materialData.hasAlpha = material.double_sided;
 
                 if (material.base_color_texture != -1)
                 {
@@ -636,6 +637,10 @@ mvLoadGLTFAssets(mvAssetManager& assetManager, mvGLTFModel& model)
 
                 newMesh.primitives.back().materialID = mvGetMaterialAsset(&assetManager, "PBR_VS.hlsl", "PBR_PS.hlsl", materialData);
 
+            }
+            else
+            {
+                int a = 5;
             }
 
             newMesh.primitives.back().indexBuffer = mvGetBufferAsset(&assetManager, 

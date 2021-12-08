@@ -138,11 +138,15 @@ mvFinalizePipeline(mvPipelineInfo& info)
     brt.DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
     GContext->graphics.device->CreateBlendState(&blendDesc, &pipeline.blendState);
 
-    mvPixelShader pixelShader = mvCreatePixelShader(GContext->IO.shaderDirectory + info.pixelShader);
+    if (!info.pixelShader.empty())
+    {
+        mvPixelShader pixelShader = mvCreatePixelShader(GContext->IO.shaderDirectory + info.pixelShader);
+        pipeline.pixelShader = pixelShader.shader;
+        pipeline.pixelBlob = pixelShader.blob;
+    }
+
     mvVertexShader vertexShader = mvCreateVertexShader(GContext->IO.shaderDirectory + info.vertexShader, info.layout);
 
-    pipeline.pixelShader = pixelShader.shader;
-    pipeline.pixelBlob = pixelShader.blob;
     pipeline.vertexShader = vertexShader.shader;
     pipeline.vertexBlob = vertexShader.blob;
     pipeline.inputLayout = vertexShader.inputLayout;

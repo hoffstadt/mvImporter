@@ -84,19 +84,20 @@ mvRenderMeshShadows(mvAssetManager& am, mvMesh& mesh, mvMat4 transform, mvMat4 c
         mvMaterial* material = &am.materials[primitive.materialID].material;
         mvTexture* albedoMap = primitive.albedoTexture == -1 ? nullptr : &am.textures[primitive.albedoTexture].texture;
 
-        if (material->pipeline.info.layout != primitive.layout)
+        if (material->shadowPipeline.info.layout != primitive.layout)
         {
             assert(false && "Mesh and material vertex layouts don't match.");
             return;
         }
 
         // pipeline
-        device->IASetPrimitiveTopology(material->pipeline.topology);
-        device->OMSetBlendState(material->pipeline.blendState, nullptr, 0xFFFFFFFFu);
-        device->OMSetDepthStencilState(material->pipeline.depthStencilState, 0xFF);;
-        device->IASetInputLayout(material->pipeline.inputLayout);
-        device->VSSetShader(material->pipeline.vertexShader, nullptr, 0);
-        device->PSSetShader(material->data.hasAlpha ? material->pipeline.pixelShader : nullptr, nullptr, 0);
+        device->IASetPrimitiveTopology(material->shadowPipeline.topology);
+        device->OMSetBlendState(material->shadowPipeline.blendState, nullptr, 0xFFFFFFFFu);
+        device->OMSetDepthStencilState(material->shadowPipeline.depthStencilState, 0xFF);;
+        device->IASetInputLayout(material->shadowPipeline.inputLayout);
+        device->VSSetShader(material->shadowPipeline.vertexShader, nullptr, 0);
+        device->PSSetShader(material->shadowPipeline.pixelShader, nullptr, 0);
+        device->PSSetShader(nullptr, nullptr, 0);
         device->HSSetShader(nullptr, nullptr, 0);
         device->DSSetShader(nullptr, nullptr, 0);
         device->GSSetShader(nullptr, nullptr, 0);
@@ -146,18 +147,18 @@ mvRenderNode(mvAssetManager& am, mvNode& node, mvMat4 accumulatedTransform, mvMa
 }
 
 void
-mvRenderScene(mvAssetManager& am, mvScene& scene, mvMat4 cam, mvMat4 proj)
+mvRenderScene(mvAssetManager& am, mvScene& scene, mvMat4 cam, mvMat4 proj, mvMat4 scale)
 {
     for (u32 i = 0; i < scene.nodeCount; i++)
     {
         mvNode& rootNode = am.nodes[scene.nodes[i]].node;
 
         if (rootNode.mesh > -1)
-            mvRenderMesh(am, am.meshes[rootNode.mesh].mesh, rootNode.matrix, cam, proj);
+            mvRenderMesh(am, am.meshes[rootNode.mesh].mesh, rootNode.matrix * scale, cam, proj);
 
         for (u32 j = 0; j < rootNode.childCount; j++)
         {
-            mvRenderNode(am, am.nodes[rootNode.children[j]].node, rootNode.matrix, cam, proj);
+            mvRenderNode(am, am.nodes[rootNode.children[j]].node, rootNode.matrix * scale, cam, proj);
         }
     }
 }
@@ -176,18 +177,18 @@ mvRenderNodeShadows(mvAssetManager& am, mvNode& node, mvMat4 accumulatedTransfor
 }
 
 void
-mvRenderSceneShadows(mvAssetManager& am, mvScene& scene, mvMat4 cam, mvMat4 proj)
+mvRenderSceneShadows(mvAssetManager& am, mvScene& scene, mvMat4 cam, mvMat4 proj, mvMat4 scale)
 {
     for (u32 i = 0; i < scene.nodeCount; i++)
     {
         mvNode& rootNode = am.nodes[scene.nodes[i]].node;
 
         if (rootNode.mesh > -1)
-            mvRenderMeshShadows(am, am.meshes[rootNode.mesh].mesh, rootNode.matrix, cam, proj);
+            mvRenderMeshShadows(am, am.meshes[rootNode.mesh].mesh, rootNode.matrix * scale, cam, proj);
 
         for (u32 j = 0; j < rootNode.childCount; j++)
         {
-            mvRenderNodeShadows(am, am.nodes[rootNode.children[j]].node, rootNode.matrix, cam, proj);
+            mvRenderNodeShadows(am, am.nodes[rootNode.children[j]].node, rootNode.matrix * scale, cam, proj);
         }
     }
 }

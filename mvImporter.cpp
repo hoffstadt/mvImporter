@@ -263,7 +263,7 @@ DecodeDataURI(std::vector<unsigned char>* out, std::string& mime_type,
 }
 
 static void
-ParseForTokens(char* rawData, std::vector<mvToken*>& tokens)
+ParseForTokens(char* rawData, std::vector<mvToken>& tokens)
 {
 	int currentPos = 0u;
 	char currentChar = rawData[currentPos];
@@ -283,29 +283,29 @@ ParseForTokens(char* rawData, std::vector<mvToken*>& tokens)
 				{
 					if (!buffer.empty())
 					{
-						mvToken* primitivetoken = new mvToken();
-						primitivetoken->type = MV_JSON_PRIMITIVE;
+						mvToken primitivetoken{};
+						primitivetoken.type = MV_JSON_PRIMITIVE;
 						buffer.push_back('\0');
 						for (int i = 0; i < buffer.size(); i++)
 						{
-							primitivetoken->value+=buffer[i];
+							primitivetoken.value+=buffer[i];
 						}
 						tokens.push_back(primitivetoken);
 						buffer.clear();
 					}
 
-					mvToken* token = new mvToken();
-					if (currentChar == '{') token->type = MV_JSON_LEFT_BRACE;
-					else if (currentChar == '}') token->type = MV_JSON_RIGHT_BRACE;
-					else if (currentChar == '[') token->type = MV_JSON_LEFT_BRACKET;
-					else if (currentChar == ']') token->type = MV_JSON_RIGHT_BRACKET;
-					else if (currentChar == ',') token->type = MV_JSON_COMMA;
-					else if (currentChar == ':') token->type = MV_JSON_COLON;
+					mvToken token{};
+					if (currentChar == '{') token.type = MV_JSON_LEFT_BRACE;
+					else if (currentChar == '}') token.type = MV_JSON_RIGHT_BRACE;
+					else if (currentChar == '[') token.type = MV_JSON_LEFT_BRACKET;
+					else if (currentChar == ']') token.type = MV_JSON_RIGHT_BRACKET;
+					else if (currentChar == ',') token.type = MV_JSON_COMMA;
+					else if (currentChar == ':') token.type = MV_JSON_COLON;
 
 					char cc[2];
 					cc[0] = currentChar;
 					cc[1] = 0;
-					token->value = std::string(cc);
+					token.value = std::string(cc);
 					tokens.push_back(token);
 					tokenFound = true;
 					break;
@@ -320,18 +320,18 @@ ParseForTokens(char* rawData, std::vector<mvToken*>& tokens)
 			{
 				if (inString)
 				{
-					mvToken* token = new mvToken();
+					mvToken token{};
 					buffer.push_back('\0');
 					for (int i = 0; i < buffer.size(); i++)
 					{
-						token->value+=buffer[i];
+						token.value+=buffer[i];
 					}
 					
 
 					if (rawData[currentPos + 1] == ':')
-						token->type = MV_JSON_MEMBER;
+						token.type = MV_JSON_MEMBER;
 					else
-						token->type = MV_JSON_STRING;
+						token.type = MV_JSON_STRING;
 					tokens.push_back(token);
 					tokenFound = true;
 					inString = false;
@@ -364,10 +364,10 @@ ParseForTokens(char* rawData, std::vector<mvToken*>& tokens)
 }
 
 static void
-RemoveWhiteSpace(char* rawData, char* spacesRemoved)
+RemoveWhiteSpace(char* rawData, char* spacesRemoved, size_t size)
 {
-	int currentPos = 0;
-	int newCursor = 0;
+	size_t currentPos = 0;
+	size_t newCursor = 0;
 	bool insideString = false;
 
 	char currentChar = rawData[currentPos];
@@ -397,10 +397,14 @@ RemoveWhiteSpace(char* rawData, char* spacesRemoved)
 			newCursor++;
 		}
 
+		if (currentPos >= size || newCursor >= size)
+		{
+			spacesRemoved[newCursor-1] = 0;
+			break;
+		}
+
 		currentChar = rawData[currentPos];
 	}
-
-	spacesRemoved[newCursor] = 0;
 
 }
 
@@ -413,9 +417,9 @@ ParseJSON(char* rawData, int size)
 	mvStack jsonMemberStack;
 
 	char* spacesRemoved = new char[size];
-	RemoveWhiteSpace(rawData, spacesRemoved);
+	RemoveWhiteSpace(rawData, spacesRemoved, size);
 
-	std::vector<mvToken*>* tokens = new std::vector<mvToken*>();
+	std::vector<mvToken>* tokens = new std::vector<mvToken>;
 	ParseForTokens(spacesRemoved, *tokens);
 
 	//for (auto& token : tokens)
@@ -435,7 +439,7 @@ ParseJSON(char* rawData, int size)
 		if (i >= tokens->size())
 			break;
 
-		switch ((*tokens)[i]->type)
+		switch ((*tokens)[i].type)
 		{
 
 		case MV_JSON_LEFT_BRACE:
@@ -509,8 +513,8 @@ ParseJSON(char* rawData, int size)
 			int parentId = jsonObjectStack.top();
 			mvJsonObject& parent = context.jsonObjects[parentId];
 			mvJsonMember member{};
-			member.name = (*tokens)[i]->value;
-			mvTokenType valueType = (*tokens)[i + 2]->type;
+			member.name = (*tokens)[i].value;
+			mvTokenType valueType = (*tokens)[i + 2].type;
 			if (valueType == MV_JSON_LEFT_BRACKET)
 			{
 				member.index = context.jsonObjects.size();
@@ -547,7 +551,7 @@ ParseJSON(char* rawData, int size)
 			{
 				int valueId = context.primitiveValues.size();
 				context.primitiveValues.push_back({});
-				context.primitiveValues.back().value = (*tokens)[i]->value;
+				context.primitiveValues.back().value = (*tokens)[i].value;
 				int memberId = jsonMemberStack.top();
 				parent.members[memberId].index = valueId;
 				jsonMemberStack.pop();
@@ -557,7 +561,7 @@ ParseJSON(char* rawData, int size)
 
 				int valueId = context.primitiveValues.size();
 				context.primitiveValues.push_back({});
-				context.primitiveValues.back().value = (*tokens)[i]->value;
+				context.primitiveValues.back().value = (*tokens)[i].value;
 
 				mvJsonMember member{};
 				member.type = MV_JSON_TYPE_PRIMITIVE;
@@ -576,7 +580,7 @@ ParseJSON(char* rawData, int size)
 			{
 				int valueId = context.primitiveValues.size();
 				context.primitiveValues.push_back({});
-				context.primitiveValues.back().value = (*tokens)[i]->value;
+				context.primitiveValues.back().value = (*tokens)[i].value;
 				int memberId = jsonMemberStack.top();
 				parent.members[memberId].index = valueId;
 				jsonMemberStack.pop();
@@ -587,7 +591,7 @@ ParseJSON(char* rawData, int size)
 
 				int valueId = context.primitiveValues.size();
 				context.primitiveValues.push_back({});
-				context.primitiveValues.back().value = (*tokens)[i]->value;
+				context.primitiveValues.back().value = (*tokens)[i].value;
 
 				mvJsonMember member{};
 				member.type = MV_JSON_TYPE_PRIMITIVE;
@@ -837,6 +841,16 @@ namespace mvImp {
 				}
 			}
 
+			if (jnode.doesMemberExist("scale"))
+			{
+				mvU32 compCount = jnode["scale"].members.size();
+
+				for (int j = 0; j < compCount; j++)
+				{
+					node.scale[j] = jnode["scale"][j];
+				}
+			}
+
 			if (jnode.doesMemberExist("rotation"))
 			{
 				mvU32 compCount = jnode["rotation"].members.size();
@@ -892,8 +906,6 @@ namespace mvImp {
 				{
 					
 					mvGLTFMeshPrimitive& primitive = mesh.primitives[j];
-
-
 
 					mvJsonObject jprimitive = jmesh["primitives"][j];
 
@@ -960,6 +972,15 @@ namespace mvImp {
 
 			if (jmaterial.doesMemberExist("name"))
 				material.name = jmaterial.getMember("name");
+
+			if (jmaterial.doesMemberExist("alphaMode"))
+			{
+				std::string alphaMode = jmaterial.getMember("alphaMode");
+				if (alphaMode == "OPAQUE")
+					material.alpha_mode = false;
+				else
+					material.alpha_mode = true;
+			}
 
 			if (jmaterial.doesMemberExist("pbrMetallicRoughness"))
 			{

@@ -1,16 +1,18 @@
 #include "helpers.h"
+//#include <crtdbg.h>
 
 // TODO: make most of these runtime options
-static const char* gltfModel = "Cerberus";
-//static const char* gltfModel = "Lantern";
-static f32         shadowWidth = 75.0f;
+//static const char* gltfModel = "TestImport";
+static const char* gltfModel = "WaterBottle";
+//static const char* gltfModel = "Sponza";
+static f32         shadowWidth = 95.0f;
 static int         initialWidth = 1850;
 static int         initialHeight = 900;
 static ImVec2      oldContentRegion = ImVec2(500, 500);
 
 int main()
 {
-
+    //_CrtSetDbgFlag(_CRTDBG_CHECK_ALWAYS_DF | _CRTDBG_ALLOC_MEM_DF);
     mvCreateContext();
     GContext->IO.shaderDirectory = "../../Sandbox/shaders/";
     GContext->IO.resourceDirectory = "../../Resources/";
@@ -62,9 +64,13 @@ int main()
 
     mvOffscreen offscreen = mvOffscreen(500.0f, 500.0f);
     mvTimer timer;
+    bool recreatePrimary = false;
+    f32 scale = 1.0f;
     while (true)
     {
         const auto dt = timer.mark() * 1.0f;
+
+        mvVec3 scaleVec = { scale, scale, scale };
 
         if (const auto ecode = mvProcessViewportEvents()) break;
 
@@ -74,12 +80,22 @@ int main()
             window->resized = false;
         }
 
+        if (recreatePrimary)
+        {
+            offscreen.targetView->Release();
+            offscreen.depthView->Release();
+            offscreen.resourceView->Release();
+            offscreen.texture->Release();
+            offscreen.depthTexture->Release();
+            offscreen.resize(offscreen.viewport.Width, offscreen.viewport.Height);
+            recreatePrimary = false;
+        }
+
         //-----------------------------------------------------------------------------
         // clear targets
         //-----------------------------------------------------------------------------
         static float backgroundColor[] = { 0.0f, 0.0f, 0.0f, 1.0f };
         static float backgroundColor2[] = { 0.1f, 0.1f, 0.1f, 1.0f };
-        ctx->ClearRenderTargetView(*GContext->graphics.target.GetAddressOf(), backgroundColor);
         ctx->ClearRenderTargetView(*GContext->graphics.target.GetAddressOf(), backgroundColor);
         ctx->ClearRenderTargetView(offscreen.targetView, backgroundColor2);
         ctx->ClearDepthStencilView(directionalShadowMap.depthView, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0u);
@@ -111,7 +127,7 @@ int main()
         ctx->RSSetState(directionalShadowMap.rasterizationState);
 
         for (int i = 0; i < am.sceneCount; i++)
-            Renderer::mvRenderSceneShadows(am, am.scenes[i].scene, directionalShadowMap.getViewMatrix(), directionalShadowMap.getProjectionMatrix());
+            Renderer::mvRenderSceneShadows(am, am.scenes[i].scene, directionalShadowMap.getViewMatrix(), directionalShadowMap.getProjectionMatrix(), mvScale(mvIdentityMat4(), scaleVec));
 
         //-----------------------------------------------------------------------------
         // omni shadow pass
@@ -126,7 +142,7 @@ int main()
             mvMat4 camera_matrix = mvLookAtLH(pointlight.camera.pos, look_target, omniShadowMap.cameraUps[i]);
 
             for (int i = 0; i < am.sceneCount; i++)
-                Renderer::mvRenderSceneShadows(am, am.scenes[i].scene, camera_matrix, mvPerspectiveLH(M_PI_2, 1.0f, 0.5f, 100.0f));
+                Renderer::mvRenderSceneShadows(am, am.scenes[i].scene, camera_matrix, mvPerspectiveLH(M_PI_2, 1.0f, 0.5f, 100.0f), mvScale(mvIdentityMat4(), scaleVec));
         }
 
         //-----------------------------------------------------------------------------
@@ -218,7 +234,7 @@ int main()
 
         for (int i = 0; i < am.sceneCount; i++)
         {
-            Renderer::mvRenderScene(am, am.scenes[i].scene, viewMatrix, projMatrix);
+            Renderer::mvRenderScene(am, am.scenes[i].scene, viewMatrix, projMatrix, mvScale(mvIdentityMat4(), scaleVec));
         }
 
         //-----------------------------------------------------------------------------
@@ -272,8 +288,10 @@ int main()
             omniShadowMap.info.view = mvCreateLookAtView(pointlight.camera);
 
         ImGui::Begin("Global Settings", 0);
+        ImGui::DragFloat("Scale", &scale, 0.1f, 0.0f);
         ImGui::ColorEdit3("Ambient Color", &globalInfo.ambientColor.x);
         ImGui::Checkbox("Use Shadows", (bool*)&globalInfo.useShadows);
+        ImGui::Checkbox("Use Omni Shadows", (bool*)&globalInfo.useOmniShadows);
         ImGui::Checkbox("Use Skybox", (bool*)&globalInfo.useSkybox);
         ImGui::End();
 
@@ -295,12 +313,7 @@ int main()
         }
         else
         {
-            offscreen.targetView->Release();
-            offscreen.depthView->Release();
-            offscreen.resourceView->Release();
-            offscreen.texture->Release();
-            offscreen.depthTexture->Release();
-            offscreen.resize(offscreen.viewport.Width, offscreen.viewport.Height);
+            recreatePrimary = true;
         }
 
         oldContentRegion = contentSize;

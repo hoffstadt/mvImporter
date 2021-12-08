@@ -10,14 +10,6 @@ mvCreateTexture(std::vector<unsigned char> data)
 {
 	mvTexture texture{};
 
-	//std::filesystem::path fpath = path;
-
-	//if (!std::filesystem::exists(path))
-	//{
-	//	assert(false && "File not found.");
-	//	return texture;
-	//}
-
 	// Load Image
 	i32 texWidth, texHeight, texNumChannels;
 	i32 texForceNumChannels = 4;

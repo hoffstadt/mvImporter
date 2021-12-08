@@ -33,8 +33,9 @@ struct GlobalInfo
     b32    useShadows = true;
     //-------------------------- ( 16 bytes )
 
+    b32  useOmniShadows = true;
     b32  useSkybox = true;
-    char _pad[12];
+    char _pad[8];
     //-------------------------- ( 2*16 = 32 bytes )
 };
 
@@ -240,7 +241,7 @@ struct mvShadowMap
         D3D11_RASTERIZER_DESC shadowRenderStateDesc;
         ZeroMemory(&shadowRenderStateDesc, sizeof(D3D11_RASTERIZER_DESC));
         shadowRenderStateDesc.CullMode = D3D11_CULL_FRONT;
-        shadowRenderStateDesc.FrontCounterClockwise = TRUE;
+        shadowRenderStateDesc.FrontCounterClockwise = true;
         shadowRenderStateDesc.FillMode = D3D11_FILL_SOLID;
         shadowRenderStateDesc.DepthClipEnable = true;
         shadowRenderStateDesc.DepthBias = 50;
@@ -399,10 +400,11 @@ mvGLTFModel
 LoadTestModel(const char* name)
 {
     static const char* gltfPath = "../../data/glTF-Sample-Models/2.0/";
-    std::string root = gltfPath + std::string(name) + "/glTF-Binary/";
-    std::string file = root + std::string(name) + ".glb";
-    //return mvLoadGLTF(root.c_str(), file.c_str());
-    return mvLoadGLTF(file.c_str());
+    //std::string root = gltfPath + std::string(name) + "/glTF-Binary/";
+    std::string root = gltfPath + std::string(name) + "/glTF/";
+    std::string file = root + std::string(name) + ".gltf";
+    return mvLoadGLTF(root.c_str(), file.c_str());
+    //return mvLoadGLTF(file.c_str());
 }
 
 //-----------------------------------------------------------------------------

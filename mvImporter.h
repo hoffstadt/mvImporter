@@ -190,6 +190,7 @@ struct mvGLTFMaterial
 	mvF32       base_color_factor[4]       = { 1.0f, 1.0f, 1.0f, 1.0f };
 	mvF32       emissive_factor[3]         = { 0.0f, 0.0f, 0.0f };
 	bool        double_sided               = false;
+	bool        alpha_mode                 = false;
 };
 
 struct mvGLTFNode
