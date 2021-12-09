@@ -2,12 +2,11 @@
  mvImporter, v0.0.1 (WIP)
    * no dependencies
    * assumes GLTF file is correct
-   * assumes GLTF binary data is in .bin file (just for now)
    * ignores animation for now
    * contains a hackly put together json parser
-   
+
    Do this:
-      #define MV_IMPORTER_IMPLEMENTATION
+	  #define MV_IMPORTER_IMPLEMENTATION
    before you include this file in *one* C or C++ file to create the implementation.
    // i.e. it should look like this:
    #include ...
@@ -23,34 +22,38 @@
 #define MV_IMPORTER_API
 #endif
 
+#include <string>
+#include <vector>
+
 #ifdef MV_IMPORTER_IMPLEMENTATION
 #include <assert.h>
 #include <stdio.h>
-#include <vector>
 #endif // MV_IMPORTER_IMPLEMENTATION
 
 //-----------------------------------------------------------------------------
 // Forward Declarations
 //-----------------------------------------------------------------------------
-struct mvGLTFNode;       // GLTF -> "nodes"
-struct mvGLTFScene;      // GLTF -> "scenes"
-struct mvGLTFMesh;       // GLTF -> "meshes"
-struct mvGLTFMaterial;   // GLTF -> "materials"
-struct mvGLTFTexture;    // GLTF -> "textures"
-struct mvGLTFSampler;    // GLTF -> "samplers"
-struct mvGLTFImage;      // GLTF -> "images"
-struct mvGLTFBuffer;     // GLTF -> "buffers"
-struct mvGLTFBufferView; // GLTF -> "bufferViews"
-struct mvGLTFAccessor;   // GLTF -> "accessors
-struct mvGLTFAttribute;  // GLTF -> "meshes" > "primitives" > "attributes"
-struct mvGLTFModel;      // contains arrays of the above and counts
+struct mvGLTFNode;          // GLTF -> "nodes"
+struct mvGLTFScene;         // GLTF -> "scenes"
+struct mvGLTFMeshPrimitive; // GLTF -> "meshPrimitives"
+struct mvGLTFMesh;          // GLTF -> "meshes"
+struct mvGLTFMaterial;      // GLTF -> "materials"
+struct mvGLTFTexture;       // GLTF -> "textures"
+struct mvGLTFSampler;       // GLTF -> "samplers"
+struct mvGLTFImage;         // GLTF -> "images"
+struct mvGLTFBuffer;        // GLTF -> "buffers"
+struct mvGLTFBufferView;    // GLTF -> "bufferViews"
+struct mvGLTFAccessor;      // GLTF -> "accessors
+struct mvGLTFAttribute;     // GLTF -> "meshes" > "primitives" > "attributes"
+struct mvGLTFModel;         // contains arrays of the above and counts
 
 //-----------------------------------------------------------------------------
 // mvImporter End-User API
 //-----------------------------------------------------------------------------
 
-MV_IMPORTER_API mvGLTFModel mvLoadGLTF(const char* root, const char* file);
-MV_IMPORTER_API void        mvCleanupGLTF(mvGLTFModel& model);
+MV_IMPORTER_API mvGLTFModel mvLoadGLTF      (const char* root, const char* file);
+//MV_IMPORTER_API mvGLTFModel mvLoadBinaryGLTF(const char* root, const char* file);
+MV_IMPORTER_API void        mvCleanupGLTF   (mvGLTFModel& model);
 
 //-----------------------------------------------------------------------------
 // Basic Types
@@ -126,7 +129,7 @@ struct mvGLTFAttribute
 
 struct mvGLTFAccessor
 {
-	char                name[1024];
+	std::string         name;
 	mvGLTFAccessorType  type = MV_IMP_SCALAR;
 	mvS32               buffer_view_index = -1;
 	mvGLTFComponentType component_type = MV_IMP_FLOAT;
@@ -138,9 +141,9 @@ struct mvGLTFAccessor
 
 struct mvGLTFTexture
 {
-	char  name[1024];
-	mvS32 image_index   = -1;
-	mvS32 sampler_index = -1;
+	std::string name;
+	mvS32       image_index   = -1;
+	mvS32       sampler_index = -1;
 };
 
 struct mvGLTFSampler
@@ -153,55 +156,66 @@ struct mvGLTFSampler
 
 struct mvGLTFImage
 {
-	char uri[1024];
+	std::string                mimeType;
+	std::string                uri;
+	std::vector<unsigned char> data;
+	bool                       embedded;
+	mvS32                      buffer_view_index = -1;
 };
 
 struct mvGLTFBuffer
 {
-	mvU32 byte_length = 0u;
-	char  uri[1024];
-	char* data = nullptr;
+	mvU32                      byte_length = 0u;
+	std::string                uri;
+	std::vector<unsigned char> data;
 };
 
 struct mvGLTFBufferView
 {
-	char  name[1024];
-	mvS32 buffer_index = -1;
-	mvS32 byte_offset  =  0;
-	mvS32 byte_length  = -1;
-	mvS32 byte_stride  = -1;
+	std::string name;
+	mvS32       buffer_index = -1;
+	mvS32       byte_offset  =  0;
+	mvS32       byte_length  = -1;
+	mvS32       byte_stride  = -1;
 };
 
-struct mvGLTFMesh
+struct mvGLTFMeshPrimitive
 {
-	char             name[1024];
-	mvS32            indices_index  = -1; // accessor index
+	mvS32            indices_index = -1; // accessor index
 	mvS32            material_index = -1;
 	mvGLTFPrimMode   mode = MV_IMP_TRIANGLES;
 	mvGLTFAttribute* attributes = nullptr;
 	mvU32            attribute_count = 0u;
 };
 
+struct mvGLTFMesh
+{
+	std::string          name;
+	mvGLTFMeshPrimitive* primitives = nullptr;
+	mvU32                primitives_count = 0u;
+};
+
 struct mvGLTFMaterial
 {
-	char   name[1024];
-	mvS32  base_color_texture         = -1;
-	mvS32  metallic_roughness_texture = -1;
-	mvS32  normal_texture             = -1;
-	mvS32  occlusion_texture          = -1;
-	mvS32  emissive_texture           = -1;
-	mvF32  normal_texture_scale       = 0.8f;
-	mvF32  occlusion_texture_strength = 0.9f;
-	mvF32  metallic_factor            = 1.0f;
-	mvF32  roughness_factor           = 0.0f;
-	mvF32  base_color_factor[4]       = { 1.0f, 1.0f, 1.0f, 1.0f };
-	mvF32  emissive_factor[3]         = { 0.0f, 0.0f, 0.0f };
-	bool   double_sided               = false;
+	std::string name;
+	mvS32       base_color_texture         = -1;
+	mvS32       metallic_roughness_texture = -1;
+	mvS32       normal_texture             = -1;
+	mvS32       occlusion_texture          = -1;
+	mvS32       emissive_texture           = -1;
+	mvF32       normal_texture_scale       = 1.0f;
+	mvF32       occlusion_texture_strength = 1.0f;
+	mvF32       metallic_factor            = 1.0f;
+	mvF32       roughness_factor           = 0.0f;
+	mvF32       base_color_factor[4]       = { 1.0f, 1.0f, 1.0f, 1.0f };
+	mvF32       emissive_factor[3]         = { 0.0f, 0.0f, 0.0f };
+	bool        double_sided               = false;
+	bool        alpha_mode                 = false;
 };
 
 struct mvGLTFNode
 {
-	char        name[1024];
+	std::string name;
 	mvS32       mesh_index = -1;
 	mvS32       skin_index = -1;
 	mvU32*      children = nullptr;
@@ -226,7 +240,7 @@ struct mvGLTFScene
 
 struct mvGLTFModel
 {
-	char              root[1024];
+	std::string       root;
 	mvGLTFScene*      scenes      = nullptr;
 	mvGLTFNode*       nodes       = nullptr;
 	mvGLTFMesh*       meshes      = nullptr;
@@ -288,37 +302,37 @@ enum mvTokenType
 
 struct mvStack
 {
-	void push (int value);
-	void pop  ();
-	int  top  ();
+	void push(int value);
+	void pop();
+	int  top();
 	bool empty();
 
 	int currentIndex = 0;
-	int data[1024];
+	std::vector<int> data;
 };
 
 struct mvToken
 {
-	char        value[1024];
+	std::string value;
 	mvTokenType type = MV_JSON_NONE;
 };
 
 struct mvJsonValue
 {
-	char value[1024];
+	std::string value;
 };
 
 struct mvJsonMember
 {
-	char       name[1024];
-	mvJsonType type = MV_JSON_TYPE_NONE;
-	int        index = -1;
+	std::string name;
+	mvJsonType  type = MV_JSON_TYPE_NONE;
+	int         index = -1;
 	mvJsonContext* context = nullptr;
 
-	operator char*         ();
-	operator int           ();
+	operator char* ();
+	operator int();
 	operator mvU32         ();
-	operator float         ();
+	operator float();
 	operator mvJsonObject& ();
 };
 
@@ -326,9 +340,9 @@ struct mvJsonObject
 {
 	mvJsonType                type = MV_JSON_TYPE_NONE;
 	std::vector<mvJsonMember> members;
-	mvJsonContext*            context = nullptr;
+	mvJsonContext* context = nullptr;
 
-	mvJsonMember& getMember      (const char* member);
+	mvJsonMember& getMember(const char* member);
 	bool          doesMemberExist(const char* member);
 
 	mvJsonObject& operator[](const char* member);
@@ -345,6 +359,175 @@ struct mvJsonContext
 	mvJsonObject& operator[](const char* member);
 };
 
+static bool
+isDataURI(const std::string& in)
+{
+	std::string header = "data:application/octet-stream;base64,";
+	if (in.find(header) == 0)
+		return true;
+
+	header = "data:image/jpeg;base64,";
+	if (in.find(header) == 0)
+		return true;
+
+	header = "data:image/png;base64,";
+	if (in.find(header) == 0)
+		return true;
+
+	header = "data:image/bmp;base64,";
+	if (in.find(header) == 0)
+		return true;
+
+	header = "data:image/gif;base64,";
+	if (in.find(header) == 0)
+		return true;
+
+	header = "data:text/plain;base64,";
+	if (in.find(header) == 0)
+		return true;
+
+	header = "data:application/gltf-buffer;base64,";
+	if (in.find(header) == 0)
+		return true;
+
+	return false;
+}
+
+static inline bool
+is_base64(unsigned char c)
+{
+	return (isalnum(c) || (c == '+') || (c == '/'));
+}
+
+static std::string
+base64_decode(std::string const& encoded_string)
+{
+	int in_len = static_cast<int>(encoded_string.size());
+	int i = 0;
+	int j = 0;
+	int in_ = 0;
+	unsigned char char_array_4[4], char_array_3[3];
+	std::string ret;
+
+	const std::string base64_chars =
+		"ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+		"abcdefghijklmnopqrstuvwxyz"
+		"0123456789+/";
+
+	while (in_len-- && (encoded_string[in_] != '=') &&
+		is_base64(encoded_string[in_])) {
+		char_array_4[i++] = encoded_string[in_];
+		in_++;
+		if (i == 4) {
+			for (i = 0; i < 4; i++)
+				char_array_4[i] =
+				static_cast<unsigned char>(base64_chars.find(char_array_4[i]));
+
+			char_array_3[0] =
+				(char_array_4[0] << 2) + ((char_array_4[1] & 0x30) >> 4);
+			char_array_3[1] =
+				((char_array_4[1] & 0xf) << 4) + ((char_array_4[2] & 0x3c) >> 2);
+			char_array_3[2] = ((char_array_4[2] & 0x3) << 6) + char_array_4[3];
+
+			for (i = 0; (i < 3); i++) ret += char_array_3[i];
+			i = 0;
+		}
+	}
+
+	if (i)
+	{
+		for (j = i; j < 4; j++) char_array_4[j] = 0;
+
+		for (j = 0; j < 4; j++)
+			char_array_4[j] =
+			static_cast<unsigned char>(base64_chars.find(char_array_4[j]));
+
+		char_array_3[0] = (char_array_4[0] << 2) + ((char_array_4[1] & 0x30) >> 4);
+		char_array_3[1] =
+			((char_array_4[1] & 0xf) << 4) + ((char_array_4[2] & 0x3c) >> 2);
+		char_array_3[2] = ((char_array_4[2] & 0x3) << 6) + char_array_4[3];
+
+		for (j = 0; (j < i - 1); j++) ret += char_array_3[j];
+	}
+
+	return ret;
+}
+
+bool
+DecodeDataURI(std::vector<unsigned char>* out, std::string& mime_type,
+	const std::string& in, size_t reqBytes, bool checkSize)
+{
+	std::string header = "data:application/octet-stream;base64,";
+	std::string data;
+	if (in.find(header) == 0) {
+		data = base64_decode(in.substr(header.size()));  // cut mime string.
+	}
+
+	if (data.empty()) {
+		header = "data:image/jpeg;base64,";
+		if (in.find(header) == 0) {
+			mime_type = "image/jpeg";
+			data = base64_decode(in.substr(header.size()));  // cut mime string.
+		}
+	}
+
+	if (data.empty()) {
+		header = "data:image/png;base64,";
+		if (in.find(header) == 0) {
+			mime_type = "image/png";
+			data = base64_decode(in.substr(header.size()));  // cut mime string.
+		}
+	}
+
+	if (data.empty()) {
+		header = "data:image/bmp;base64,";
+		if (in.find(header) == 0) {
+			mime_type = "image/bmp";
+			data = base64_decode(in.substr(header.size()));  // cut mime string.
+		}
+	}
+
+	if (data.empty()) {
+		header = "data:image/gif;base64,";
+		if (in.find(header) == 0) {
+			mime_type = "image/gif";
+			data = base64_decode(in.substr(header.size()));  // cut mime string.
+		}
+	}
+
+	if (data.empty()) {
+		header = "data:text/plain;base64,";
+		if (in.find(header) == 0) {
+			mime_type = "text/plain";
+			data = base64_decode(in.substr(header.size()));
+		}
+	}
+
+	if (data.empty()) {
+		header = "data:application/gltf-buffer;base64,";
+		if (in.find(header) == 0) {
+			data = base64_decode(in.substr(header.size()));
+		}
+	}
+
+	// TODO(syoyo): Allow empty buffer? #229
+	if (data.empty()) {
+		return false;
+	}
+
+	if (checkSize) {
+		if (data.size() != reqBytes) {
+			return false;
+		}
+		out->resize(reqBytes);
+	}
+	else {
+		out->resize(data.size());
+	}
+	std::copy(data.begin(), data.end(), out->begin());
+	return true;
+}
+
 static void
 ParseForTokens(char* rawData, std::vector<mvToken>& tokens)
 {
@@ -353,8 +536,7 @@ ParseForTokens(char* rawData, std::vector<mvToken>& tokens)
 	char basicTokens[] = { '{', '}', '[', ']', ':', ',' };
 
 	bool inString = false;
-	char buffer[1024];
-	int  bufferPos = 0;
+	std::vector<char> buffer;
 
 	while (currentChar != 0)
 	{
@@ -365,17 +547,17 @@ ParseForTokens(char* rawData, std::vector<mvToken>& tokens)
 			{
 				if (currentChar == basicTokens[i])
 				{
-					if (bufferPos != 0)
+					if (!buffer.empty())
 					{
 						mvToken primitivetoken{};
 						primitivetoken.type = MV_JSON_PRIMITIVE;
-						for (int i = 0; i < bufferPos; i++)
+						buffer.push_back('\0');
+						for (int i = 0; i < buffer.size(); i++)
 						{
-							primitivetoken.value[i] = buffer[i];
+							primitivetoken.value += buffer[i];
 						}
 						tokens.push_back(primitivetoken);
-						bufferPos = 0;
-						buffer[0] = 0;
+						buffer.clear();
 					}
 
 					mvToken token{};
@@ -386,7 +568,10 @@ ParseForTokens(char* rawData, std::vector<mvToken>& tokens)
 					else if (currentChar == ',') token.type = MV_JSON_COMMA;
 					else if (currentChar == ':') token.type = MV_JSON_COLON;
 
-					token.value[0] = currentChar;
+					char cc[2];
+					cc[0] = currentChar;
+					cc[1] = 0;
+					token.value = std::string(cc);
 					tokens.push_back(token);
 					tokenFound = true;
 					break;
@@ -402,10 +587,12 @@ ParseForTokens(char* rawData, std::vector<mvToken>& tokens)
 				if (inString)
 				{
 					mvToken token{};
-					for (int i = 0; i < bufferPos; i++)
+					buffer.push_back('\0');
+					for (int i = 0; i < buffer.size(); i++)
 					{
-						token.value[i] = buffer[i];
+						token.value += buffer[i];
 					}
+
 
 					if (rawData[currentPos + 1] == ':')
 						token.type = MV_JSON_MEMBER;
@@ -414,30 +601,26 @@ ParseForTokens(char* rawData, std::vector<mvToken>& tokens)
 					tokens.push_back(token);
 					tokenFound = true;
 					inString = false;
-					bufferPos = 0;
-					buffer[0] = 0;
+					buffer.clear();
 				}
 				else
 				{
 					inString = true;
-					bufferPos = 0;
-					buffer[0] = 0;
+					buffer.clear();
 					tokenFound = true;
 				}
 			}
 			else if (inString)
 			{
 				tokenFound = true;
-				buffer[bufferPos] = currentChar;
-				bufferPos++;
+				buffer.push_back(currentChar);
 			}
 		}
 
 		// primitives
 		if (!tokenFound)
 		{
-			buffer[bufferPos] = currentChar;
-			bufferPos++;
+			buffer.push_back(currentChar);
 		}
 
 		currentPos++;
@@ -447,10 +630,10 @@ ParseForTokens(char* rawData, std::vector<mvToken>& tokens)
 }
 
 static void
-RemoveWhiteSpace(char* rawData, char* spacesRemoved)
+RemoveWhiteSpace(char* rawData, char* spacesRemoved, size_t size)
 {
-	int currentPos = 0;
-	int newCursor = 0;
+	size_t currentPos = 0;
+	size_t newCursor = 0;
 	bool insideString = false;
 
 	char currentChar = rawData[currentPos];
@@ -480,10 +663,14 @@ RemoveWhiteSpace(char* rawData, char* spacesRemoved)
 			newCursor++;
 		}
 
+		if (currentPos >= size || newCursor >= size)
+		{
+			spacesRemoved[newCursor - 1] = 0;
+			break;
+		}
+
 		currentChar = rawData[currentPos];
 	}
-
-	spacesRemoved[newCursor] = 0;
 
 }
 
@@ -496,10 +683,10 @@ ParseJSON(char* rawData, int size)
 	mvStack jsonMemberStack;
 
 	char* spacesRemoved = new char[size];
-	RemoveWhiteSpace(rawData, spacesRemoved);
+	RemoveWhiteSpace(rawData, spacesRemoved, size);
 
-	std::vector<mvToken> tokens;
-	ParseForTokens(spacesRemoved, tokens);
+	std::vector<mvToken>* tokens = new std::vector<mvToken>;
+	ParseForTokens(spacesRemoved, *tokens);
 
 	//for (auto& token : tokens)
 	//	std::cout << token.value << std::endl;
@@ -515,10 +702,10 @@ ParseJSON(char* rawData, int size)
 	while (true)
 	{
 
-		if (i >= tokens.size())
+		if (i >= tokens->size())
 			break;
 
-		switch (tokens[i].type)
+		switch ((*tokens)[i].type)
 		{
 
 		case MV_JSON_LEFT_BRACE:
@@ -592,8 +779,8 @@ ParseJSON(char* rawData, int size)
 			int parentId = jsonObjectStack.top();
 			mvJsonObject& parent = context.jsonObjects[parentId];
 			mvJsonMember member{};
-			strcpy(member.name, tokens[i].value);
-			mvTokenType valueType = tokens[i + 2].type;
+			member.name = (*tokens)[i].value;
+			mvTokenType valueType = (*tokens)[i + 2].type;
 			if (valueType == MV_JSON_LEFT_BRACKET)
 			{
 				member.index = context.jsonObjects.size();
@@ -630,7 +817,7 @@ ParseJSON(char* rawData, int size)
 			{
 				int valueId = context.primitiveValues.size();
 				context.primitiveValues.push_back({});
-				strcpy(context.primitiveValues.back().value, tokens[i].value);
+				context.primitiveValues.back().value = (*tokens)[i].value;
 				int memberId = jsonMemberStack.top();
 				parent.members[memberId].index = valueId;
 				jsonMemberStack.pop();
@@ -640,7 +827,7 @@ ParseJSON(char* rawData, int size)
 
 				int valueId = context.primitiveValues.size();
 				context.primitiveValues.push_back({});
-				strcpy(context.primitiveValues.back().value, tokens[i].value);
+				context.primitiveValues.back().value = (*tokens)[i].value;
 
 				mvJsonMember member{};
 				member.type = MV_JSON_TYPE_PRIMITIVE;
@@ -659,7 +846,7 @@ ParseJSON(char* rawData, int size)
 			{
 				int valueId = context.primitiveValues.size();
 				context.primitiveValues.push_back({});
-				strcpy(context.primitiveValues.back().value, tokens[i].value);
+				context.primitiveValues.back().value = (*tokens)[i].value;
 				int memberId = jsonMemberStack.top();
 				parent.members[memberId].index = valueId;
 				jsonMemberStack.pop();
@@ -670,7 +857,7 @@ ParseJSON(char* rawData, int size)
 
 				int valueId = context.primitiveValues.size();
 				context.primitiveValues.push_back({});
-				strcpy(context.primitiveValues.back().value, tokens[i].value);
+				context.primitiveValues.back().value = (*tokens)[i].value;
 
 				mvJsonMember member{};
 				member.type = MV_JSON_TYPE_PRIMITIVE;
@@ -699,12 +886,12 @@ ParseJSON(char* rawData, int size)
 	return ptrContext;
 }
 
-bool 
+bool
 mvJsonContext::doesMemberExist(const char* member)
 {
 	for (int i = 0; i < jsonObjects[1].members.size(); i++)
 	{
-		const char* name = jsonObjects[1].members[i].name;
+		const char* name = jsonObjects[1].members[i].name.c_str();
 
 		if (strcmp(member, name) == 0)
 			return true;
@@ -713,12 +900,12 @@ mvJsonContext::doesMemberExist(const char* member)
 	return false;
 }
 
-mvJsonObject& 
+mvJsonObject&
 mvJsonContext::operator[](const char* member)
 {
 	for (int i = 0; i < jsonObjects[1].members.size(); i++)
 	{
-		const char* name = jsonObjects[1].members[i].name;
+		const char* name = jsonObjects[1].members[i].name.c_str();
 
 		if (strcmp(member, name) == 0)
 		{
@@ -730,38 +917,45 @@ mvJsonContext::operator[](const char* member)
 	return jsonObjects[0];
 }
 
-void 
+void
 mvStack::push(int value)
 {
+	if (data.empty())
+		data.resize(2048);
+
+	if (value == data.size())
+	{
+		data.resize(value * 2);
+	}
 	data[currentIndex] = value;
 	currentIndex++;
 }
 
-void 
+void
 mvStack::pop()
 {
 	data[currentIndex] = -1;
 	currentIndex--;
 }
 
-int 
+int
 mvStack::top()
 {
 	return data[currentIndex - 1];
 }
 
-bool 
+bool
 mvStack::empty()
 {
 	return currentIndex == 0;
 }
 
-bool 
+bool
 mvJsonObject::doesMemberExist(const char* member)
 {
 	for (int i = 0; i < members.size(); i++)
 	{
-		const char* name = members[i].name;
+		const char* name = members[i].name.c_str();
 
 		if (strcmp(member, name) == 0)
 			return true;
@@ -770,7 +964,7 @@ mvJsonObject::doesMemberExist(const char* member)
 	return false;
 }
 
-mvJsonMember& 
+mvJsonMember&
 mvJsonObject::operator[](int i)
 {
 	return members[i];
@@ -781,7 +975,7 @@ mvJsonObject::operator[](const char* member)
 {
 	for (int i = 0; i < members.size(); i++)
 	{
-		const char* name = members[i].name;
+		const char* name = members[i].name.c_str();
 
 		if (strcmp(member, name) == 0)
 			return context->jsonObjects[members[i].index];
@@ -795,7 +989,7 @@ mvJsonObject::getMember(const char* member)
 {
 	for (int i = 0; i < members.size(); i++)
 	{
-		const char* name = members[i].name;
+		const char* name = members[i].name.c_str();
 
 		if (strcmp(member, name) == 0)
 			return members[i];
@@ -806,23 +1000,23 @@ mvJsonObject::getMember(const char* member)
 
 mvJsonMember::operator int()
 {
-	return atoi(context->primitiveValues[index].value);
+	return atoi(context->primitiveValues[index].value.c_str());
 }
 
 mvJsonMember::operator mvU32()
 {
-	int value = atoi(context->primitiveValues[index].value);
+	int value = atoi(context->primitiveValues[index].value.c_str());
 	return (mvU32)value;
 }
 
 mvJsonMember::operator float()
 {
-	return atof(context->primitiveValues[index].value);
+	return atof(context->primitiveValues[index].value.c_str());
 }
 
 mvJsonMember::operator char* ()
 {
-	return context->primitiveValues[index].value;
+	return (char*)context->primitiveValues[index].value.c_str();
 }
 
 mvJsonMember::operator mvJsonObject& ()
@@ -833,7 +1027,7 @@ mvJsonMember::operator mvJsonObject& ()
 namespace mvImp {
 
 	static mvGLTFScene*
-	_LoadScenes(mvJsonContext& j, mvU32& size)
+		_LoadScenes(mvJsonContext& j, mvU32& size)
 	{
 		if (!j.doesMemberExist("scenes"))
 			return nullptr;
@@ -865,7 +1059,7 @@ namespace mvImp {
 	}
 
 	static mvGLTFNode*
-	_LoadNodes(mvJsonContext& j, mvU32& size)
+		_LoadNodes(mvJsonContext& j, mvU32& size)
 	{
 		if (!j.doesMemberExist("nodes"))
 			return nullptr;
@@ -879,7 +1073,7 @@ namespace mvImp {
 			mvGLTFNode& node = nodes[size];
 
 			if (jnode.doesMemberExist("name"))
-				strcpy(node.name, jnode.getMember("name"));
+				node.name = jnode.getMember("name");
 
 			if (jnode.doesMemberExist("mesh"))
 				node.mesh_index = jnode.getMember("mesh");
@@ -913,6 +1107,16 @@ namespace mvImp {
 				}
 			}
 
+			if (jnode.doesMemberExist("scale"))
+			{
+				mvU32 compCount = jnode["scale"].members.size();
+
+				for (int j = 0; j < compCount; j++)
+				{
+					node.scale[j] = jnode["scale"][j];
+				}
+			}
+
 			if (jnode.doesMemberExist("rotation"))
 			{
 				mvU32 compCount = jnode["rotation"].members.size();
@@ -941,61 +1145,74 @@ namespace mvImp {
 	}
 
 	static mvGLTFMesh*
-	_LoadMeshes(mvJsonContext& j, mvU32& size)
+		_LoadMeshes(mvJsonContext& j, mvU32& size)
 	{
 		if (!j.doesMemberExist("meshes"))
 			return nullptr;
 
-		mvU32 count = j["meshes"].members.size();
-		mvGLTFMesh* meshes = new mvGLTFMesh[count];
+		mvU32 meshCount = j["meshes"].members.size();
 
-		for (int i = 0; i < count; i++)
+		mvGLTFMesh* meshes = new mvGLTFMesh[meshCount];
+
+		for (int i = 0; i < meshCount; i++)
 		{
 			mvJsonObject& jmesh = j["meshes"][i];
-			mvGLTFMesh& mesh = meshes[size];
+			mvGLTFMesh& mesh = meshes[i];
 
 			if (jmesh.doesMemberExist("name"))
-				strcpy(mesh.name, jmesh.getMember("name"));
+				mesh.name = jmesh.getMember("name");
 
 			if (jmesh.doesMemberExist("primitives"))
 			{
-				mvJsonObject jprimitive = jmesh["primitives"][0];
 
-				if (jprimitive.doesMemberExist("indices"))
-					mesh.indices_index = jprimitive.getMember("indices");
+				mesh.primitives_count = jmesh["primitives"].members.size();
+				mesh.primitives = new mvGLTFMeshPrimitive[mesh.primitives_count];
 
-				if (jprimitive.doesMemberExist("material"))
-					mesh.material_index = jprimitive.getMember("material");
-
-				if (jprimitive.doesMemberExist("attributes"))
+				for (int j = 0; j < mesh.primitives_count; j++)
 				{
-					mvU32 attrCount = jprimitive["attributes"].members.size();
-					mesh.attributes = new mvGLTFAttribute[attrCount];
 
-					if (jprimitive["attributes"].doesMemberExist("POSITION"))
+					mvGLTFMeshPrimitive& primitive = mesh.primitives[j];
+
+					mvJsonObject jprimitive = jmesh["primitives"][j];
+
+					if (jprimitive.doesMemberExist("indices"))
+						primitive.indices_index = jprimitive.getMember("indices");
+
+					if (jprimitive.doesMemberExist("material"))
+						primitive.material_index = jprimitive.getMember("material");
+
+					if (jprimitive.doesMemberExist("attributes"))
 					{
-						mesh.attributes[mesh.attribute_count] = { MV_IMP_POSITION , jprimitive["attributes"].getMember("POSITION") };
-						mesh.attribute_count++;
+						mvU32 attrCount = jprimitive["attributes"].members.size();
+						primitive.attributes = new mvGLTFAttribute[attrCount];
+
+						if (jprimitive["attributes"].doesMemberExist("POSITION"))
+						{
+							primitive.attributes[primitive.attribute_count] = { MV_IMP_POSITION , jprimitive["attributes"].getMember("POSITION") };
+							primitive.attribute_count++;
+						}
+
+
+						if (jprimitive["attributes"].doesMemberExist("TANGENT"))
+						{
+							primitive.attributes[primitive.attribute_count] = { MV_IMP_TANGENT , jprimitive["attributes"].getMember("TANGENT") };
+							primitive.attribute_count++;
+						}
+
+						if (jprimitive["attributes"].doesMemberExist("NORMAL"))
+						{
+							primitive.attributes[primitive.attribute_count] = { MV_IMP_NORMAL , jprimitive["attributes"].getMember("NORMAL") };
+							primitive.attribute_count++;
+						}
+
+						if (jprimitive["attributes"].doesMemberExist("TEXCOORD_0"))
+						{
+							primitive.attributes[primitive.attribute_count] = { MV_IMP_TEXTCOORD , jprimitive["attributes"].getMember("TEXCOORD_0") };
+							primitive.attribute_count++;
+						}
 					}
 
 
-					if (jprimitive["attributes"].doesMemberExist("TANGENT"))
-					{
-						mesh.attributes[mesh.attribute_count] = { MV_IMP_TANGENT , jprimitive["attributes"].getMember("TANGENT") };
-						mesh.attribute_count++;
-					}
-
-					if (jprimitive["attributes"].doesMemberExist("NORMAL"))
-					{
-						mesh.attributes[mesh.attribute_count] = { MV_IMP_NORMAL , jprimitive["attributes"].getMember("NORMAL") };
-						mesh.attribute_count++;
-					}
-
-					if (jprimitive["attributes"].doesMemberExist("TEXCOORD_0"))
-					{
-						mesh.attributes[mesh.attribute_count] = { MV_IMP_TEXTCOORD , jprimitive["attributes"].getMember("TEXCOORD_0") };
-						mesh.attribute_count++;
-					}
 				}
 			}
 
@@ -1006,7 +1223,7 @@ namespace mvImp {
 	}
 
 	static mvGLTFMaterial*
-	_LoadMaterials(mvJsonContext& j, mvU32& size)
+		_LoadMaterials(mvJsonContext& j, mvU32& size)
 	{
 		if (!j.doesMemberExist("materials"))
 			return nullptr;
@@ -1020,7 +1237,16 @@ namespace mvImp {
 			mvGLTFMaterial& material = materials[size];
 
 			if (jmaterial.doesMemberExist("name"))
-				strcpy(material.name, jmaterial.getMember("name"));
+				material.name = jmaterial.getMember("name");
+
+			if (jmaterial.doesMemberExist("alphaMode"))
+			{
+				std::string alphaMode = jmaterial.getMember("alphaMode");
+				if (alphaMode == "OPAQUE")
+					material.alpha_mode = false;
+				else
+					material.alpha_mode = true;
+			}
 
 			if (jmaterial.doesMemberExist("pbrMetallicRoughness"))
 			{
@@ -1093,7 +1319,7 @@ namespace mvImp {
 	}
 
 	static mvGLTFTexture*
-	_LoadTextures(mvJsonContext& j, mvU32& size)
+		_LoadTextures(mvJsonContext& j, mvU32& size)
 	{
 		if (!j.doesMemberExist("textures"))
 			return nullptr;
@@ -1113,7 +1339,7 @@ namespace mvImp {
 				texture.image_index = jtexture.getMember("source");
 
 			if (jtexture.doesMemberExist("name"))
-				strcpy(texture.name, jtexture.getMember("name"));
+				texture.name = jtexture.getMember("name");
 
 			size++;
 		}
@@ -1122,7 +1348,7 @@ namespace mvImp {
 	}
 
 	static mvGLTFSampler*
-	_LoadSamplers(mvJsonContext& j, mvU32& size)
+		_LoadSamplers(mvJsonContext& j, mvU32& size)
 	{
 		if (!j.doesMemberExist("samplers"))
 			return nullptr;
@@ -1154,7 +1380,7 @@ namespace mvImp {
 	}
 
 	static mvGLTFImage*
-	_LoadImages(mvJsonContext& j, mvU32& size)
+		_LoadImages(mvJsonContext& j, mvU32& size)
 	{
 		if (!j.doesMemberExist("images"))
 			return nullptr;
@@ -1168,7 +1394,13 @@ namespace mvImp {
 			mvGLTFImage& image = images[size];
 
 			if (jimage.doesMemberExist("uri"))
-				strcpy(image.uri, jimage.getMember("uri"));
+				image.uri = jimage.getMember("uri");
+
+			if (jimage.doesMemberExist("mimeType"))
+				image.mimeType = jimage.getMember("mimeType");
+
+			if (jimage.doesMemberExist("bufferView"))
+				image.buffer_view_index = jimage.getMember("bufferView");
 
 			size++;
 		}
@@ -1177,7 +1409,7 @@ namespace mvImp {
 	}
 
 	static mvGLTFBuffer*
-	_LoadBuffers(mvJsonContext& j, mvU32& size)
+		_LoadBuffers(mvJsonContext& j, mvU32& size)
 	{
 		if (!j.doesMemberExist("buffers"))
 			return nullptr;
@@ -1191,7 +1423,7 @@ namespace mvImp {
 			mvGLTFBuffer& buffer = buffers[size];
 
 			if (jbuffer.doesMemberExist("uri"))
-				strcpy(buffer.uri, jbuffer.getMember("uri"));
+				buffer.uri = jbuffer.getMember("uri");
 
 			if (jbuffer.doesMemberExist("byteLength"))
 				buffer.byte_length = (int)jbuffer.getMember("byteLength");
@@ -1203,7 +1435,7 @@ namespace mvImp {
 	}
 
 	static mvGLTFBufferView*
-	_LoadBufferViews(mvJsonContext& j, mvU32& size)
+		_LoadBufferViews(mvJsonContext& j, mvU32& size)
 	{
 		if (!j.doesMemberExist("bufferViews"))
 			return nullptr;
@@ -1218,7 +1450,7 @@ namespace mvImp {
 			mvGLTFBufferView& bufferview = bufferviews[size];
 
 			if (jbufferview.doesMemberExist("name"))
-				strcpy(bufferview.name, jbufferview.getMember("name"));
+				bufferview.name = jbufferview.getMember("name");
 
 			if (jbufferview.doesMemberExist("buffer"))
 				bufferview.buffer_index = jbufferview.getMember("buffer");
@@ -1239,7 +1471,7 @@ namespace mvImp {
 	}
 
 	static mvGLTFAccessor*
-	_LoadAccessors(mvJsonContext& j, mvU32& size)
+		_LoadAccessors(mvJsonContext& j, mvU32& size)
 	{
 		if (!j.doesMemberExist("accessors"))
 			return nullptr;
@@ -1254,7 +1486,8 @@ namespace mvImp {
 
 			if (jaccessor.doesMemberExist("name"))
 			{
-				strcpy(accessor.name, jaccessor.getMember("name"));
+				//strcpy(accessor.name, jaccessor.getMember("name"));
+				accessor.name = jaccessor.getMember("name");
 			}
 
 			if (jaccessor.doesMemberExist("byteOffset"))
@@ -1350,13 +1583,128 @@ namespace mvImp {
 	}
 }
 
+static mvGLTFModel
+mvLoadBinaryGLTF(const char* root, const char* file)
+{
+
+	mvGLTFModel model{};
+	model.root = root;
+
+	mvU32 dataSize = 0u;
+	char* data = (char*)mvImp::_ReadFile(file, dataSize, "rb");
+
+	mvU32 magic = *(mvU32*)&data[0];
+	mvU32 version = *(mvU32*)&data[4];
+	mvU32 length = *(mvU32*)&data[8];
+
+	mvU32 chunkLength = *(mvU32*)&data[12];
+	mvU32 chunkType = *(mvU32*)&data[16];
+	char* chunkData = &data[20];
+
+	if (dataSize == 0u)
+	{
+		assert(false && "File not found.");
+		return model;
+	}
+
+	mvJsonContext& context = *ParseJSON(chunkData, chunkLength);
+
+	model.scenes = mvImp::_LoadScenes(context, model.scene_count);
+	model.nodes = mvImp::_LoadNodes(context, model.node_count);
+	model.materials = mvImp::_LoadMaterials(context, model.material_count);
+	model.meshes = mvImp::_LoadMeshes(context, model.mesh_count);
+	model.textures = mvImp::_LoadTextures(context, model.texture_count);
+	model.samplers = mvImp::_LoadSamplers(context, model.sampler_count);
+	model.images = mvImp::_LoadImages(context, model.image_count);
+	model.buffers = mvImp::_LoadBuffers(context, model.buffer_count);
+	model.bufferviews = mvImp::_LoadBufferViews(context, model.bufferview_count);
+	model.accessors = mvImp::_LoadAccessors(context, model.accessor_count);
+
+	if (chunkLength + 20 != length)
+	{
+		mvU32 datachunkLength = *(mvU32*)&data[20 + chunkLength];
+		mvU32 datachunkType = *(mvU32*)&data[24 + chunkLength];
+		char* datachunkData = &data[28 + chunkLength];
+
+		model.buffers[0].data.resize(model.buffers[0].byte_length);
+		memcpy(model.buffers[0].data.data(), datachunkData, model.buffers[0].byte_length);
+		int a = 6;
+	}
+
+	for (mvU32 i = 0; i < model.image_count; i++)
+	{
+		mvGLTFImage& image = model.images[i];
+
+		if (image.buffer_view_index > -1)
+		{
+			image.embedded = true;
+			//image.data = model.buffers
+			mvGLTFBufferView bufferView = model.bufferviews[image.buffer_view_index];
+			char* bufferRawData = (char*)model.buffers[bufferView.buffer_index].data.data();
+			char* bufferRawSection = &bufferRawData[bufferView.byte_offset]; // start of buffer section
+			image.data.resize(bufferView.byte_length);
+			memcpy(image.data.data(), bufferRawSection, bufferView.byte_length);
+			continue;
+		}
+
+		if (isDataURI(image.uri))
+		{
+			image.embedded = true;
+			std::string mime_type;
+			if (!DecodeDataURI(&image.data, mime_type, image.uri, 0, false))
+			{
+				assert(false && "here");
+			}
+		}
+		else
+		{
+			image.embedded = false;
+		}
+
+	}
+
+	for (mvU32 i = 0; i < model.buffer_count; i++)
+	{
+		mvGLTFBuffer& buffer = model.buffers[i];
+
+		if (!buffer.data.empty())
+			continue;
+
+		if (isDataURI(buffer.uri))
+		{
+			std::string mime_type;
+			if (!DecodeDataURI(&buffer.data, mime_type, buffer.uri, buffer.byte_length, true))
+			{
+				assert(false && "here");
+			}
+		}
+		else
+		{
+			std::string combinedFile = model.root;
+			combinedFile.append(buffer.uri);
+			mvU32 dataSize = 0u;
+			void* data = mvImp::_ReadFile(combinedFile.c_str(), dataSize, "rb");
+			buffer.data.resize(dataSize);
+			memcpy(buffer.data.data(), data, dataSize);
+		}
+
+	}
+
+	delete[] data;
+	return model;
+}
+
 mvGLTFModel
 mvLoadGLTF(const char* root, const char* file)
 {
 
+	size_t len = strlen(file);
+	if (file[len - 1] == 'b')
+		return mvLoadBinaryGLTF(root, file);
+
 	mvGLTFModel model{};
 
-	strcpy(model.root, root);
+	model.root = root;
 
 	mvU32 dataSize = 0u;
 	char* data = mvImp::_ReadFile(file, dataSize, "rb");
@@ -1381,40 +1729,76 @@ mvLoadGLTF(const char* root, const char* file)
 	model.bufferviews = mvImp::_LoadBufferViews(context, model.bufferview_count);
 	model.accessors = mvImp::_LoadAccessors(context, model.accessor_count);
 
+	for (mvU32 i = 0; i < model.image_count; i++)
+	{
+		mvGLTFImage& image = model.images[i];
+
+		if (isDataURI(image.uri))
+		{
+			image.embedded = true;
+			std::string mime_type;
+			if (!DecodeDataURI(&image.data, mime_type, image.uri, 0, false))
+			{
+				assert(false && "here");
+			}
+		}
+		else
+		{
+			image.embedded = false;
+		}
+
+	}
+
 	for (mvU32 i = 0; i < model.buffer_count; i++)
 	{
 		mvGLTFBuffer& buffer = model.buffers[i];
 
-		//std::string combinedFile = model.rootDirectory + buffer.uri;
-
-		char combinedFile[1024];
-		strcpy(combinedFile, model.root);
-		strcat(combinedFile, buffer.uri);
-
-		mvU32 dataSize = 0u;
-		buffer.data = mvImp::_ReadFile(combinedFile, dataSize, "rb");
+		if (isDataURI(buffer.uri))
+		{
+			std::string mime_type;
+			if (!DecodeDataURI(&buffer.data, mime_type, buffer.uri, buffer.byte_length, true))
+			{
+				assert(false && "here");
+			}
+		}
+		else
+		{
+			std::string combinedFile = model.root;
+			combinedFile.append(buffer.uri);
+			mvU32 dataSize = 0u;
+			void* data = mvImp::_ReadFile(combinedFile.c_str(), dataSize, "rb");
+			buffer.data.resize(dataSize);
+			memcpy(buffer.data.data(), data, dataSize);
+		}
 
 	}
 
 	return model;
 }
 
-void 
+void
 mvCleanupGLTF(mvGLTFModel& model)
 {
 
 	for (mvU32 i = 0; i < model.mesh_count; i++)
-		delete[] model.meshes[i].attributes;
+	{
+		for (mvU32 j = 0; j < model.meshes[i].primitives_count; j++)
+		{
+			delete[] model.meshes[i].primitives[j].attributes;
+		}
+		delete[] model.meshes[i].primitives;
+	}
+
 
 	for (mvU32 i = 0; i < model.node_count; i++)
 	{
-		if(model.nodes[i].children)
+		if (model.nodes[i].children)
 			delete[] model.nodes[i].children;
 	}
 
 	for (mvU32 i = 0; i < model.scene_count; i++)
 	{
-		if(model.scenes[i].nodes)
+		if (model.scenes[i].nodes)
 			delete[] model.scenes[i].nodes;
 	}
 
@@ -1452,4 +1836,5 @@ mvCleanupGLTF(mvGLTFModel& model)
 	model.bufferview_count = 0u;
 	model.accessor_count = 0u;
 }
-#endif // MV_IMPORTER_IMPLEMENTATION
+
+#endif

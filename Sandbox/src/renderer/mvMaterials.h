@@ -11,8 +11,8 @@ struct mvMaterialData
     mvVec4 albedo = { 0.45f, 0.45f, 0.85f, 1.0f };
     //-------------------------- ( 16 bytes )
 
-    f32 metalness = 0.5f;
-    f32 roughness = 0.5f;
+    f32 metalness = 1.0f;
+    f32 roughness = 0.1f;
     f32 radiance  = 1.0f;
     f32 fresnel   = 0.04f;
 
@@ -24,8 +24,15 @@ struct mvMaterialData
     b32 useMetalMap     = false;
     //-------------------------- ( 16 bytes )
 
+    
+    mvVec3 emisiveFactor = { 0.0f, 0.0f, 0.0f };
+    b32 useEmissiveMap = false;
+
+    
     b32 hasAlpha = false;
-    char _pad1[12];
+    b32 useOcclusionMap = false;
+    f32 occlusionStrength = 1.0f;
+    char _pad0[4];
     //-------------------------- ( 16 bytes )
 
     //-------------------------- ( 4 * 16 = 64 bytes )
@@ -36,6 +43,7 @@ struct mvMaterial
     mvConstBuffer  buffer;
     mvMaterialData data;
     mvPipeline     pipeline;
+    mvPipeline     shadowPipeline;
     mvSampler      colorSampler;
 };
 

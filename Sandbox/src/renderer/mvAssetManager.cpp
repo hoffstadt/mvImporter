@@ -30,6 +30,18 @@ mvCleanupAssetManager(mvAssetManager* manager)
 		manager->materials[i].material.pipeline.blendState->Release();
 		manager->materials[i].material.pipeline.depthStencilState->Release();
 		manager->materials[i].material.pipeline.rasterizationState->Release();
+
+		if (manager->materials[i].material.shadowPipeline.pixelShader)
+		{
+			manager->materials[i].material.shadowPipeline.pixelBlob->Release();
+			manager->materials[i].material.shadowPipeline.pixelShader->Release();
+		}
+		manager->materials[i].material.shadowPipeline.vertexShader->Release();
+		manager->materials[i].material.shadowPipeline.vertexBlob->Release();
+		manager->materials[i].material.shadowPipeline.inputLayout->Release();
+		manager->materials[i].material.shadowPipeline.blendState->Release();
+		manager->materials[i].material.shadowPipeline.depthStencilState->Release();
+		manager->materials[i].material.shadowPipeline.rasterizationState->Release();
 	}
 
 	delete[] manager->buffers;
@@ -52,12 +64,17 @@ mvGetMaterialAsset(mvAssetManager* manager, const std::string& vs, const std::st
 		std::to_string(materialData.albedo.w) +
 		std::to_string(materialData.metalness) +
 		std::to_string(materialData.roughness) +
+		std::to_string(materialData.emisiveFactor.x) +
+		std::to_string(materialData.emisiveFactor.y) +
+		std::to_string(materialData.emisiveFactor.z) +
 		std::to_string(materialData.radiance) +
 		std::to_string(materialData.fresnel) +
 		std::string(materialData.hasAlpha ? "T" : "F") +
 		std::string(materialData.useAlbedoMap ? "T" : "F") +
 		std::string(materialData.useNormalMap ? "T" : "F") +
 		std::string(materialData.useRoughnessMap ? "T" : "F") +
+		std::string(materialData.useOcclusionMap ? "T" : "F") +
+		std::string(materialData.useEmissiveMap ? "T" : "F") +
 		std::string(materialData.useMetalMap ? "T" : "F");
 
 	for (s32 i = 0; i < manager->materialCount; i++)
@@ -83,6 +100,21 @@ mvGetTextureAsset(mvAssetManager* manager, const std::string& path)
 
 	manager->textures[manager->textureCount].hash = path;
 	manager->textures[manager->textureCount].texture = mvCreateTexture(path);
+	manager->textureCount++;
+	return manager->textureCount - 1;
+}
+
+mvAssetID 
+mvGetTextureAsset(mvAssetManager* manager, const std::string& path, std::vector<unsigned char> data)
+{
+	for (s32 i = 0; i < manager->textureCount; i++)
+	{
+		if (manager->textures[i].hash == path)
+			return i;
+	}
+
+	manager->textures[manager->textureCount].hash = path;
+	manager->textures[manager->textureCount].texture = mvCreateTexture(data);
 	manager->textureCount++;
 	return manager->textureCount - 1;
 }

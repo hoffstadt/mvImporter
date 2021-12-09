@@ -6,6 +6,60 @@
 #include "stb_image.h"
 
 mvTexture
+mvCreateTexture(std::vector<unsigned char> data)
+{
+	mvTexture texture{};
+
+	// Load Image
+	i32 texWidth, texHeight, texNumChannels;
+	i32 texForceNumChannels = 4;
+	unsigned char* testTextureBytes = stbi_load_from_memory(data.data(), data.size(), &texWidth, &texHeight,
+		&texNumChannels, texForceNumChannels);
+	assert(testTextureBytes);
+	
+
+	if (texNumChannels > 3)
+		texture.alpha = true;
+
+	//i32 texWidth, texHeight, texNumChannels;
+	//stbi_info_from_memory(data.data(), data.size(), &texWidth, &texHeight, &texNumChannels);
+	//if (texNumChannels > 3)
+	//	texture.alpha = true;
+	i32 texBytesPerRow = texForceNumChannels * texWidth;
+
+	// Create Texture
+	D3D11_TEXTURE2D_DESC textureDesc = {};
+	textureDesc.Width = texWidth;
+	textureDesc.Height = texHeight;
+	textureDesc.MipLevels = 0;
+	textureDesc.ArraySize = 1;
+	textureDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	textureDesc.SampleDesc.Count = 1;
+	textureDesc.SampleDesc.Quality = 0;
+	textureDesc.Usage = D3D11_USAGE_DEFAULT;
+	textureDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET;
+	textureDesc.CPUAccessFlags = 0;
+	textureDesc.MiscFlags = D3D11_RESOURCE_MISC_GENERATE_MIPS;
+
+	GContext->graphics.device->CreateTexture2D(&textureDesc, nullptr, texture.texture.GetAddressOf());
+	GContext->graphics.imDeviceContext->UpdateSubresource(texture.texture.Get(), 0u, nullptr, testTextureBytes, texBytesPerRow, 0u);
+
+	// create the resource view on the texture
+	D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+	srvDesc.Format = textureDesc.Format;
+	srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+	srvDesc.Texture2D.MostDetailedMip = 0;
+	srvDesc.Texture2D.MipLevels = -1;
+
+	GContext->graphics.device->CreateShaderResourceView(texture.texture.Get(), &srvDesc, texture.textureView.GetAddressOf());
+	GContext->graphics.imDeviceContext->GenerateMips(texture.textureView.Get());
+
+	free(testTextureBytes);
+
+	return texture;
+}
+
+mvTexture
 mvCreateTexture(const std::string& path)
 {
     mvTexture texture{};
