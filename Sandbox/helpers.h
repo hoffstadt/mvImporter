@@ -29,7 +29,7 @@
 struct GlobalInfo
 {
 
-    mvVec3 ambientColor = { 0.2f, 0.2f, 0.2f };
+    mvVec3 ambientColor = { 0.1f, 0.1f, 0.1f };
     b32    useShadows = true;
     //-------------------------- ( 16 bytes )
 
@@ -53,7 +53,9 @@ struct GlobalInfo
     b32 useOcclusionMap = true;
 
     b32 useNormalMap = true;
-    char _pad0[12];
+    b32 usePCF = false;
+    i32 pcfRange = 1;
+    char _pad0[4];
 };
 
 struct PointLightInfo
@@ -194,9 +196,14 @@ struct mvShadowMap
     mvConstBuffer                  buffer;
     DirectionalShadowTransformInfo info;
     f32                            angle = 10.0f;
+    f32                            width;
+    i32                            depthBias = 50;
+    f32                            slopeBias = 2.0f;
+    b8                             backface = false;
 
-    mvShadowMap(u32 resolution, f32 width)
+    mvShadowMap(u32 resolution, f32 w)
     {
+        width = w;
         viewport = { 0.0f, 0.0f, (f32)resolution, (f32)resolution, 0.0f, 1.0f };
 
         buffer = mvCreateConstBuffer(&info, sizeof(DirectionalShadowTransformInfo));
@@ -260,28 +267,28 @@ struct mvShadowMap
         shadowRenderStateDesc.CullMode = D3D11_CULL_FRONT;
         shadowRenderStateDesc.FrontCounterClockwise = true;
         shadowRenderStateDesc.FillMode = D3D11_FILL_SOLID;
-        shadowRenderStateDesc.DepthClipEnable = true;
-        shadowRenderStateDesc.DepthBias = 50;
-        shadowRenderStateDesc.DepthBiasClamp = 0.1f;
-        shadowRenderStateDesc.SlopeScaledDepthBias = 2.0f;
+        shadowRenderStateDesc.DepthClipEnable = false;
+        shadowRenderStateDesc.DepthBias = depthBias;
+        shadowRenderStateDesc.DepthBiasClamp = 0.0f;
+        shadowRenderStateDesc.SlopeScaledDepthBias = slopeBias;
 
         GContext->graphics.device->CreateRasterizerState(&shadowRenderStateDesc, &rasterizationState);
 
-        D3D11_SAMPLER_DESC comparisonSamplerDesc;
+        D3D11_SAMPLER_DESC comparisonSamplerDesc{};
         ZeroMemory(&comparisonSamplerDesc, sizeof(D3D11_SAMPLER_DESC));
         comparisonSamplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
         comparisonSamplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
         comparisonSamplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
-        comparisonSamplerDesc.BorderColor[0] = 1.0f;
-        comparisonSamplerDesc.BorderColor[1] = 1.0f;
-        comparisonSamplerDesc.BorderColor[2] = 1.0f;
+        comparisonSamplerDesc.BorderColor[0] = 0.0f;
+        comparisonSamplerDesc.BorderColor[1] = 0.0f;
+        comparisonSamplerDesc.BorderColor[2] = 0.0f;
         comparisonSamplerDesc.BorderColor[3] = 1.0f;
-        comparisonSamplerDesc.MinLOD = 0.f;
+        comparisonSamplerDesc.MinLOD = 0.0f;
         comparisonSamplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
-        comparisonSamplerDesc.MipLODBias = 0.f;
-        comparisonSamplerDesc.MaxAnisotropy = 0;
-        comparisonSamplerDesc.ComparisonFunc = D3D11_COMPARISON_LESS;
-        comparisonSamplerDesc.Filter = D3D11_FILTER_COMPARISON_MIN_MAG_MIP_LINEAR;
+        comparisonSamplerDesc.MipLODBias = 0.0f;
+        comparisonSamplerDesc.MaxAnisotropy = D3D11_REQ_MAXANISOTROPY;
+        comparisonSamplerDesc.ComparisonFunc = D3D11_COMPARISON_LESS_EQUAL;
+        comparisonSamplerDesc.Filter = D3D11_FILTER_COMPARISON_MIN_MAG_MIP_POINT;
 
         GContext->graphics.device->CreateSamplerState(&comparisonSamplerDesc, &sampler);
 
@@ -298,23 +305,6 @@ struct mvShadowMap
     {
         return mvOrthoRH(camera.left, camera.right, camera.bottom, camera.top, camera.nearZ, camera.farZ);
     }
-
-    void showControls()
-    {
-        ImGui::Begin("Direction Light");
-
-        if (ImGui::SliderFloat("Directional Light Angle", &angle, -45.0f, 45.0f))
-        {
-            f32 zcomponent = sinf(M_PI * angle / 180.0f);
-            f32 ycomponent = cosf(M_PI * angle / 180.0f);
-
-            camera.dir = { 0.0f, -ycomponent, zcomponent };
-            info.view = mvLookAtRH(camera.pos, camera.pos - camera.dir, camera.up);
-            info.projection = mvOrthoRH(camera.left, camera.right, camera.bottom, camera.top, camera.nearZ, camera.farZ);
-        }
-
-        ImGui::End();
-    }
 };
 
 struct mvShadowCubeMap
@@ -322,12 +312,15 @@ struct mvShadowCubeMap
     ID3D11Texture2D*          texture = nullptr;
     ID3D11DepthStencilView*   depthView[6]{};
     ID3D11ShaderResourceView* resourceView = nullptr;
+    ID3D11RasterizerState* rasterizationState;
     mvVec3                    cameraDirections[6];
     mvVec3                    cameraUps[6];
     ID3D11SamplerState*       sampler = nullptr;
     D3D11_VIEWPORT            viewport;
     mvConstBuffer             buffer;
     OmniShadowTransformInfo   info;
+    i32                       depthBias = 50;
+    f32                       slopeBias = 2.0f;
 
     mvShadowCubeMap(u32 resolution)
     {
@@ -404,25 +397,22 @@ struct mvShadowCubeMap
         comparisonSamplerDesc.Filter = D3D11_FILTER_COMPARISON_MIN_MAG_MIP_LINEAR;
         GContext->graphics.device->CreateSamplerState(&comparisonSamplerDesc, &sampler);
 
+        D3D11_RASTERIZER_DESC shadowRenderStateDesc;
+        ZeroMemory(&shadowRenderStateDesc, sizeof(D3D11_RASTERIZER_DESC));
+        shadowRenderStateDesc.CullMode = D3D11_CULL_BACK;
+        shadowRenderStateDesc.FrontCounterClockwise = true;
+        shadowRenderStateDesc.FillMode = D3D11_FILL_SOLID;
+        shadowRenderStateDesc.DepthClipEnable = false;
+        shadowRenderStateDesc.DepthBias = depthBias;
+        shadowRenderStateDesc.DepthBiasClamp = 0.0f;
+        shadowRenderStateDesc.SlopeScaledDepthBias = slopeBias;
+
+        GContext->graphics.device->CreateRasterizerState(&shadowRenderStateDesc, &rasterizationState);
+
         buffer = mvCreateConstBuffer(&info, sizeof(OmniShadowTransformInfo));
 
     }
 };
-
-//-----------------------------------------------------------------------------
-// helper functions
-//-----------------------------------------------------------------------------
-
-//mvGLTFModel 
-//LoadTestModel(const char* name)
-//{
-//    static const char* gltfPath = "../../data/glTF-Sample-Models/2.0/";
-//    std::string root = gltfPath + std::string(name) + "/glTF-Binary/";
-//    //std::string root = gltfPath + std::string(name) + "/glTF/";
-//    std::string file = root + std::string(name) + ".glb";
-//    //return mvLoadGLTF(root.c_str(), file.c_str());
-//    return mvLoadBinaryGLTF(root.c_str(), file.c_str());
-//}
 
 //-----------------------------------------------------------------------------
 // helper classes
@@ -601,20 +591,6 @@ struct mvPointLight
         pipeline.vertexBlob = vertexShader.blob;
         pipeline.inputLayout = vertexShader.inputLayout;
         pipeline.topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-    }
-
-    bool showControls()
-    {
-        bool modified = false;
-        ImGui::Begin("Point Light");
-        if (ImGui::SliderFloat3("Position", &info.viewLightPos.x, -25.0f, 50.0f))
-        {
-            camera.pos = { info.viewLightPos.x, info.viewLightPos.y, info.viewLightPos.z };
-            modified = true;
-        }
-        ImGui::End();
-
-        return modified;
     }
 
 };

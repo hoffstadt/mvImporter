@@ -305,6 +305,7 @@ mvLoadGLTFAssets(mvAssetManager& assetManager, mvGLTFModel& model)
 
     u32 nodeOffset = assetManager.nodeCount;
     u32 meshOffset = assetManager.meshCount;
+    u32 materialOffset = assetManager.materialCount;
 
     for (u32 currentMesh = 0u; currentMesh < model.mesh_count; currentMesh++)
     {
@@ -551,27 +552,6 @@ mvLoadGLTFAssets(mvAssetManager& assetManager, mvGLTFModel& model)
 
             }
 
-            // left hand
-            //for (size_t i = 0; i < vertexBuffer.size(); i += 14)
-            //{
-            //    vertexBuffer[i + 2]  *= -1.0f;                    // z
-            //    vertexBuffer[i + 5]  *= -1.0f;                    // nz
-            //    vertexBuffer[i + 10] *= -1.0f;                    // tz
-            //    vertexBuffer[i + 13] *= -1.0f;                    // bz
-            //    //vertexBuffer[i + 7] = 1.0f - vertexBuffer[i + 7]; // v
-            //}
-
-            // left hand
-            //for (size_t i = 0; i < indexBuffer.size(); i += 3)
-            //{
-
-            //    size_t i0 = indexBuffer[i];
-            //    size_t i2 = indexBuffer[i + 2];
-
-            //    indexBuffer[i] = i2;
-            //    indexBuffer[i + 2] = i0;
-            //}
-
             newMesh.primitives.push_back({});
             newMesh.primitives.back().layout = mvCreateVertexLayout(
                 {
@@ -666,10 +646,6 @@ mvLoadGLTFAssets(mvAssetManager& assetManager, mvGLTFModel& model)
                 newMesh.primitives.back().materialID = mvGetMaterialAsset(&assetManager, "PBR_VS.hlsl", "PBR_PS.hlsl", materialData);
 
             }
-            else
-            {
-                int a = 5;
-            }
 
             newMesh.primitives.back().indexBuffer = mvGetBufferAsset(&assetManager, 
                 indexBuffer.data(), indexBuffer.size() * sizeof(u32), D3D11_BIND_INDEX_BUFFER, std::string(glmesh.name) + std::to_string(currentPrimitive) + "_indexbuffer");
@@ -691,7 +667,7 @@ mvLoadGLTFAssets(mvAssetManager& assetManager, mvGLTFModel& model)
         mvNode newNode{};
         newNode.name = glnode.name;
         if(glnode.mesh_index > -1)
-            newNode.mesh = glnode.mesh_index;
+            newNode.mesh = glnode.mesh_index+meshOffset;
         newNode.childCount = glnode.child_count;
 
         for (i32 i = 0; i < glnode.child_count; i++)
@@ -735,7 +711,6 @@ mvLoadGLTFAssets(mvAssetManager& assetManager, mvGLTFModel& model)
                 0.0f, 0.0f, 0.0f, 1.0f);
 
             newNode.matrix = mvTranslate(mvIdentityMat4(), newNode.translation) * rotationMat * mvScale(mvIdentityMat4(), newNode.scale);
-            //newNode.matrix = mvScale(mvIdentityMat4(), newNode.scale) * rotationMat * mvScale(mvIdentityMat4(), newNode.translation);
         }
 
         mvRegistryNodeAsset(&assetManager, newNode);

@@ -64,12 +64,17 @@ mvGetMaterialAsset(mvAssetManager* manager, const std::string& vs, const std::st
 		std::to_string(materialData.albedo.w) +
 		std::to_string(materialData.metalness) +
 		std::to_string(materialData.roughness) +
+		std::to_string(materialData.emisiveFactor.x) +
+		std::to_string(materialData.emisiveFactor.y) +
+		std::to_string(materialData.emisiveFactor.z) +
 		std::to_string(materialData.radiance) +
 		std::to_string(materialData.fresnel) +
 		std::string(materialData.hasAlpha ? "T" : "F") +
 		std::string(materialData.useAlbedoMap ? "T" : "F") +
 		std::string(materialData.useNormalMap ? "T" : "F") +
 		std::string(materialData.useRoughnessMap ? "T" : "F") +
+		std::string(materialData.useOcclusionMap ? "T" : "F") +
+		std::string(materialData.useEmissiveMap ? "T" : "F") +
 		std::string(materialData.useMetalMap ? "T" : "F");
 
 	for (s32 i = 0; i < manager->materialCount; i++)

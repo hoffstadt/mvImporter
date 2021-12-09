@@ -6,6 +6,7 @@ static const float zf = 100.0f;
 static const float zn = 0.5f;
 static const float c1 = (zf + zn) / (zf - zn);
 static const float c0 = -(2 * zn * zf) / (zf - zn);
+static const int PCFRANGE = 2;
 
 //-----------------------------------------------------------------------------
 // equations
@@ -143,6 +144,8 @@ struct mvGlobalInfo
     //-------------------------- ( 1*16 = 16 bytes )
     
     bool useNormalMap;
+    bool usePCF;
+    int pcfRange;
 };
 
 
@@ -304,6 +307,30 @@ float4 getIrradiance(float3 N)
     return float4(PI * color / float(nrSamples), 1.0);
 }
 
+float filterPCF(const in float2 spos, float depthCheck)
+{
+    float shadowLevel = 0.0f;
+    float texWidth;
+    float texHeight;
+    float scale = 1.5;
+    DirectionalShadowMap.GetDimensions(texWidth, texHeight);
+    float dx = scale * 1.0 / texWidth;
+    float dy = scale * 1.0 / texHeight;
+    
+    int count = 0;
+    [loop]
+    for (int x = -info.pcfRange; x <= info.pcfRange; x++)
+    {
+        [loop]
+        for (int y = -info.pcfRange; y <= info.pcfRange; y++)
+        {
+            shadowLevel += DirectionalShadowMap.SampleCmpLevelZero(DShadowSampler, float2(spos.x + dx*x, spos.y + dy*y), depthCheck);
+            count++;
+        }
+    }
+    return shadowLevel / count;
+}
+
 float4 main(VSOut input) : SV_Target
 {
     float4 albedo = material.albedo;
@@ -324,6 +351,13 @@ float4 main(VSOut input) : SV_Target
             input.Normal = -input.Normal;
         }
        
+    }
+    else if (material.useAlbedoMap)
+    {
+        float albedo_alpha = AlbedoTexture.Sample(Sampler, input.UV).a;
+
+        // bail if highly translucent
+        clip(albedo_alpha < 0.1f ? -1 : 1);
     }
 
     float3 N = calculateNormal(input);
@@ -399,21 +433,20 @@ float4 main(VSOut input) : SV_Target
         // Calculate the depth of the light.
         lightDepthValue = input.dshadowWorldPos.z / input.dshadowWorldPos.w;
             
-        shadowLevel = DirectionalShadowMap.SampleCmpLevelZero(DShadowSampler, projectTexCoord, lightDepthValue);
+        if(info.usePCF)
+        {
+            shadowLevel = filterPCF(projectTexCoord, lightDepthValue);
+        }
+        else
+        {
+            shadowLevel = DirectionalShadowMap.SampleCmpLevelZero(DShadowSampler, projectTexCoord, lightDepthValue);
+        }
+        
         
         if (shadowLevel != 0.0f) // not in shadow
         {
             Lo += (shadowLevel * specularContribution(albedo.rgb, input.UV, L, V, N, F0, metallic, roughness));
             brdf += (shadowLevel * BRDF(L, V, N, metallic, roughness));
-         
-            if(info.useIrradiance)
-            {
-                irradiance = shadowLevel * getIrradiance(-N);
-            }
-            else
-            {
-                irradiance = shadowLevel * Environment.Sample(EnvironmentSampler, N).rgb;
-            }
             
         }
             
@@ -422,15 +455,17 @@ float4 main(VSOut input) : SV_Target
     {
         Lo += specularContribution(albedo.rgb, input.UV, L, V, N, F0, metallic, roughness);
         brdf += BRDF(L, V, N, metallic, roughness);
-        
-        if (info.useIrradiance)
-        {
-            irradiance = shadowLevel * getIrradiance(-N);
-        }
-        else
-        {
-            irradiance = shadowLevel * Environment.Sample(EnvironmentSampler, N).rgb;
-        }
+
+    }
+    
+    if (info.useIrradiance)
+    {
+        irradiance = getIrradiance(-N);
+    }
+    else
+    {
+                //irradiance = shadowLevel * Environment.Sample(EnvironmentSampler, N).rgb;
+        irradiance = info.ambientColor;
     }
     
     //float2 brdf = textureBRDFLUT.Sample(samplerBRDFLUT, float2(max(dot(N, V), 0.0), roughness)).rg;
