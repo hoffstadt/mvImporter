@@ -13,7 +13,7 @@ struct VSOut
 };
 
 
-VSOut main(float3 pos : Position, float3 n : Normal, float2 tc : Texcoord, float3 tan : Tangent, float3 bitan : Bitangent)
+VSOut main(float3 pos : Position, float3 n : Normal, float2 tc : Texcoord, float3 tan : Tangent)
 {
     VSOut vso;
     vso.pixelPos = mul(modelViewProj, float4(pos, 1.0f));

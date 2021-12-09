@@ -171,7 +171,7 @@ struct mvSkybox
         vertexBuffer = mvCreateBuffer(vertices.data(), vertices.size() * sizeof(f32), D3D11_BIND_VERTEX_BUFFER);
         indexBuffer = mvCreateBuffer(indices.data(), indices.size() * sizeof(u32), D3D11_BIND_INDEX_BUFFER);
         vertexLayout = mvCreateVertexLayout({ mvVertexElement::Position3D });
-        cubeTexture = mvCreateCubeTexture("../../Resources/Skybox");
+        cubeTexture = mvCreateCubeTexture("../../Resources/SkyBox");
 
         D3D11_SAMPLER_DESC samplerDesc{};
         samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_BORDER;

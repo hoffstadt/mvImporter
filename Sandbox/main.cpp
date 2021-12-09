@@ -1,12 +1,8 @@
 #include "helpers.h"
 
 // TODO: make most of these runtime options
-
-
 static const char* gltfAssetDirectory0 = "../../data/glTF-Sample-Models/2.0/Sponza/glTF/";
 static const char* gltfModel0 = "../../data/glTF-Sample-Models/2.0/Sponza/glTF/Sponza.gltf";
-//static const char* gltfAssetDirectory0 = "../../data/glTF-Sample-Models/2.0/FlightHelmet/glTF/";
-//static const char* gltfModel0 = "../../data/glTF-Sample-Models/2.0/FlightHelmet/glTF/FlightHelmet.gltf";
 static const char* gltfAssetDirectory1 = "../../data/glTF-Sample-Models/2.0/DamagedHelmet/glTF-Binary/";
 static const char* gltfModel1 = "../../data/glTF-Sample-Models/2.0/DamagedHelmet/glTF-Binary/DamagedHelmet.glb";
 static f32         shadowWidth = 95.0f;
@@ -46,7 +42,7 @@ int main()
     // main camera
     mvCamera camera{};
     camera.pos = { -13.5f, 6.0f, 3.5f };
-    camera.front = { 0.0f, 0.0f, -1.0f };
+    camera.front = { 0.0f, 0.0f, 1.0f };
     camera.pitch = 0.0f;
     camera.yaw = 0.0f;
     camera.aspect = 500.0f / 500.0f;
@@ -70,7 +66,7 @@ int main()
     bool recreatePrimary = false;
     bool recreateShadowMapRS = false;
     bool recreateOShadowMapRS = false;
-    f32 scale0 = 5.0f;
+    f32 scale0 = 1.0f;
     f32 scale1 = 1.0f;
     mvVec3 translate0 = { 0.0f, 0.0f, 0.0f };
     mvVec3 translate1 = { 0.0f, 0.0f, 0.0f };
@@ -161,8 +157,6 @@ int main()
         ImGui_ImplWin32_NewFrame();
         ImGui::NewFrame();
 
-        globalInfo.camPos = camera.pos;
-
         ID3D11ShaderResourceView* const pSRV[6] = { NULL };
         ctx->PSSetShaderResources(0, 1, pSRV);
         ctx->PSSetShaderResources(1, 1, pSRV);
@@ -207,36 +201,12 @@ int main()
         mvMat4 viewMatrix = mvCreateFPSView(camera);
         mvMat4 projMatrix = mvCreateLookAtProjection(camera);
 
-        {
-            //mvVec4 posCopy = pointlight.info.viewLightPos;
-
-            //mvVec4 out = viewMatrix * pointlight.info.viewLightPos;
-            //pointlight.info.viewLightPos.x = out.x;
-            //pointlight.info.viewLightPos.y = out.y;
-            //pointlight.info.viewLightPos.z = out.z;
-
-            mvUpdateConstBuffer(pointlight.buffer, &pointlight.info);
-            //pointlight.info.viewLightPos = posCopy;
-        }
-
-        {
-            directionLightInfo.viewLightDir = directionalShadowMap.camera.dir;
-            //mvVec3 posCopy = directionLightInfo.viewLightDir;
-
-            //mvVec4 out = viewMatrix * mvVec4{
-            //    directionLightInfo.viewLightDir.x,
-            //    directionLightInfo.viewLightDir.y,
-            //    directionLightInfo.viewLightDir.z,
-            //    0.0f };
-            //directionLightInfo.viewLightDir.x = out.x;
-            //directionLightInfo.viewLightDir.y = out.y;
-            //directionLightInfo.viewLightDir.z = out.z;
-
-            mvUpdateConstBuffer(directionLightBuffer, &directionLightInfo);
-            //directionLightInfo.viewLightDir = posCopy;
-        }
+        globalInfo.camPos = camera.pos;
+        directionLightInfo.viewLightDir = directionalShadowMap.camera.dir;
 
         // update constant buffers
+        mvUpdateConstBuffer(pointlight.buffer, &pointlight.info);
+        mvUpdateConstBuffer(directionLightBuffer, &directionLightInfo);
         mvUpdateConstBuffer(globalInfoBuffer, &globalInfo);
         mvUpdateConstBuffer(directionalShadowMap.buffer, &directionalShadowMap.info);
         mvUpdateConstBuffer(omniShadowMap.buffer, &omniShadowMap.info);
@@ -254,7 +224,6 @@ int main()
         ctx->PSSetSamplers(1u, 1, &directionalShadowMap.sampler);
         ctx->PSSetSamplers(2u, 1, &omniShadowMap.sampler);
         ctx->PSSetSamplers(3u, 1, &skybox.cubeSampler);
-
 
         // textures
         ctx->PSSetShaderResources(5u, 1, &directionalShadowMap.resourceView);
@@ -289,9 +258,7 @@ int main()
         }
 
         for (int i = 0; i < am.sceneCount; i++)
-        {
             Renderer::mvRenderScene(am, am.scenes[i].scene, viewMatrix, projMatrix, i == 0 ? stransform0 : stransform1, i == 0 ? ttransform0 : ttransform1);
-        }
 
         //-----------------------------------------------------------------------------
         // skybox pass
@@ -430,15 +397,8 @@ int main()
             camera.aspect = offscreen.viewport.Width / offscreen.viewport.Height;
 
             ImGui::Image(offscreen.resourceView, contentSize);
-            if (contentSize.x == oldContentRegion.x && contentSize.y == oldContentRegion.y)
-            {
-
-            }
-            else
-            {
+            if (!(contentSize.x == oldContentRegion.x && contentSize.y == oldContentRegion.y))
                 recreatePrimary = true;
-            }
-
             oldContentRegion = contentSize;
 
             //-----------------------------------------------------------------------------

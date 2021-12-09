@@ -18,8 +18,7 @@ mvCreateMaterial(const std::string& vs, const std::string& ps, mvMaterialData& m
 			mvVertexElement::Position3D,
 			mvVertexElement::Normal,
 			mvVertexElement::Texture2D,
-			mvVertexElement::Tangent,
-			mvVertexElement::Bitangent
+			mvVertexElement::Tangent
 		}
 	);
 
@@ -36,8 +35,7 @@ mvCreateMaterial(const std::string& vs, const std::string& ps, mvMaterialData& m
 			mvVertexElement::Position3D,
 			mvVertexElement::Normal,
 			mvVertexElement::Texture2D,
-			mvVertexElement::Tangent,
-			mvVertexElement::Bitangent
+			mvVertexElement::Tangent
 		}
 	);
 

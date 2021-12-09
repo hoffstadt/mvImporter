@@ -2,7 +2,6 @@
  mvImporter, v0.0.1 (WIP)
    * no dependencies
    * assumes GLTF file is correct
-   * assumes GLTF binary data is in .bin file (just for now)
    * ignores animation for now
    * contains a hackly put together json parser
 

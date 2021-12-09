@@ -392,29 +392,6 @@ mvDot(mvVec3 v1, mvVec3 v2)
 	return v1.x * v2.x + v1.y * v2.y + v1.z * v2.z;
 }
 
-mvMat4 
-mvLookAtLH(mvVec3 eye, mvVec3 center, mvVec3 up)
-{
-	mvVec3 f = mvNormalize(center - eye);
-	mvVec3 s = mvNormalize(mvCross(up, f));
-	mvVec3 u = mvCross(f, s);
-
-	mvMat4 result = mvIdentityMat4();
-	result[0][0] = s.x;
-	result[1][0] = s.y;
-	result[2][0] = s.z;
-	result[0][1] = u.x;
-	result[1][1] = u.y;
-	result[2][1] = u.z;
-	result[0][2] = f.x;
-	result[1][2] = f.y;
-	result[2][2] = f.z;
-	result[3][0] = -mvDot(s, eye);
-	result[3][1] = -mvDot(u, eye);
-	result[3][2] = -mvDot(f, eye);
-	return result;
-}
-
 mvMat4
 mvLookAtRH(mvVec3 eye, mvVec3 center, mvVec3 up)
 {
@@ -469,19 +446,6 @@ mvFPSViewRH(mvVec3 eye, float pitch, float yaw)
 	return viewMatrix;
 }
 
-mvMat4 
-mvOrthoLH(f32 left, f32 right, f32 bottom, f32 top, f32 zNear, f32 zFar)
-{
-	mvMat4 result = mvIdentityMat4();
-	result[0][0] = 2.0f / (right - left);
-	result[1][1] = 2.0f / (top - bottom);
-	result[2][2] = 2.0f / (zFar - zNear);
-	result[3][0] = -(right + left) / (right - left);
-	result[3][1] = -(top + bottom) / (top - bottom);
-	result[3][2] = -(zFar + zNear) / (zFar - zNear);
-	return result;
-}
-
 mvMat4
 mvOrthoRH(f32 left, f32 right, f32 bottom, f32 top, f32 zNear, f32 zFar)
 {
@@ -492,20 +456,6 @@ mvOrthoRH(f32 left, f32 right, f32 bottom, f32 top, f32 zNear, f32 zFar)
 	result[3][0] = -(right + left) / (right - left);
 	result[3][1] = -(top + bottom) / (top - bottom);
 	result[3][2] = -(zFar + zNear) / (zFar - zNear);
-	return result;
-}
-
-mvMat4 
-mvPerspectiveLH(f32 fovy, f32 aspect, f32 zNear, f32 zFar)
-{
-	const f32 tanHalfFovy = tan(fovy / 2.0f);
-
-	mvMat4 result{};
-	result[0][0] = 1.0f / (aspect * tanHalfFovy);
-	result[1][1] = 1.0f / (tanHalfFovy);
-	result[2][2] = (zFar + zNear) / (zFar - zNear);
-	result[2][3] = 1.0f;
-	result[3][2] = -(2.0f * zFar * zNear) / (zFar - zNear);
 	return result;
 }
 

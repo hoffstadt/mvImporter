@@ -181,9 +181,7 @@ struct VSOut
 {   
     float4 Pos              : SV_Position;
     float3 WorldPos         : POSITION0;
-    float3 ViewPos          : POSITION1;
     float3 Normal           : NORMAL0;
-    float3 ViewNormal       : NORMAL1;
     float2 UV               : TEXCOORD0;
     float3 Tangent          : TEXCOORD1;
     float4 dshadowWorldPos  : dshadowPosition; // light pos
@@ -344,12 +342,12 @@ float4 main(VSOut input) : SV_Target
 
         albedo = pow(albedo, float4(2.2, 2.2, 2.2, 1.0));
         
-        // flip normal when backface
-        if (dot(input.ViewNormal, input.ViewPos) >= 0.0f)
-        {
-            input.ViewNormal = -input.ViewNormal;
-            input.Normal = -input.Normal;
-        }
+        //// flip normal when backface
+        //if (dot(input.ViewNormal, input.ViewPos) >= 0.0f)
+        //{
+        //    input.ViewNormal = -input.ViewNormal;
+        //    input.Normal = -input.Normal;
+        //}
        
     }
     else if (material.useAlbedoMap)
