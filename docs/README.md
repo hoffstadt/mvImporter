@@ -1,4 +1,12 @@
 # mvImporter
+A simple, portable header-only [glTF 2.0](https://github.com/KhronosGroup/glTF) loader with not dependencies. Similar to [TinyGLTF](https://github.com/syoyo/tinygltf) but with a built-in JSON parser.
+
+| [Basic Usage](#basic-usage) | [Features](#features) | [TODOs](#todos) | [Licenses](#licenses) | [Sample Renderers](#sample-renderers) |
+|-----------------------------|-----------------------|-----------------|-----------------------|---------------------------------------|
+
+<div align="center">
+  <img src="https://github.com/hoffstadt/mvImporter/blob/master/docs/images/damagedhelmet.png?raw=true" alt="DamagedHelmet">
+</div>
 
 ## Basic Usage
 
@@ -41,3 +49,78 @@ int main()
     mvCleanupGLTF(gltfmodel);
 }
 ```
+
+## Features
+
+* Written in portable C++. C++-11 with STL dependency only.
+  * [x] Windows + Visual Studio 2015 Update 3 or later.
+  * [x] macOS + clang(LLVM)
+  * [x] Linux + gcc/clang
+  * [x] Windows + MinGW
+  * [ ] iOS + clang
+  * [ ] Android NDK
+  * [ ] Web using Emscripten(LLVM)
+* glTF specification v2.0.0
+  * [x] ASCII glTF
+    * [x] Load
+    * [ ] Save
+  * [x] Binary glTF(GLB)
+    * [x] Load
+    * [ ] Save(.bin embedded .glb)
+* Buffers
+  * [x] Parse BASE64 encoded embedded buffer data(DataURI).
+  * [x] Load `.bin` file.
+* Image
+  * [x] Parse BASE64 encoded embedded image data(DataURI)
+  * [x] Load external image file(Using stb_image)
+  * [x] Load PNG(8bit and 16bit)(Using stb_image)
+  * [x] Load JPEG(8bit only)(Using stb_image)
+  * [x] Load BMP(Using stb_image)
+  * [x] Load GIF(Using stb_image)
+* Morph traget
+  * [ ] Sparse accessor
+* Load glTF from memory
+* Custom callback handler
+  * [ ] Image load
+  * [ ] Image save
+* Extensions
+  * [ ] Draco mesh decoding
+  * [ ] Draco mesh encoding
+
+## TODOs
+* [ ] Remove C++ std dependencies on _vector_ and _string_.
+* [ ] Add tests
+* [ ] Support extensions and extras
+* [ ] Support animations
+* [ ] Added toy engine for Linux & macOS
+
+## Sample Renderers
+We've included simple renderers to test loading and features. A lot of work still needs to be done here and they are not ready for general usage but feel free to play with them.
+With the goal of this project being the loader, not the renderers, we only work on them when we have time.
+
+### Building
+#### Windows
+**Requirements**
+- [_git_](https://git-scm.com/)
+- [_Visual Studio 2019_ (windows)](https://visualstudio.microsoft.com/vs/) with the following workflows:
+  * Desktop development with C++
+  * Game development with C++
+
+Instructions:
+1. From within a local directory, enter the following bash commands:
+```
+git clone --recursive https://github.com/hoffstadt/mvImporter
+```
+4. In Visual Studio, use _Open a local folder_ to open _mvImporter_ folder. This will use CMakeLists.txt as the "project" file.
+5. Run _Build All_.
+
+### Linux
+Not ready yet.
+
+### MacOS
+Not ready yet.
+
+## Licenses
+_mvImporter_ is licensed under MIT license.
+
+Battle Damaged Sci-fi Helmet - PBR by [theblueturtle_](https://sketchfab.com/theblueturtle_), published under a Creative Commons Attribution-NonCommercial license
