@@ -77,36 +77,42 @@ mvCreateTexturedCube(mvAssetManager& assetManager, f32 size)
             mvVertexElement::Position3D,
             mvVertexElement::Normal,
             mvVertexElement::Texture2D,
-            mvVertexElement::Tangent
+            mvVertexElement::Tangent,
+            mvVertexElement::Bitangent
         }
     );
 
     const float side = size;
     auto vertices = std::vector<f32>{
-        -side, -side, -side, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  // 0 near side
-         side, -side, -side, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f,  // 1
-        -side,  side, -side, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f,  // 2
-         side,  side, -side, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 0.0f,  // 3
-        -side, -side,  side, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  // 4 far side
-         side, -side,  side, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f,  // 5
-        -side,  side,  side, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f,  // 6
-         side,  side,  side, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 0.0f,  // 7
-        -side, -side, -side, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  // 8 left side
-        -side,  side, -side, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f,  // 9
-        -side, -side,  side, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f,  // 10
-        -side,  side,  side, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 0.0f,  // 11
-         side, -side, -side, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  // 12 right side
-         side,  side, -side, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f,  // 13
-         side, -side,  side, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f,  // 14
-         side,  side,  side, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 0.0f,  // 15
-        -side, -side, -side, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  // 16 bottom side
-         side, -side, -side, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f,  // 17
-        -side, -side,  side, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f,  // 18
-         side, -side,  side, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 0.0f,  // 19
-        -side,  side, -side, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  // 20 top side
-         side,  side, -side, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f,  // 21
-        -side,  side,  side, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f,  // 22
-         side,  side,  side, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 0.0f   // 23
+        -side, -side, -side, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f,  // 0 near side
+         side, -side, -side, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f,  // 1
+        -side,  side, -side, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  // 2
+         side,  side, -side, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f,  // 3
+
+        -side, -side,  side, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f,  // 4 far side
+         side, -side,  side, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f,  // 5
+        -side,  side,  side, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f,  // 6
+         side,  side,  side, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  // 7
+
+        -side, -side, -side, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f,  // 8 left side
+        -side,  side, -side, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f,  // 9
+        -side, -side,  side, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f,  // 10
+        -side,  side,  side, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  // 11
+
+         side, -side, -side, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f,  // 12 right side
+         side,  side, -side, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  // 13
+         side, -side,  side, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f,  // 14
+         side,  side,  side, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f,  // 15
+
+        -side, -side, -side, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  // 16 bottom side
+         side, -side, -side, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f,  // 17
+        -side, -side,  side, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f,  // 18
+         side, -side,  side, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f,  // 19
+
+        -side,  side, -side, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f,  // 20 top side
+         side,  side, -side, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f,  // 21
+        -side,  side,  side, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  // 22
+         side,  side,  side, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f   // 23
     };
 
     static auto indices = std::vector<u32>{
@@ -121,20 +127,20 @@ mvCreateTexturedCube(mvAssetManager& assetManager, f32 size)
     for (size_t i = 0; i < indices.size(); i += 3)
     {
 
-        mvVec3 p0 = { vertices[11 * indices[i]], vertices[11 * indices[i] + 1], vertices[11 * indices[i] + 2] };
-        mvVec3 p1 = { vertices[11 * indices[i+1]], vertices[11 * indices[i + 1] + 1], vertices[11 * indices[i + 1] + 2] };
-        mvVec3 p2 = { vertices[11 * indices[i+2]], vertices[11 * indices[i + 2] + 1], vertices[11 * indices[i + 2] + 2] };
+        mvVec3 p0 = { vertices[14 * indices[i]], vertices[14 * indices[i] + 1], vertices[14 * indices[i] + 2] };
+        mvVec3 p1 = { vertices[14 * indices[i+1]], vertices[14 * indices[i + 1] + 1], vertices[14 * indices[i + 1] + 2] };
+        mvVec3 p2 = { vertices[14 * indices[i+2]], vertices[14 * indices[i + 2] + 1], vertices[14 * indices[i + 2] + 2] };
 
         mvVec3 n = mvNormalize(mvCross(p1 - p0, p2 - p0));
-        vertices[11 * indices[i] + 3] = n[0];
-        vertices[11 * indices[i] + 4] = n[1];
-        vertices[11 * indices[i] + 5] = n[2];
-        vertices[11 * indices[i + 1] + 3] = n[0];
-        vertices[11 * indices[i + 1] + 4] = n[1];
-        vertices[11 * indices[i + 1] + 5] = n[2];
-        vertices[11 * indices[i + 2] + 3] = n[0];
-        vertices[11 * indices[i + 2] + 4] = n[1];
-        vertices[11 * indices[i + 2] + 5] = n[2];
+        vertices[14 * indices[i] + 3] = n[0];
+        vertices[14 * indices[i] + 4] = n[1];
+        vertices[14 * indices[i] + 5] = n[2];
+        vertices[14 * indices[i + 1] + 3] = n[0];
+        vertices[14 * indices[i + 1] + 4] = n[1];
+        vertices[14 * indices[i + 1] + 5] = n[2];
+        vertices[14 * indices[i + 2] + 3] = n[0];
+        vertices[14 * indices[i + 2] + 4] = n[1];
+        vertices[14 * indices[i + 2] + 5] = n[2];
     }
 
     mvMesh mesh{};
@@ -160,16 +166,17 @@ mvCreateTexturedQuad(mvAssetManager& assetManager, f32 size)
             mvVertexElement::Position3D,
             mvVertexElement::Normal,
             mvVertexElement::Texture2D,
-            mvVertexElement::Tangent
+            mvVertexElement::Tangent,
+            mvVertexElement::Bitangent
         }
     );
 
     const float side = size;
     auto vertices = std::vector<f32>{
-        -side,  side, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
-         side, -side, 0.0f, 0.0f, 0.0f, -1.0f, 1.0f, 1.0f, 0.0f, 0.0f, 0.0f,
-        -side, -side, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f,
-         side,  side, 0.0f, 0.0f, 0.0f, -1.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f
+        -side,  side, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
+         side, -side, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f,
+        -side, -side, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f,
+         side,  side, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f,
     };
 
     static auto indices = std::vector<u32>{
@@ -179,20 +186,20 @@ mvCreateTexturedQuad(mvAssetManager& assetManager, f32 size)
 
     for (size_t i = 0; i < indices.size(); i += 3)
     {
-        mvVec3 p0 = { vertices[11 * indices[i]], vertices[11 * indices[i] + 1], vertices[11 * indices[i] + 2] };
-        mvVec3 p1 = { vertices[11 * indices[i + 1]], vertices[11 * indices[i + 1] + 1], vertices[11 * indices[i + 1] + 2] };
-        mvVec3 p2 = { vertices[11 * indices[i + 2]], vertices[11 * indices[i + 2] + 1], vertices[11 * indices[i + 2] + 2] };
+        mvVec3 p0 = { vertices[14 * indices[i]], vertices[14 * indices[i] + 1], vertices[14 * indices[i] + 2] };
+        mvVec3 p1 = { vertices[14 * indices[i + 1]], vertices[14 * indices[i + 1] + 1], vertices[14 * indices[i + 1] + 2] };
+        mvVec3 p2 = { vertices[14 * indices[i + 2]], vertices[14 * indices[i + 2] + 1], vertices[14 * indices[i + 2] + 2] };
 
         mvVec3 n = mvNormalize(mvCross(p1 - p0, p2 - p0));
-        vertices[11 * indices[i] + 3] = n[0];
-        vertices[11 * indices[i] + 4] = n[1];
-        vertices[11 * indices[i] + 5] = n[2];
-        vertices[11 * indices[i + 1] + 3] = n[0];
-        vertices[11 * indices[i + 1] + 4] = n[1];
-        vertices[11 * indices[i + 1] + 5] = n[2];
-        vertices[11 * indices[i + 2] + 3] = n[0];
-        vertices[11 * indices[i + 2] + 4] = n[1];
-        vertices[11 * indices[i + 2] + 5] = n[2];
+        vertices[14 * indices[i] + 3] = n[0];
+        vertices[14 * indices[i] + 4] = n[1];
+        vertices[14 * indices[i] + 5] = n[2];
+        vertices[14 * indices[i + 1] + 3] = n[0];
+        vertices[14 * indices[i + 1] + 4] = n[1];
+        vertices[14 * indices[i + 1] + 5] = n[2];
+        vertices[14 * indices[i + 2] + 3] = n[0];
+        vertices[14 * indices[i + 2] + 4] = n[1];
+        vertices[14 * indices[i + 2] + 5] = n[2];
     }
 
     mvMesh mesh{};
@@ -377,7 +384,7 @@ mvLoadGLTFAssets(mvAssetManager& assetManager, mvGLTFModel& model)
 
             u32 triangleCount = origIndexBuffer.size() / 3;
 
-            vertexBuffer.reserve(triangleCount * 11 * 3);
+            vertexBuffer.reserve(triangleCount * 14 * 3);
             indexBuffer.reserve(triangleCount * 3);
             if (normalAttributeBuffer.empty()) normalAttributeBuffer.resize(triangleCount * 3 * 3);
             if (textureAttributeBuffer.empty()) textureAttributeBuffer.resize(triangleCount * 3 * 2);
@@ -410,11 +417,14 @@ mvLoadGLTFAssets(mvAssetManager& assetManager, mvGLTFModel& model)
                 combinedVertexBuffer.push_back(0.0f);  // we will calculate
                 combinedVertexBuffer.push_back(0.0f);  // we will calculate
                 combinedVertexBuffer.push_back(0.0f);  // we will calculate
+                combinedVertexBuffer.push_back(0.0f);  // we will calculate
+                combinedVertexBuffer.push_back(0.0f);  // we will calculate
+                combinedVertexBuffer.push_back(0.0f);  // we will calculate
 
                 indexBuffer.push_back(indexBuffer.size());
             }
 
-            // calculate normals, tangents
+            // calculate normals, tangents, bitangents
             for (size_t i = 0; i < indexBuffer.size() - 2; i += 3)
             {
 
@@ -422,17 +432,17 @@ mvLoadGLTFAssets(mvAssetManager& assetManager, mvGLTFModel& model)
                 size_t i1 = indexBuffer[i + 1];
                 size_t i2 = indexBuffer[i + 2];
 
-                mvVec3 p0 = *((mvVec3*)&combinedVertexBuffer[i0 * 11]);
-                mvVec3 p1 = *((mvVec3*)&combinedVertexBuffer[i1 * 11]);
-                mvVec3 p2 = *((mvVec3*)&combinedVertexBuffer[i2 * 11]);
+                mvVec3 p0 = *((mvVec3*)&combinedVertexBuffer[i0 * 14]);
+                mvVec3 p1 = *((mvVec3*)&combinedVertexBuffer[i1 * 14]);
+                mvVec3 p2 = *((mvVec3*)&combinedVertexBuffer[i2 * 14]);
 
-                mvVec3 n0 = *((mvVec3*)&combinedVertexBuffer[i0 * 11 + 3]);
-                mvVec3 n1 = *((mvVec3*)&combinedVertexBuffer[i1 * 11 + 3]);
-                mvVec3 n2 = *((mvVec3*)&combinedVertexBuffer[i2 * 11 + 3]);
+                mvVec3 n0 = *((mvVec3*)&combinedVertexBuffer[i0 * 14 + 3]);
+                mvVec3 n1 = *((mvVec3*)&combinedVertexBuffer[i1 * 14 + 3]);
+                mvVec3 n2 = *((mvVec3*)&combinedVertexBuffer[i2 * 14 + 3]);
 
-                mvVec2 tex0 = *((mvVec2*)&combinedVertexBuffer[i0 * 11 + 6]);
-                mvVec2 tex1 = *((mvVec2*)&combinedVertexBuffer[i1 * 11 + 6]);
-                mvVec2 tex2 = *((mvVec2*)&combinedVertexBuffer[i2 * 11 + 6]);
+                mvVec2 tex0 = *((mvVec2*)&combinedVertexBuffer[i0 * 14 + 6]);
+                mvVec2 tex1 = *((mvVec2*)&combinedVertexBuffer[i1 * 14 + 6]);
+                mvVec2 tex2 = *((mvVec2*)&combinedVertexBuffer[i2 * 14 + 6]);
 
                 // calculate normals
                 //mvVec3 n = cNormalize(cCross(p1 - p0, p2 - p0));
@@ -463,11 +473,22 @@ mvLoadGLTFAssets(mvAssetManager& assetManager, mvGLTFModel& model)
                     ((edge1.z * uv2.y) - (edge2.z * uv1.y)) * dirCorrection
                 };
 
+                mvVec3 bitangent = {
+				    ((edge1.x * uv2.x) - (edge2.x * uv1.x)) * dirCorrection,
+				    ((edge1.y * uv2.x) - (edge2.y * uv1.x)) * dirCorrection,
+				    ((edge1.z * uv2.x) - (edge2.z * uv1.x)) * dirCorrection
+			    };
+
                 // project tangent and bitangent into the plane formed by the vertex' normal
                 //mvVec3 newTangent = cNormalize(tangent - n * (tangent * n));
-                *((mvVec3*)&combinedVertexBuffer[i0 * 11 + 8]) = mvNormalize(tangent - n0 * (tangent * n0));
-                *((mvVec3*)&combinedVertexBuffer[i1 * 11 + 8]) = mvNormalize(tangent - n1 * (tangent * n1));
-                *((mvVec3*)&combinedVertexBuffer[i2 * 11 + 8]) = mvNormalize(tangent - n2 * (tangent * n2));
+                *((mvVec3*)&combinedVertexBuffer[i0 * 14 + 8]) = mvNormalize(tangent - n0 * (tangent * n0));
+                *((mvVec3*)&combinedVertexBuffer[i1 * 14 + 8]) = mvNormalize(tangent - n1 * (tangent * n1));
+                *((mvVec3*)&combinedVertexBuffer[i2 * 14 + 8]) = mvNormalize(tangent - n2 * (tangent * n2));
+
+                //mvVec3 newBitangent = cNormalize(bitangent - n * (bitangent * n));
+                *((mvVec3*)&combinedVertexBuffer[i0 * 14 + 11]) = mvNormalize(bitangent - n0 * (bitangent * n0));
+                *((mvVec3*)&combinedVertexBuffer[i1 * 14 + 11]) = mvNormalize(bitangent - n1 * (bitangent * n1));
+                *((mvVec3*)&combinedVertexBuffer[i2 * 14 + 11]) = mvNormalize(bitangent - n2 * (bitangent * n2));
 
                 // vertex 0
                 vertexBuffer.push_back(p0.x);
@@ -478,9 +499,12 @@ mvLoadGLTFAssets(mvAssetManager& assetManager, mvGLTFModel& model)
                 vertexBuffer.push_back(n0.z);
                 vertexBuffer.push_back(tex0.x);
                 vertexBuffer.push_back(tex0.y);
-                vertexBuffer.push_back(combinedVertexBuffer[i0 * 11 + 8]);
-                vertexBuffer.push_back(combinedVertexBuffer[i0 * 11 + 9]);
-                vertexBuffer.push_back(combinedVertexBuffer[i0 * 11 + 10]);
+                vertexBuffer.push_back(combinedVertexBuffer[i0 * 14 + 8]);
+                vertexBuffer.push_back(combinedVertexBuffer[i0 * 14 + 9]);
+                vertexBuffer.push_back(combinedVertexBuffer[i0 * 14 + 10]);
+                vertexBuffer.push_back(combinedVertexBuffer[i0 * 14 + 11]);
+                vertexBuffer.push_back(combinedVertexBuffer[i0 * 14 + 12]);
+                vertexBuffer.push_back(combinedVertexBuffer[i0 * 14 + 13]);
 
                 // vertex 1
                 vertexBuffer.push_back(p1.x);
@@ -491,9 +515,12 @@ mvLoadGLTFAssets(mvAssetManager& assetManager, mvGLTFModel& model)
                 vertexBuffer.push_back(n1.z);
                 vertexBuffer.push_back(tex1.x);
                 vertexBuffer.push_back(tex1.y);
-                vertexBuffer.push_back(combinedVertexBuffer[i1 * 11 + 8]);
-                vertexBuffer.push_back(combinedVertexBuffer[i1 * 11 + 9]);
-                vertexBuffer.push_back(combinedVertexBuffer[i1 * 11 + 10]);
+                vertexBuffer.push_back(combinedVertexBuffer[i1 * 14 + 8]);
+                vertexBuffer.push_back(combinedVertexBuffer[i1 * 14 + 9]);
+                vertexBuffer.push_back(combinedVertexBuffer[i1 * 14 + 10]);
+                vertexBuffer.push_back(combinedVertexBuffer[i1 * 14 + 11]);
+                vertexBuffer.push_back(combinedVertexBuffer[i1 * 14 + 12]);
+                vertexBuffer.push_back(combinedVertexBuffer[i1 * 14 + 13]);
 
                 // vertex 2
                 vertexBuffer.push_back(p2.x);
@@ -504,9 +531,12 @@ mvLoadGLTFAssets(mvAssetManager& assetManager, mvGLTFModel& model)
                 vertexBuffer.push_back(n2.z);
                 vertexBuffer.push_back(tex2.x);
                 vertexBuffer.push_back(tex2.y);
-                vertexBuffer.push_back(combinedVertexBuffer[i2 * 11 + 8]);
-                vertexBuffer.push_back(combinedVertexBuffer[i2 * 11 + 9]);
-                vertexBuffer.push_back(combinedVertexBuffer[i2 * 11 + 10]);
+                vertexBuffer.push_back(combinedVertexBuffer[i2 * 14 + 8]);
+                vertexBuffer.push_back(combinedVertexBuffer[i2 * 14 + 9]);
+                vertexBuffer.push_back(combinedVertexBuffer[i2 * 14 + 10]);
+                vertexBuffer.push_back(combinedVertexBuffer[i2 * 14 + 11]);
+                vertexBuffer.push_back(combinedVertexBuffer[i2 * 14 + 12]);
+                vertexBuffer.push_back(combinedVertexBuffer[i2 * 14 + 13]);
 
             }
 
@@ -516,7 +546,8 @@ mvLoadGLTFAssets(mvAssetManager& assetManager, mvGLTFModel& model)
                     mvVertexElement::Position3D,
                     mvVertexElement::Normal,
                     mvVertexElement::Texture2D,
-                    mvVertexElement::Tangent
+                    mvVertexElement::Tangent,
+                    mvVertexElement::Bitangent
                 }
             );
 

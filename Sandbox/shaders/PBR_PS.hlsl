@@ -181,25 +181,23 @@ struct VSOut
 {   
     float4 Pos              : SV_Position;
     float3 WorldPos         : POSITION0;
-    float3 Normal           : NORMAL0;
+    float3 WorldNormal      : NORMAL0;
     float2 UV               : TEXCOORD0;
-    float3 Tangent          : TEXCOORD1;
     float4 dshadowWorldPos  : dshadowPosition; // light pos
     float4 oshadowWorldPos  : oshadowPosition; // light pos
+    float3x3 TBN            : TangentBasis;
 };
 
 float3 calculateNormal(VSOut input)
 {
 
-    float3 N = normalize(input.Normal);
-    float3 T = normalize(input.Tangent);
-    float3 B = normalize(cross(N, T));
-    float3x3 TBN = transpose(float3x3(T, B, N));
+    float3 N = normalize(input.WorldNormal);
     
     if (material.useNormalMap && info.useNormalMap)
     {
         float3 tangentNormal = NormalTexture.Sample(Sampler, input.UV).xyz * 2.0 - 1.0;
-        return normalize(mul(TBN, tangentNormal));
+        tangentNormal.y = -tangentNormal.y;
+        return normalize(mul(input.TBN, tangentNormal));
     }
     
     return N;
@@ -342,12 +340,11 @@ float4 main(VSOut input) : SV_Target
 
         albedo = pow(albedo, float4(2.2, 2.2, 2.2, 1.0));
         
-        //// flip normal when backface
-        //if (dot(input.ViewNormal, input.ViewPos) >= 0.0f)
-        //{
-        //    input.ViewNormal = -input.ViewNormal;
-        //    input.Normal = -input.Normal;
-        //}
+        // flip normal when backface
+        if (dot(input.WorldNormal, input.WorldPos) >= 0.0f)
+        {
+            input.WorldNormal = -input.WorldNormal;
+        }
        
     }
     else if (material.useAlbedoMap)

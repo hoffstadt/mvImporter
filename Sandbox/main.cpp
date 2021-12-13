@@ -66,7 +66,7 @@ int main()
     bool recreatePrimary = false;
     bool recreateShadowMapRS = false;
     bool recreateOShadowMapRS = false;
-    f32 scale0 = 1.0f;
+    f32 scale0 = 5.0f;
     f32 scale1 = 1.0f;
     mvVec3 translate0 = { 0.0f, 0.0f, 0.0f };
     mvVec3 translate1 = { 0.0f, 0.0f, 0.0f };

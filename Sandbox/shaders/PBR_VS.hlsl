@@ -10,11 +10,11 @@ struct VSOut
 {   
     float4 Pos              : SV_Position;
     float3 WorldPos         : POSITION0;
-    float3 Normal           : NORMAL0;
+    float3 WorldNormal      : NORMAL0;
     float2 UV               : TEXCOORD0;
-    float3 Tangent          : TEXCOORD1;
     float4 dshadowWorldPos  : dshadowPosition; // light pos
     float4 oshadowWorldPos  : oshadowPosition; // light pos
+    float3x3 TBN            : TangentBasis;
 };
 
 cbuffer DirectionalShadowTransformCBuf : register(b1)
@@ -41,13 +41,15 @@ float4 ToDirectShadowHomoSpace(const in float3 pos, uniform matrix modelTransfor
     return mul(fin, float4(pos, 1.0f));
 }
 
-VSOut main(float3 pos : Position, float3 n : Normal, float2 tc : Texcoord, float3 tan : Tangent)
+VSOut main(float3 pos : Position, float3 n : Normal, float2 tc : Texcoord, float3 tan : Tangent, float3 b : Bitangent)
 {
     VSOut output;
     float3 locPos = mul(model, float4(pos, 1.0)).xyz;
     output.WorldPos = locPos;
-    output.Normal = mul((float3x3)model, n);
-    output.Tangent = mul((float3x3) model, tan);
+    output.WorldNormal = mul((float3x3)model, n);
+    float3 WorldTangent = mul((float3x3) model, tan);
+    float3 WorldBitangent = mul((float3x3) model, b);
+    output.TBN = transpose(float3x3(WorldTangent, WorldBitangent, output.WorldNormal));
     output.UV = tc;
     output.Pos = mul(modelViewProj, float4(pos, 1.0f));
     output.dshadowWorldPos = ToDirectShadowHomoSpace(pos, model);
