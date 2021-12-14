@@ -33,5 +33,7 @@ struct mvMesh
 mvMesh mvCreateCube        (mvAssetManager& assetManager, f32 size = 1.0f);
 mvMesh mvCreateTexturedCube(mvAssetManager& assetManager, f32 size = 1.0f);
 mvMesh mvCreateTexturedQuad(mvAssetManager& assetManager, f32 size = 1.0f);
+mvMesh mvCreateFrustum     (mvAssetManager& assetManager, f32 width, f32 height, f32 nearZ, f32 farZ);
+mvMesh mvCreateFrustum2    (mvAssetManager& assetManager, f32 fov, f32 aspect, f32 nearZ, f32 farZ);
 
 void mvLoadGLTFAssets(mvAssetManager& assetManager, mvGLTFModel& model);

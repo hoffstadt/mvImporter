@@ -25,6 +25,7 @@
 #include <string>
 #include <vector>
 
+//#define MV_IMPORTER_IMPLEMENTATION
 #ifdef MV_IMPORTER_IMPLEMENTATION
 #include <assert.h>
 #include <stdio.h>
@@ -33,6 +34,9 @@
 //-----------------------------------------------------------------------------
 // Forward Declarations
 //-----------------------------------------------------------------------------
+struct mvGLTFCamera;        // GLTF -> "cameras"
+struct mvGLTFPerspective;   // GLTF -> "perspective"
+struct mvGLTFOrthographic;  // GLTF -> "orthographic"
 struct mvGLTFNode;          // GLTF -> "nodes"
 struct mvGLTFScene;         // GLTF -> "scenes"
 struct mvGLTFMeshPrimitive; // GLTF -> "meshPrimitives"
@@ -52,7 +56,6 @@ struct mvGLTFModel;         // contains arrays of the above and counts
 //-----------------------------------------------------------------------------
 
 MV_IMPORTER_API mvGLTFModel mvLoadGLTF      (const char* root, const char* file);
-//MV_IMPORTER_API mvGLTFModel mvLoadBinaryGLTF(const char* root, const char* file);
 MV_IMPORTER_API void        mvCleanupGLTF   (mvGLTFModel& model);
 
 //-----------------------------------------------------------------------------
@@ -119,6 +122,12 @@ enum mvGLTFWrapMode
 	MV_IMP_WRAP_CLAMP_TO_EDGE   = 33071,
 	MV_IMP_WRAP_MIRRORED_REPEAT = 33648,
 	MV_IMP_WRAP_REPEAT          = 10497,
+};
+
+enum mvGLTFCameraType
+{
+	MV_IMP_PERSPECTIVE = 0,
+	MV_IMP_ORTHOGRAPHIC = 1
 };
 
 struct mvGLTFAttribute
@@ -213,11 +222,36 @@ struct mvGLTFMaterial
 	bool        alpha_mode                 = false;
 };
 
+struct mvGLTFPerspective
+{
+	mvF32 aspectRatio = 0.0f;
+	mvF32 yfov = 0.0f;
+	mvF32 zfar = 0.0f;
+	mvF32 znear = 0.0f;
+};
+
+struct mvGLTFOrthographic
+{
+	mvF32 xmag = 0.0f;
+	mvF32 ymag = 0.0f;
+	mvF32 zfar = 0.0f;
+	mvF32 znear = 0.0f;
+};
+
+struct mvGLTFCamera
+{
+	std::string        name;
+	mvGLTFCameraType   type = MV_IMP_PERSPECTIVE;
+	mvGLTFPerspective  perspective;
+	mvGLTFOrthographic orthographic;
+};
+
 struct mvGLTFNode
 {
 	std::string name;
-	mvS32       mesh_index = -1;
-	mvS32       skin_index = -1;
+	mvS32       mesh_index   = -1;
+	mvS32       skin_index   = -1;
+	mvS32       camera_index = -1;
 	mvU32*      children = nullptr;
 	mvU32       child_count = 0u;
 	mvF32       matrix[16] = {
@@ -251,6 +285,7 @@ struct mvGLTFModel
 	mvGLTFBuffer*     buffers     = nullptr;
 	mvGLTFBufferView* bufferviews = nullptr;
 	mvGLTFAccessor*   accessors   = nullptr;
+	mvGLTFCamera*     cameras     = nullptr;
 
 	mvU32 scene_count      = 0u;
 	mvU32 node_count       = 0u;
@@ -262,6 +297,7 @@ struct mvGLTFModel
 	mvU32 buffer_count     = 0u;
 	mvU32 bufferview_count = 0u;
 	mvU32 accessor_count   = 0u;
+	mvU32 camera_count     = 0u;
 };
 
 //-----------------------------------------------------------------------------
@@ -1026,8 +1062,86 @@ mvJsonMember::operator mvJsonObject& ()
 
 namespace mvImp {
 
+	static mvGLTFCamera*
+	_LoadCameras(mvJsonContext& j, mvU32& size)
+	{
+		if (!j.doesMemberExist("cameras"))
+			return nullptr;
+
+		mvU32 cameraCount = j["cameras"].members.size();
+
+		mvGLTFCamera* cameras = new mvGLTFCamera[cameraCount];
+
+		for (int i = 0; i < cameraCount; i++)
+		{
+			mvJsonObject& jcamera = j["cameras"][i];
+			mvGLTFCamera& camera = cameras[i];
+
+			if (jcamera.doesMemberExist("name"))
+			{
+				camera.name = jcamera.getMember("name");
+			}
+
+			if (jcamera.doesMemberExist("type"))
+			{
+
+				std::string type = jcamera.getMember("type");
+				if (type == "perspective")
+				{
+					camera.type = MV_IMP_PERSPECTIVE;
+				}
+				else
+				{
+					camera.type = MV_IMP_ORTHOGRAPHIC;
+				}
+			}
+
+			if (jcamera.doesMemberExist("perspective"))
+			{
+
+				mvJsonObject perspective = jcamera["perspective"];
+
+				if (perspective.doesMemberExist("aspectRatio"))
+					camera.perspective.aspectRatio = perspective.getMember("aspectRatio");
+
+				if (perspective.doesMemberExist("yfov"))
+					camera.perspective.yfov = perspective.getMember("yfov");
+
+				if (perspective.doesMemberExist("zfar"))
+					camera.perspective.zfar = perspective.getMember("zfar");
+
+				if (perspective.doesMemberExist("znear"))
+					camera.perspective.znear = perspective.getMember("znear");
+
+			}
+
+			if (jcamera.doesMemberExist("orthographic"))
+			{
+
+				mvJsonObject orthographic = jcamera["orthographic"];
+
+				if (orthographic.doesMemberExist("xmag"))
+					camera.orthographic.xmag = orthographic.getMember("xmag");
+
+				if (orthographic.doesMemberExist("ymag"))
+					camera.orthographic.ymag = orthographic.getMember("ymag");
+
+				if (orthographic.doesMemberExist("zfar"))
+					camera.orthographic.zfar = orthographic.getMember("zfar");
+
+				if (orthographic.doesMemberExist("znear"))
+					camera.orthographic.znear = orthographic.getMember("znear");
+
+			}
+
+			size++;
+		}
+
+		return cameras;
+	}
+
 	static mvGLTFScene*
-		_LoadScenes(mvJsonContext& j, mvU32& size)
+	_LoadScenes(mvJsonContext& j, mvU32& size)
 	{
 		if (!j.doesMemberExist("scenes"))
 			return nullptr;
@@ -1059,7 +1173,7 @@ namespace mvImp {
 	}
 
 	static mvGLTFNode*
-		_LoadNodes(mvJsonContext& j, mvU32& size)
+	_LoadNodes(mvJsonContext& j, mvU32& size)
 	{
 		if (!j.doesMemberExist("nodes"))
 			return nullptr;
@@ -1145,7 +1259,7 @@ namespace mvImp {
 	}
 
 	static mvGLTFMesh*
-		_LoadMeshes(mvJsonContext& j, mvU32& size)
+	_LoadMeshes(mvJsonContext& j, mvU32& size)
 	{
 		if (!j.doesMemberExist("meshes"))
 			return nullptr;
@@ -1223,7 +1337,7 @@ namespace mvImp {
 	}
 
 	static mvGLTFMaterial*
-		_LoadMaterials(mvJsonContext& j, mvU32& size)
+	_LoadMaterials(mvJsonContext& j, mvU32& size)
 	{
 		if (!j.doesMemberExist("materials"))
 			return nullptr;
@@ -1319,7 +1433,7 @@ namespace mvImp {
 	}
 
 	static mvGLTFTexture*
-		_LoadTextures(mvJsonContext& j, mvU32& size)
+	_LoadTextures(mvJsonContext& j, mvU32& size)
 	{
 		if (!j.doesMemberExist("textures"))
 			return nullptr;
@@ -1348,7 +1462,7 @@ namespace mvImp {
 	}
 
 	static mvGLTFSampler*
-		_LoadSamplers(mvJsonContext& j, mvU32& size)
+	_LoadSamplers(mvJsonContext& j, mvU32& size)
 	{
 		if (!j.doesMemberExist("samplers"))
 			return nullptr;
@@ -1380,7 +1494,7 @@ namespace mvImp {
 	}
 
 	static mvGLTFImage*
-		_LoadImages(mvJsonContext& j, mvU32& size)
+	_LoadImages(mvJsonContext& j, mvU32& size)
 	{
 		if (!j.doesMemberExist("images"))
 			return nullptr;
@@ -1409,7 +1523,7 @@ namespace mvImp {
 	}
 
 	static mvGLTFBuffer*
-		_LoadBuffers(mvJsonContext& j, mvU32& size)
+	_LoadBuffers(mvJsonContext& j, mvU32& size)
 	{
 		if (!j.doesMemberExist("buffers"))
 			return nullptr;
@@ -1435,7 +1549,7 @@ namespace mvImp {
 	}
 
 	static mvGLTFBufferView*
-		_LoadBufferViews(mvJsonContext& j, mvU32& size)
+	_LoadBufferViews(mvJsonContext& j, mvU32& size)
 	{
 		if (!j.doesMemberExist("bufferViews"))
 			return nullptr;
@@ -1471,7 +1585,7 @@ namespace mvImp {
 	}
 
 	static mvGLTFAccessor*
-		_LoadAccessors(mvJsonContext& j, mvU32& size)
+	_LoadAccessors(mvJsonContext& j, mvU32& size)
 	{
 		if (!j.doesMemberExist("accessors"))
 			return nullptr;
@@ -1619,6 +1733,7 @@ mvLoadBinaryGLTF(const char* root, const char* file)
 	model.buffers = mvImp::_LoadBuffers(context, model.buffer_count);
 	model.bufferviews = mvImp::_LoadBufferViews(context, model.bufferview_count);
 	model.accessors = mvImp::_LoadAccessors(context, model.accessor_count);
+	model.cameras = mvImp::_LoadCameras(context, model.camera_count);
 
 	if (chunkLength + 20 != length)
 	{
@@ -1728,6 +1843,7 @@ mvLoadGLTF(const char* root, const char* file)
 	model.buffers = mvImp::_LoadBuffers(context, model.buffer_count);
 	model.bufferviews = mvImp::_LoadBufferViews(context, model.bufferview_count);
 	model.accessors = mvImp::_LoadAccessors(context, model.accessor_count);
+	model.cameras = mvImp::_LoadCameras(context, model.camera_count);
 
 	for (mvU32 i = 0; i < model.image_count; i++)
 	{

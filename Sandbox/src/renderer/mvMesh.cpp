@@ -213,6 +213,109 @@ mvCreateTexturedQuad(mvAssetManager& assetManager, f32 size)
     return mesh;
 }
 
+mvMesh
+mvCreateFrustum(mvAssetManager& assetManager, f32 width, f32 height, f32 nearZ, f32 farZ)
+{
+    mvVertexLayout layout = mvCreateVertexLayout(
+        {
+            mvVertexElement::Position3D
+        }
+    );
+
+    f32 smallWidth = atan(width / (2.0f * farZ));
+    f32 smallHeight = atan(height / (2.0f * farZ));
+
+    auto vertices = std::vector<f32>{
+         smallWidth,  smallHeight, nearZ,
+        -smallWidth,  smallHeight, nearZ,
+        -smallWidth, -smallHeight, nearZ,
+         smallWidth, -smallHeight, nearZ,
+         width / 2.0f,  height / 2.0f, farZ,
+        -width / 2.0f,  height / 2.0f, farZ,
+        -width / 2.0f, -height / 2.0f, farZ,
+         width / 2.0f, -height / 2.0f, farZ,
+    };
+
+    static auto indices = std::vector<u32>{
+        0, 1,
+        1, 2,
+        2, 3,
+        3, 0,
+        4, 5,
+        5, 6,
+        6, 7,
+        7, 4,
+        0, 4,
+        3, 7,
+        1, 5,
+        2, 6
+    };
+
+    mvMesh mesh{};
+
+    mesh.name = "frustum";
+    mesh.primitives.push_back({});
+    mesh.primitives.back().layout = layout;
+    mesh.primitives.back().vertexBuffer = mvGetBufferAsset(&assetManager, vertices.data(), vertices.size() * sizeof(f32), D3D11_BIND_VERTEX_BUFFER, "frustum_vertex");
+    mesh.primitives.back().indexBuffer = mvGetBufferAsset(&assetManager, indices.data(), indices.size() * sizeof(u32), D3D11_BIND_INDEX_BUFFER, "frustum_index");
+
+    return mesh;
+}
+
+mvMesh
+mvCreateFrustum2(mvAssetManager& assetManager, f32 fov, f32 aspect, f32 nearZ, f32 farZ)
+{
+    mvVertexLayout layout = mvCreateVertexLayout(
+        {
+            mvVertexElement::Position3D
+        }
+    );
+
+    f32 smallWidth = tan(fov) * nearZ;
+    f32 smallHeight = smallWidth / aspect;
+
+    f32 bigWidth = tan(fov) * farZ;
+    f32 bigHeight = bigWidth / aspect;
+
+
+    auto vertices = std::vector<f32>{
+         smallWidth,  smallHeight, nearZ,
+        -smallWidth,  smallHeight, nearZ,
+        -smallWidth, -smallHeight, nearZ,
+         smallWidth, -smallHeight, nearZ,
+         bigWidth,  bigHeight, farZ,
+        -bigWidth,  bigHeight, farZ,
+        -bigWidth, -bigHeight, farZ,
+         bigWidth, -bigHeight, farZ,
+    };
+
+    static auto indices = std::vector<u32>{
+        0, 1,
+        1, 2,
+        2, 3,
+        3, 0,
+        4, 5,
+        5, 6,
+        6, 7,
+        7, 4,
+        0, 4,
+        3, 7,
+        1, 5,
+        2, 6
+    };
+
+    mvMesh mesh{};
+
+    mesh.name = "frustum";
+    mesh.primitives.push_back({});
+    mesh.primitives.back().layout = layout;
+    mesh.primitives.back().vertexBuffer = mvGetBufferAsset(&assetManager, vertices.data(), vertices.size() * sizeof(f32), D3D11_BIND_VERTEX_BUFFER, "frustum_vertex");
+    mesh.primitives.back().indexBuffer = mvGetBufferAsset(&assetManager, indices.data(), indices.size() * sizeof(u32), D3D11_BIND_INDEX_BUFFER, "frustum_index");
+
+    return mesh;
+}
+
+
 static u8
 mvGetAccessorItemCompCount(mvGLTFAccessor& accessor)
 {
@@ -552,6 +655,7 @@ mvLoadGLTFAssets(mvAssetManager& assetManager, mvGLTFModel& model)
             );
 
             // upload index buffer
+
             if (glprimitive.material_index != -1)
             {
 
@@ -634,6 +738,15 @@ mvLoadGLTFAssets(mvAssetManager& assetManager, mvGLTFModel& model)
                 newMesh.primitives.back().materialID = mvGetMaterialAsset(&assetManager, "PBR_VS.hlsl", "PBR_PS.hlsl", materialData);
 
             }
+            else
+            {
+                mvMaterialData materialData{};
+                materialData.albedo = { 0.45f, 0.45f, 0.85f, 1.0f };
+                materialData.metalness = 0.0f;
+                materialData.roughness = 0.5f;
+                materialData.hasAlpha = true;
+                newMesh.primitives.back().materialID = mvGetMaterialAsset(&assetManager, "PBR_VS.hlsl", "PBR_PS.hlsl", materialData);
+            }
 
             newMesh.primitives.back().indexBuffer = mvGetBufferAsset(&assetManager, 
                 indexBuffer.data(), indexBuffer.size() * sizeof(u32), D3D11_BIND_INDEX_BUFFER, std::string(glmesh.name) + std::to_string(currentPrimitive) + "_indexbuffer");
@@ -656,6 +769,8 @@ mvLoadGLTFAssets(mvAssetManager& assetManager, mvGLTFModel& model)
         newNode.name = glnode.name;
         if(glnode.mesh_index > -1)
             newNode.mesh = glnode.mesh_index+meshOffset;
+        if (glnode.camera_index > -1)
+            newNode.camera = glnode.camera_index + meshOffset;
         newNode.childCount = glnode.child_count;
 
         for (i32 i = 0; i < glnode.child_count; i++)

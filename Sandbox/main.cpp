@@ -3,8 +3,8 @@
 // TODO: make most of these runtime options
 static const char* gltfAssetDirectory0 = "../../data/glTF-Sample-Models/2.0/Sponza/glTF/";
 static const char* gltfModel0 = "../../data/glTF-Sample-Models/2.0/Sponza/glTF/Sponza.gltf";
-static const char* gltfAssetDirectory1 = "../../data/glTF-Sample-Models/2.0/DamagedHelmet/glTF-Binary/";
-static const char* gltfModel1 = "../../data/glTF-Sample-Models/2.0/DamagedHelmet/glTF-Binary/DamagedHelmet.glb";
+//static const char* gltfAssetDirectory0 = "../../data/glTF-Sample-Models/2.0/Cameras/glTF/";
+//static const char* gltfModel0 = "../../data/glTF-Sample-Models/2.0/Cameras/glTF/Cameras.gltf";
 static f32         shadowWidth = 95.0f;
 static int         initialWidth = 1850;
 static int         initialHeight = 900;
@@ -33,11 +33,8 @@ int main()
 
     // assets & meshes
     mvGLTFModel gltfmodel0 = mvLoadGLTF(gltfAssetDirectory0, gltfModel0);
-    mvGLTFModel gltfmodel1 = mvLoadGLTF(gltfAssetDirectory1, gltfModel1);
     mvLoadGLTFAssets(am, gltfmodel0);
-    mvLoadGLTFAssets(am, gltfmodel1);
     mvCleanupGLTF(gltfmodel0);
-    mvCleanupGLTF(gltfmodel1);
 
     // main camera
     mvCamera camera{};
@@ -54,6 +51,10 @@ int main()
     mvPointLight pointlight = mvPointLight(am);
     omniShadowMap.info.view = mvCreateLookAtView(pointlight.camera);
 
+    //mvMesh frustum = mvCreateFrustum(am, 5.0f, 5.0f, 0.5f, 100.0f);
+    //mvMesh frustum = mvCreateFrustum2(am, M_PI_2, 1.0f, 0.5f, 100.0f);
+    mvMesh frustum1 = mvCreateFrustum2(am, 45.0f, 1.0f, 0.5f, 50.0f);
+
     // framework constant buffers
     DirectionLightInfo directionLightInfo{};
     mvConstBuffer directionLightBuffer = mvCreateConstBuffer(&directionLightInfo, sizeof(DirectionLightInfo));
@@ -67,21 +68,14 @@ int main()
     bool recreateShadowMapRS = false;
     bool recreateOShadowMapRS = false;
     f32 scale0 = 5.0f;
-    f32 scale1 = 1.0f;
     mvVec3 translate0 = { 0.0f, 0.0f, 0.0f };
-    mvVec3 translate1 = { 0.0f, 0.0f, 0.0f };
     while (true)
     {
         const auto dt = timer.mark() * 1.0f;
 
         mvVec3 scaleVec0 = { scale0, scale0, scale0 };
-        mvVec3 scaleVec1 = { scale1, scale1, scale1 };
-
         mvMat4 stransform0 = mvScale(mvIdentityMat4(), scaleVec0);
-        mvMat4 stransform1 = mvScale(mvIdentityMat4(), scaleVec1);
-
         mvMat4 ttransform0 = mvTranslate(mvIdentityMat4(), translate0);
-        mvMat4 ttransform1 = mvTranslate(mvIdentityMat4(), translate1);
 
         if (const auto ecode = mvProcessViewportEvents()) break;
 
@@ -174,7 +168,7 @@ int main()
         ctx->RSSetState(directionalShadowMap.rasterizationState);
 
         for (int i = 0; i < am.sceneCount; i++)
-            Renderer::mvRenderSceneShadows(am, am.scenes[i].scene, directionalShadowMap.getViewMatrix(), directionalShadowMap.getProjectionMatrix(), i==0 ? stransform0 : stransform1, i==0 ? ttransform0 : ttransform1);
+            Renderer::mvRenderSceneShadows(am, am.scenes[i].scene, directionalShadowMap.getViewMatrix(), directionalShadowMap.getProjectionMatrix(), stransform0, ttransform0);
 
         //-----------------------------------------------------------------------------
         // omni shadow pass
@@ -189,7 +183,7 @@ int main()
             mvMat4 camera_matrix = mvLookAtRH(pointlight.camera.pos, look_target, omniShadowMap.cameraUps[i]);
 
             for (int i = 0; i < am.sceneCount; i++)
-                Renderer::mvRenderSceneShadows(am, am.scenes[i].scene, camera_matrix, mvPerspectiveRH(M_PI_2, 1.0f, 0.5f, 100.0f), i == 0 ? stransform0 : stransform1, i == 0 ? ttransform0 : ttransform1);
+                Renderer::mvRenderSceneShadows(am, am.scenes[i].scene, camera_matrix, mvPerspectiveRH(M_PI_2, 1.0f, 0.5f, 100.0f), stransform0, ttransform0);
         }
 
         //-----------------------------------------------------------------------------
@@ -258,7 +252,7 @@ int main()
         }
 
         for (int i = 0; i < am.sceneCount; i++)
-            Renderer::mvRenderScene(am, am.scenes[i].scene, viewMatrix, projMatrix, i == 0 ? stransform0 : stransform1, i == 0 ? ttransform0 : ttransform1);
+            Renderer::mvRenderScene(am, am.scenes[i].scene, viewMatrix, projMatrix, stransform0, ttransform0);
 
         //-----------------------------------------------------------------------------
         // skybox pass
@@ -293,6 +287,33 @@ int main()
                 // draw
                 ctx->DrawIndexed(skybox.indexBuffer.size / sizeof(u32), 0u, 0u);
             }
+        }
+
+        // render frustum mesh
+        {
+            mvSetPipelineState(pointlight.pipeline2);
+
+            mvTransforms transforms{};
+            transforms.model = mvTranslate(mvIdentityMat4(), pointlight.camera.pos);
+            transforms.modelView = viewMatrix * transforms.model;
+            transforms.modelViewProjection = projMatrix * viewMatrix * transforms.model;
+
+            D3D11_MAPPED_SUBRESOURCE mappedSubresource;
+            ctx->Map(GContext->graphics.tranformCBuf.Get(), 0u, D3D11_MAP_WRITE_DISCARD, 0u, &mappedSubresource);
+            memcpy(mappedSubresource.pData, &transforms, sizeof(mvTransforms));
+            ctx->Unmap(GContext->graphics.tranformCBuf.Get(), 0u);
+
+            // mesh
+            static const UINT offset = 0u;
+            ctx->VSSetConstantBuffers(0u, 1u, GContext->graphics.tranformCBuf.GetAddressOf());
+            ctx->IASetIndexBuffer(am.buffers[frustum1.primitives.back().indexBuffer].buffer.buffer, DXGI_FORMAT_R32_UINT, 0u);
+            static mvVertexLayout lightvertexlayout = mvCreateVertexLayout({ mvVertexElement::Position3D });
+            ctx->IASetVertexBuffers(0u, 1u,
+                &am.buffers[frustum1.primitives.back().vertexBuffer].buffer.buffer,
+                &lightvertexlayout.size, &offset);
+
+            // draw
+            ctx->DrawIndexed(am.buffers[frustum1.primitives.back().indexBuffer].buffer.size / sizeof(u32), 0u, 0u);
         }
 
         //-----------------------------------------------------------------------------
@@ -339,10 +360,8 @@ int main()
             ImGui::Dummy(ImVec2(50.0f, 25.0f));
 
             ImGui::Text("%s", "Scene:");
-            ImGui::DragFloat("Scale 0", &scale0, 0.1f, 0.0f);
-            ImGui::DragFloat3("Translate 0", &translate0.x, 1.0f, -200.0f, 200.0f);
-            ImGui::DragFloat("Scale 1", &scale1, 0.1f, 0.0f);
-            ImGui::DragFloat3("Translate 1", &translate1.x, 1.0f, -200.0f, 200.0f);
+            ImGui::DragFloat("Scale", &scale0, 0.1f, 0.0f);
+            ImGui::DragFloat3("Translate", &translate0.x, 1.0f, -200.0f, 200.0f);
             ImGui::ColorEdit3("Ambient Color", &globalInfo.ambientColor.x);
             ImGui::Checkbox("Use Skybox", (bool*)&globalInfo.useSkybox);
 
@@ -485,6 +504,15 @@ int main()
     pointlight.pipeline.blendState->Release();
     pointlight.pipeline.depthStencilState->Release();
     pointlight.pipeline.rasterizationState->Release();
+
+    pointlight.pipeline2.pixelShader->Release();
+    pointlight.pipeline2.vertexShader->Release();
+    pointlight.pipeline2.pixelBlob->Release();
+    pointlight.pipeline2.vertexBlob->Release();
+    pointlight.pipeline2.inputLayout->Release();
+    pointlight.pipeline2.blendState->Release();
+    pointlight.pipeline2.depthStencilState->Release();
+    pointlight.pipeline2.rasterizationState->Release();
 
     skybox.cubeSampler->Release();
     skybox.vertexBuffer.buffer->Release();

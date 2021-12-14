@@ -8,6 +8,7 @@ struct mvNode
 {
     std::string name;
     mvAssetID   mesh = -1;
+    mvAssetID   camera = -1;
     mvAssetID   children[256];
     u32         childCount = 0u;
     mvMat4      matrix      = mvIdentityMat4();

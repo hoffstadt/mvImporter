@@ -312,7 +312,7 @@ struct mvShadowCubeMap
     ID3D11Texture2D*          texture = nullptr;
     ID3D11DepthStencilView*   depthView[6]{};
     ID3D11ShaderResourceView* resourceView = nullptr;
-    ID3D11RasterizerState* rasterizationState;
+    ID3D11RasterizerState*    rasterizationState;
     mvVec3                    cameraDirections[6];
     mvVec3                    cameraUps[6];
     ID3D11SamplerState*       sampler = nullptr;
@@ -525,6 +525,7 @@ struct mvPointLight
     PointLightInfo info{};
     mvMesh         mesh{};
     mvPipeline     pipeline{};
+    mvPipeline     pipeline2{};
 
     mvPointLight(mvAssetManager& am)
     {
@@ -540,57 +541,107 @@ struct mvPointLight
         // create constant buffer
         buffer = mvCreateConstBuffer(&info, sizeof(PointLightInfo));
 
-        // create pipeline
-        pipeline.topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+        {
+            D3D11_RASTERIZER_DESC rasterDesc = CD3D11_RASTERIZER_DESC(CD3D11_DEFAULT{});
+            rasterDesc.CullMode = D3D11_CULL_BACK;
+            rasterDesc.FrontCounterClockwise = TRUE;
 
-        D3D11_RASTERIZER_DESC rasterDesc = CD3D11_RASTERIZER_DESC(CD3D11_DEFAULT{});
-        rasterDesc.CullMode = D3D11_CULL_BACK;
-        rasterDesc.FrontCounterClockwise = TRUE;
+            GContext->graphics.device->CreateRasterizerState(&rasterDesc, &pipeline.rasterizationState);
 
-        GContext->graphics.device->CreateRasterizerState(&rasterDesc, &pipeline.rasterizationState);
+            D3D11_DEPTH_STENCIL_DESC dsDesc = CD3D11_DEPTH_STENCIL_DESC{ CD3D11_DEFAULT{} };
 
-        D3D11_DEPTH_STENCIL_DESC dsDesc = CD3D11_DEPTH_STENCIL_DESC{ CD3D11_DEFAULT{} };
+            // Depth test parameters
+            dsDesc.DepthEnable = true;
+            dsDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
+            dsDesc.DepthFunc = D3D11_COMPARISON_LESS;
 
-        // Depth test parameters
-        dsDesc.DepthEnable = true;
-        dsDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
-        dsDesc.DepthFunc = D3D11_COMPARISON_LESS;
+            // Stencil test parameters
+            dsDesc.StencilEnable = true;
+            dsDesc.StencilReadMask = 0xFF;
+            dsDesc.StencilWriteMask = 0xFF;
 
-        // Stencil test parameters
-        dsDesc.StencilEnable = true;
-        dsDesc.StencilReadMask = 0xFF;
-        dsDesc.StencilWriteMask = 0xFF;
+            // Stencil operations if pixel is front-facing
+            dsDesc.FrontFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
+            dsDesc.FrontFace.StencilDepthFailOp = D3D11_STENCIL_OP_INCR;
+            dsDesc.FrontFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
+            dsDesc.FrontFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
 
-        // Stencil operations if pixel is front-facing
-        dsDesc.FrontFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
-        dsDesc.FrontFace.StencilDepthFailOp = D3D11_STENCIL_OP_INCR;
-        dsDesc.FrontFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
-        dsDesc.FrontFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
+            // Stencil operations if pixel is back-facing
+            dsDesc.BackFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
+            dsDesc.BackFace.StencilDepthFailOp = D3D11_STENCIL_OP_DECR;
+            dsDesc.BackFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
+            dsDesc.BackFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
 
-        // Stencil operations if pixel is back-facing
-        dsDesc.BackFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
-        dsDesc.BackFace.StencilDepthFailOp = D3D11_STENCIL_OP_DECR;
-        dsDesc.BackFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
-        dsDesc.BackFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
+            GContext->graphics.device->CreateDepthStencilState(&dsDesc, &pipeline.depthStencilState);
 
-        GContext->graphics.device->CreateDepthStencilState(&dsDesc, &pipeline.depthStencilState);
+            D3D11_BLEND_DESC blendDesc = CD3D11_BLEND_DESC{ CD3D11_DEFAULT{} };
+            auto& brt = blendDesc.RenderTarget[0];
+            brt.BlendEnable = TRUE;
+            brt.SrcBlend = D3D11_BLEND_SRC_ALPHA;
+            brt.DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
+            GContext->graphics.device->CreateBlendState(&blendDesc, &pipeline.blendState);
 
-        D3D11_BLEND_DESC blendDesc = CD3D11_BLEND_DESC{ CD3D11_DEFAULT{} };
-        auto& brt = blendDesc.RenderTarget[0];
-        brt.BlendEnable = TRUE;
-        brt.SrcBlend = D3D11_BLEND_SRC_ALPHA;
-        brt.DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
-        GContext->graphics.device->CreateBlendState(&blendDesc, &pipeline.blendState);
+            mvPixelShader pixelShader = mvCreatePixelShader(GContext->IO.shaderDirectory + "Solid_PS.hlsl");
+            mvVertexShader vertexShader = mvCreateVertexShader(GContext->IO.shaderDirectory + "Solid_VS.hlsl", mvCreateVertexLayout({ mvVertexElement::Position3D }));
 
-        mvPixelShader pixelShader = mvCreatePixelShader(GContext->IO.shaderDirectory + "Solid_PS.hlsl");
-        mvVertexShader vertexShader = mvCreateVertexShader(GContext->IO.shaderDirectory + "Solid_VS.hlsl", mvCreateVertexLayout({ mvVertexElement::Position3D }));
+            pipeline.pixelShader = pixelShader.shader;
+            pipeline.pixelBlob = pixelShader.blob;
+            pipeline.vertexShader = vertexShader.shader;
+            pipeline.vertexBlob = vertexShader.blob;
+            pipeline.inputLayout = vertexShader.inputLayout;
+            pipeline.topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+        }
 
-        pipeline.pixelShader = pixelShader.shader;
-        pipeline.pixelBlob = pixelShader.blob;
-        pipeline.vertexShader = vertexShader.shader;
-        pipeline.vertexBlob = vertexShader.blob;
-        pipeline.inputLayout = vertexShader.inputLayout;
-        pipeline.topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+        {
+            D3D11_RASTERIZER_DESC rasterDesc = CD3D11_RASTERIZER_DESC(CD3D11_DEFAULT{});
+            rasterDesc.CullMode = D3D11_CULL_NONE;
+            rasterDesc.FillMode = D3D11_FILL_WIREFRAME;
+
+            GContext->graphics.device->CreateRasterizerState(&rasterDesc, &pipeline2.rasterizationState);
+
+            D3D11_DEPTH_STENCIL_DESC dsDesc = CD3D11_DEPTH_STENCIL_DESC{ CD3D11_DEFAULT{} };
+
+            // Depth test parameters
+            dsDesc.DepthEnable = true;
+            dsDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
+            dsDesc.DepthFunc = D3D11_COMPARISON_LESS;
+
+            // Stencil test parameters
+            dsDesc.StencilEnable = true;
+            dsDesc.StencilReadMask = 0xFF;
+            dsDesc.StencilWriteMask = 0xFF;
+
+            // Stencil operations if pixel is front-facing
+            dsDesc.FrontFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
+            dsDesc.FrontFace.StencilDepthFailOp = D3D11_STENCIL_OP_INCR;
+            dsDesc.FrontFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
+            dsDesc.FrontFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
+
+            // Stencil operations if pixel is back-facing
+            dsDesc.BackFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
+            dsDesc.BackFace.StencilDepthFailOp = D3D11_STENCIL_OP_DECR;
+            dsDesc.BackFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
+            dsDesc.BackFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
+
+            GContext->graphics.device->CreateDepthStencilState(&dsDesc, &pipeline2.depthStencilState);
+
+            D3D11_BLEND_DESC blendDesc = CD3D11_BLEND_DESC{ CD3D11_DEFAULT{} };
+            auto& brt = blendDesc.RenderTarget[0];
+            brt.BlendEnable = TRUE;
+            brt.SrcBlend = D3D11_BLEND_SRC_ALPHA;
+            brt.DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
+            GContext->graphics.device->CreateBlendState(&blendDesc, &pipeline2.blendState);
+
+            mvPixelShader pixelShader = mvCreatePixelShader(GContext->IO.shaderDirectory + "Solid_PS.hlsl");
+            mvVertexShader vertexShader = mvCreateVertexShader(GContext->IO.shaderDirectory + "Solid_VS.hlsl", mvCreateVertexLayout({ mvVertexElement::Position3D }));
+
+            pipeline2.pixelShader = pixelShader.shader;
+            pipeline2.pixelBlob = pixelShader.blob;
+            pipeline2.vertexShader = vertexShader.shader;
+            pipeline2.vertexBlob = vertexShader.blob;
+            pipeline2.inputLayout = vertexShader.inputLayout;
+            pipeline2.topology = D3D11_PRIMITIVE_TOPOLOGY_LINELIST;
+        }
     }
 
 };

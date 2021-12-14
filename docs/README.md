@@ -30,6 +30,7 @@ int main()
     unsigned int buffer_count = gltfmodel.buffer_count;
     unsigned int bufferview_count = gltfmodel.bufferview_count;
     unsigned int accessor_count = gltfmodel.accessor_count;
+    unsigned int camera_count = gltfmodel.camera_count;
 
     // arrays
     mvGLTFScene* scenes = gltfmodel.scenes;
@@ -42,6 +43,7 @@ int main()
     mvGLTFBuffer* buffers = gltfmodel.buffers; // note the data already loaded as bytes in the "data" member
     mvGLTFBufferView* bufferviews = gltfmodel.bufferviews;
     mvGLTFAccessor* accessors = gltfmodel.accessors;
+    mvGLTFCamera* cameras = gltfmodel.cameras;
 
     // now do whatever you want with the data
 
