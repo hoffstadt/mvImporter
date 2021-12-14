@@ -1,7 +1,8 @@
 #include "mvMaterials.h"
+#include "mvAssetManager.h"
 
 mvMaterial
-mvCreateMaterial(const std::string& vs, const std::string& ps, mvMaterialData& materialData)
+mvCreateMaterial(mvAssetManager& am, const std::string& vs, const std::string& ps, mvMaterialData& materialData)
 {
 	mvMaterial material{};
 
@@ -23,26 +24,32 @@ mvCreateMaterial(const std::string& vs, const std::string& ps, mvMaterialData& m
 		}
 	);
 
-	mvPipelineInfo shadowPipelineInfo{};
-	shadowPipelineInfo.pixelShader = materialData.hasAlpha ? "Shadow_PS.hlsl" : "";
-	shadowPipelineInfo.vertexShader = "Shadow_VS.hlsl";
-	shadowPipelineInfo.depthBias = 50;
-	shadowPipelineInfo.slopeBias = 2.0f;
-	shadowPipelineInfo.clamp = 0.1f;
-	shadowPipelineInfo.cull = false;
+	std::string hash = ps + vs +
+		std::to_string(materialData.albedo.x) +
+		std::to_string(materialData.albedo.y) +
+		std::to_string(materialData.albedo.z) +
+		std::to_string(materialData.albedo.w) +
+		std::to_string(materialData.metalness) +
+		std::to_string(materialData.roughness) +
+		std::to_string(materialData.emisiveFactor.x) +
+		std::to_string(materialData.emisiveFactor.y) +
+		std::to_string(materialData.emisiveFactor.z) +
+		std::to_string(materialData.radiance) +
+		std::to_string(materialData.fresnel) +
+		std::string(materialData.hasAlpha ? "T" : "F") +
+		std::string(materialData.useAlbedoMap ? "T" : "F") +
+		std::string(materialData.useNormalMap ? "T" : "F") +
+		std::string(materialData.useRoughnessMap ? "T" : "F") +
+		std::string(materialData.useOcclusionMap ? "T" : "F") +
+		std::string(materialData.useEmissiveMap ? "T" : "F") +
+		std::string(materialData.useMetalMap ? "T" : "F");
 
-	shadowPipelineInfo.layout = mvCreateVertexLayout(
-		{
-			mvVertexElement::Position3D,
-			mvVertexElement::Normal,
-			mvVertexElement::Texture2D,
-			mvVertexElement::Tangent,
-			mvVertexElement::Bitangent
-		}
-	);
+	material.pipeline = mvGetMaterialAssetID(&am, hash);
+	if (material.pipeline == -1)
+	{
+		material.pipeline = mvRegisterAsset(&am, hash, mvFinalizePipeline(pipelineInfo));
+	}
 
-	material.pipeline = mvFinalizePipeline(pipelineInfo);
-	material.shadowPipeline = mvFinalizePipeline(shadowPipelineInfo);
 	material.colorSampler = mvCreateSampler();
 	material.data = materialData;
 	material.buffer = mvCreateConstBuffer(&material.data, sizeof(mvMaterialData));

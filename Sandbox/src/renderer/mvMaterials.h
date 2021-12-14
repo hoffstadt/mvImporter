@@ -6,6 +6,8 @@
 #include "mvPipeline.h"
 #include "mvTextures.h"
 
+struct mvAssetManager;
+
 struct mvMaterialData
 {
     mvVec4 albedo = { 0.45f, 0.45f, 0.85f, 1.0f };
@@ -42,9 +44,8 @@ struct mvMaterial
 {
     mvConstBuffer  buffer;
     mvMaterialData data;
-    mvPipeline     pipeline;
-    mvPipeline     shadowPipeline;
+    mvAssetID      pipeline;
     mvSampler      colorSampler;
 };
 
-mvMaterial mvCreateMaterial(const std::string& vs, const std::string& ps, mvMaterialData& materialData);
+mvMaterial mvCreateMaterial(mvAssetManager& am, const std::string& vs, const std::string& ps, mvMaterialData& materialData);

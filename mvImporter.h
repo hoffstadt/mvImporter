@@ -1192,8 +1192,8 @@ namespace mvImp {
 			if (jnode.doesMemberExist("mesh"))
 				node.mesh_index = jnode.getMember("mesh");
 
-			if (jnode.doesMemberExist("skin"))
-				node.skin_index = jnode.getMember("skin");
+			if (jnode.doesMemberExist("camera"))
+				node.camera_index = jnode.getMember("camera");
 
 			if (jnode.doesMemberExist("skin"))
 				node.skin_index = jnode.getMember("skin");

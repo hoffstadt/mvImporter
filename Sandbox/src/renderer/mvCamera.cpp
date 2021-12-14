@@ -15,21 +15,52 @@ wrap_angle(T theta) noexcept
     return mod;
 }
 
-mvMat4 mvCreateFPSView(mvCamera& camera)
+mvCamera 
+mvCreateOrthoCamera(mvVec3 pos, mvVec3 dir, f32 width, f32 height, f32 near, f32 far)
+{
+    mvCamera camera{};
+    camera.type = MV_CAMERA_ORTHOGRAPHIC;
+    camera.pos = pos;
+    camera.dir = dir;
+    camera.width = width;
+    camera.height = height;
+    camera.nearZ = near;
+    camera.farZ = far;
+
+    return camera;
+}
+
+mvCamera
+mvCreatePerspectiveCamera(mvVec3 pos, f32 fov, f32 aspect, f32 near, f32 far)
+{
+    mvCamera camera{};
+    camera.type = MV_CAMERA_PERSPECTIVE;
+    camera.pos = pos;
+    camera.aspectRatio = aspect;
+    camera.fieldOfView = fov;
+    camera.nearZ = near;
+    camera.farZ = far;
+    camera.front = { 0.0f, 0.0f, 1.0f };
+
+    return camera;
+}
+
+mvMat4 
+mvCreateFPSView(mvCamera& camera)
 {
     return mvFPSViewRH(camera.pos, camera.pitch, camera.yaw);
 }
 
 mvMat4
-mvCreateOrthoView(mvOrthoCamera& camera)
+mvCreateOrthoView(mvCamera& camera)
 {
     return mvLookAtRH(camera.pos, camera.pos + camera.dir, camera.up);
 }
 
 mvMat4
-mvCreateOrthoProjection(mvOrthoCamera& camera)
+mvCreateOrthoProjection(mvCamera& camera)
 {
-    return mvOrthoRH(camera.left, camera.right, camera.bottom, camera.top, camera.nearZ, camera.farZ);
+    return mvOrthoRH(-camera.width/2.0f, camera.width / 2.0f, -camera.height / 2.0f, -camera.height / 2.0f, camera.nearZ, camera.farZ);
 }
 
 mvMat4
@@ -46,7 +77,7 @@ mvCreateLookAtView(mvCamera& camera)
 mvMat4
 mvCreateLookAtProjection(mvCamera& camera)
 {
-    return mvPerspectiveRH(camera.fieldOfView, camera.aspect, camera.nearZ, camera.farZ);
+    return mvPerspectiveRH(camera.fieldOfView, camera.aspectRatio, camera.nearZ, camera.farZ);
 }
 
 void 

@@ -58,12 +58,16 @@ mvCreateCube(mvAssetManager& assetManager, f32 size)
     mesh.name = "cube";
     mesh.primitives.push_back({});
     mesh.primitives.back().layout = layout;
-    mesh.primitives.back().vertexBuffer = mvGetBufferAsset(&assetManager,
+    mesh.primitives.back().vertexBuffer = mvGetBufferAssetID(&assetManager,
+        "cube_vertex" + std::to_string(side),
         vertices.data(),
         vertices.size() * sizeof(f32),
-        D3D11_BIND_VERTEX_BUFFER,
-        "cube_vertex" + std::to_string(side));
-    mesh.primitives.back().indexBuffer = mvGetBufferAsset(&assetManager, indices.data(), indices.size() * sizeof(u32), D3D11_BIND_INDEX_BUFFER, "cube_index");
+        D3D11_BIND_VERTEX_BUFFER);
+    mesh.primitives.back().indexBuffer = mvGetBufferAssetID(&assetManager, 
+        "cube_index",
+        indices.data(), 
+        indices.size() * sizeof(u32), 
+        D3D11_BIND_INDEX_BUFFER);
 
     return mesh;
 }
@@ -147,12 +151,16 @@ mvCreateTexturedCube(mvAssetManager& assetManager, f32 size)
     mesh.name = "textured cube";
     mesh.primitives.push_back({});
     mesh.primitives.back().layout = layout;
-    mesh.primitives.back().vertexBuffer = mvGetBufferAsset(&assetManager,
+    mesh.primitives.back().vertexBuffer = mvGetBufferAssetID(&assetManager,
+        "textured_cube_vertex" + std::to_string(side),
         vertices.data(), 
         vertices.size() * sizeof(f32), 
-        D3D11_BIND_VERTEX_BUFFER, 
-        "textured_cube_vertex" + std::to_string(side));
-    mesh.primitives.back().indexBuffer = mvGetBufferAsset(&assetManager, indices.data(), indices.size() * sizeof(u32), D3D11_BIND_INDEX_BUFFER, "textured_cube_index");
+        D3D11_BIND_VERTEX_BUFFER);
+    mesh.primitives.back().indexBuffer = mvGetBufferAssetID(&assetManager, 
+        "textured_cube_index",
+        indices.data(), 
+        indices.size() * sizeof(u32), 
+        D3D11_BIND_INDEX_BUFFER);
 
     return mesh;
 }
@@ -207,8 +215,16 @@ mvCreateTexturedQuad(mvAssetManager& assetManager, f32 size)
     mesh.name = "textured quad";
     mesh.primitives.push_back({});
     mesh.primitives.back().layout = layout;
-    mesh.primitives.back().vertexBuffer = mvGetBufferAsset(&assetManager, vertices.data(), vertices.size() * sizeof(f32), D3D11_BIND_VERTEX_BUFFER, "textured_quad_vertex");
-    mesh.primitives.back().indexBuffer = mvGetBufferAsset(&assetManager, indices.data(), indices.size()*sizeof(u32), D3D11_BIND_INDEX_BUFFER, "textured_quad_index");
+    mesh.primitives.back().vertexBuffer = mvGetBufferAssetID(&assetManager, 
+        "textured_quad_vertex",
+        vertices.data(), 
+        vertices.size() * sizeof(f32),
+        D3D11_BIND_VERTEX_BUFFER);
+    mesh.primitives.back().indexBuffer = mvGetBufferAssetID(&assetManager,
+        "textured_quad_index",
+        indices.data(), 
+        indices.size()*sizeof(u32), 
+        D3D11_BIND_INDEX_BUFFER);
 
     return mesh;
 }
@@ -216,6 +232,9 @@ mvCreateTexturedQuad(mvAssetManager& assetManager, f32 size)
 mvMesh
 mvCreateFrustum(mvAssetManager& assetManager, f32 width, f32 height, f32 nearZ, f32 farZ)
 {
+    static u32 id = 0;
+    id++;
+
     mvVertexLayout layout = mvCreateVertexLayout(
         {
             mvVertexElement::Position3D
@@ -253,11 +272,19 @@ mvCreateFrustum(mvAssetManager& assetManager, f32 width, f32 height, f32 nearZ, 
 
     mvMesh mesh{};
 
-    mesh.name = "frustum";
+    mesh.name = "frustum1_" + std::to_string(id);
     mesh.primitives.push_back({});
     mesh.primitives.back().layout = layout;
-    mesh.primitives.back().vertexBuffer = mvGetBufferAsset(&assetManager, vertices.data(), vertices.size() * sizeof(f32), D3D11_BIND_VERTEX_BUFFER, "frustum_vertex");
-    mesh.primitives.back().indexBuffer = mvGetBufferAsset(&assetManager, indices.data(), indices.size() * sizeof(u32), D3D11_BIND_INDEX_BUFFER, "frustum_index");
+    mesh.primitives.back().vertexBuffer = mvGetBufferAssetID(&assetManager, 
+        "frustum_vertex1_" + std::to_string(id),
+        vertices.data(), 
+        vertices.size() * sizeof(f32), 
+        D3D11_BIND_VERTEX_BUFFER);
+    mesh.primitives.back().indexBuffer = mvGetBufferAssetID(&assetManager, 
+        "frustum_index1",
+        indices.data(), 
+        indices.size() * sizeof(u32), 
+        D3D11_BIND_INDEX_BUFFER);
 
     return mesh;
 }
@@ -265,6 +292,8 @@ mvCreateFrustum(mvAssetManager& assetManager, f32 width, f32 height, f32 nearZ, 
 mvMesh
 mvCreateFrustum2(mvAssetManager& assetManager, f32 fov, f32 aspect, f32 nearZ, f32 farZ)
 {
+    static u32 id = 0;
+    id++;
     mvVertexLayout layout = mvCreateVertexLayout(
         {
             mvVertexElement::Position3D
@@ -306,11 +335,76 @@ mvCreateFrustum2(mvAssetManager& assetManager, f32 fov, f32 aspect, f32 nearZ, f
 
     mvMesh mesh{};
 
-    mesh.name = "frustum";
+    mesh.name = "frustum2_" + std::to_string(id);
     mesh.primitives.push_back({});
     mesh.primitives.back().layout = layout;
-    mesh.primitives.back().vertexBuffer = mvGetBufferAsset(&assetManager, vertices.data(), vertices.size() * sizeof(f32), D3D11_BIND_VERTEX_BUFFER, "frustum_vertex");
-    mesh.primitives.back().indexBuffer = mvGetBufferAsset(&assetManager, indices.data(), indices.size() * sizeof(u32), D3D11_BIND_INDEX_BUFFER, "frustum_index");
+    mesh.primitives.back().vertexBuffer = mvGetBufferAssetID(&assetManager, 
+        "frustum_vertex2_" + std::to_string(id),
+        vertices.data(), 
+        vertices.size() * sizeof(f32), 
+        D3D11_BIND_VERTEX_BUFFER);
+    mesh.primitives.back().indexBuffer = mvGetBufferAssetID(&assetManager, 
+        "frustum_index2",
+        indices.data(), 
+        indices.size() * sizeof(u32), 
+        D3D11_BIND_INDEX_BUFFER);
+
+    return mesh;
+}
+
+mvMesh
+mvCreateOrthoFrustum(mvAssetManager& assetManager, f32 width, f32 height, f32 nearZ, f32 farZ)
+{
+    static u32 id = 0;
+    id++;
+
+    mvVertexLayout layout = mvCreateVertexLayout(
+        {
+            mvVertexElement::Position3D
+        }
+    );
+
+    auto vertices = std::vector<f32>{
+         width,  height, nearZ,
+        -width,  height, nearZ,
+        -width, -height, nearZ,
+         width, -height, nearZ,
+         width / 2.0f,  height / 2.0f, farZ,
+        -width / 2.0f,  height / 2.0f, farZ,
+        -width / 2.0f, -height / 2.0f, farZ,
+         width / 2.0f, -height / 2.0f, farZ,
+    };
+
+    static auto indices = std::vector<u32>{
+        0, 1,
+        1, 2,
+        2, 3,
+        3, 0,
+        4, 5,
+        5, 6,
+        6, 7,
+        7, 4,
+        0, 4,
+        3, 7,
+        1, 5,
+        2, 6
+    };
+
+    mvMesh mesh{};
+
+    mesh.name = "frustum3_" + std::to_string(id);
+    mesh.primitives.push_back({});
+    mesh.primitives.back().layout = layout;
+    mesh.primitives.back().vertexBuffer = mvGetBufferAssetID(&assetManager,
+        "frustum_vertex3_" + std::to_string(id),
+        vertices.data(),
+        vertices.size() * sizeof(f32),
+        D3D11_BIND_VERTEX_BUFFER);
+    mesh.primitives.back().indexBuffer = mvGetBufferAssetID(&assetManager,
+        "frustum_index3",
+        indices.data(),
+        indices.size() * sizeof(u32),
+        D3D11_BIND_INDEX_BUFFER);
 
     return mesh;
 }
@@ -407,6 +501,32 @@ mvLoadGLTFAssets(mvAssetManager& assetManager, mvGLTFModel& model)
     u32 nodeOffset = assetManager.nodeCount;
     u32 meshOffset = assetManager.meshCount;
     u32 materialOffset = assetManager.materialCount;
+    u32 cameraOffset = assetManager.cameraCount;
+
+    for (u32 currentCamera = 0u; currentCamera < model.camera_count; currentCamera++)
+    {
+        mvGLTFCamera& glcamera = model.cameras[currentCamera];
+        mvCamera camera{};
+
+        if (glcamera.type == MV_IMP_PERSPECTIVE)
+        {
+            camera.type = MV_CAMERA_PERSPECTIVE;
+            camera.aspectRatio = glcamera.perspective.aspectRatio;
+            camera.farZ = glcamera.perspective.zfar;
+            camera.nearZ = glcamera.perspective.znear;
+            camera.fieldOfView = glcamera.perspective.yfov;
+        }
+        else
+        {
+            camera.type = MV_CAMERA_ORTHOGRAPHIC;
+            camera.farZ = glcamera.orthographic.zfar;
+            camera.nearZ = glcamera.orthographic.znear;
+            camera.width = glcamera.orthographic.xmag * 2.0f;
+            camera.height = glcamera.orthographic.ymag * 2.0f;
+        }
+
+        mvRegisterAsset(&assetManager, glcamera.name, camera);
+    }
 
     for (u32 currentMesh = 0u; currentMesh < model.mesh_count; currentMesh++)
     {
@@ -675,10 +795,10 @@ mvLoadGLTFAssets(mvAssetManager& assetManager, mvGLTFModel& model)
                     std::string uri = model.images[texture.image_index].uri;
                     if (model.images[texture.image_index].embedded)
                     {
-                        newMesh.primitives.back().albedoTexture = mvGetTextureAsset(&assetManager, model.root + newMesh.name + std::to_string(currentPrimitive) + uri + "_a", model.images[texture.image_index].data);
+                        newMesh.primitives.back().albedoTexture = mvGetTextureAssetID(&assetManager, model.root + newMesh.name + std::to_string(currentPrimitive) + uri + "_a", model.images[texture.image_index].data);
                     }
                     else
-                        newMesh.primitives.back().albedoTexture = mvGetTextureAsset(&assetManager, model.root + uri);
+                        newMesh.primitives.back().albedoTexture = mvGetTextureAssetID(&assetManager, model.root + uri);
                     materialData.useAlbedoMap = true;
                 }
 
@@ -688,10 +808,10 @@ mvLoadGLTFAssets(mvAssetManager& assetManager, mvGLTFModel& model)
                     std::string uri = model.images[texture.image_index].uri;
                     if (model.images[texture.image_index].embedded)
                     {
-                        newMesh.primitives.back().normalTexture = mvGetTextureAsset(&assetManager, model.root + newMesh.name + std::to_string(currentPrimitive) + uri + "_n", model.images[texture.image_index].data);
+                        newMesh.primitives.back().normalTexture = mvGetTextureAssetID(&assetManager, model.root + newMesh.name + std::to_string(currentPrimitive) + uri + "_n", model.images[texture.image_index].data);
                     }
                     else
-                        newMesh.primitives.back().normalTexture = mvGetTextureAsset(&assetManager, model.root + uri);
+                        newMesh.primitives.back().normalTexture = mvGetTextureAssetID(&assetManager, model.root + uri);
                     materialData.useNormalMap = true;
                 }
 
@@ -701,10 +821,10 @@ mvLoadGLTFAssets(mvAssetManager& assetManager, mvGLTFModel& model)
                     std::string uri = model.images[texture.image_index].uri;
                     if (model.images[texture.image_index].embedded)
                     {
-                        newMesh.primitives.back().metalRoughnessTexture = mvGetTextureAsset(&assetManager, model.root + newMesh.name + std::to_string(currentPrimitive) + uri + "_m", model.images[texture.image_index].data);
+                        newMesh.primitives.back().metalRoughnessTexture = mvGetTextureAssetID(&assetManager, model.root + newMesh.name + std::to_string(currentPrimitive) + uri + "_m", model.images[texture.image_index].data);
                     }
                     else
-                        newMesh.primitives.back().metalRoughnessTexture = mvGetTextureAsset(&assetManager, model.root + uri);
+                        newMesh.primitives.back().metalRoughnessTexture = mvGetTextureAssetID(&assetManager, model.root + uri);
                     materialData.useRoughnessMap = true;
                     materialData.useMetalMap = true;
                 }
@@ -715,10 +835,10 @@ mvLoadGLTFAssets(mvAssetManager& assetManager, mvGLTFModel& model)
                     std::string uri = model.images[texture.image_index].uri;
                     if (model.images[texture.image_index].embedded)
                     {
-                        newMesh.primitives.back().emissiveTexture = mvGetTextureAsset(&assetManager, model.root + newMesh.name + std::to_string(currentPrimitive) + uri + "_e", model.images[texture.image_index].data);
+                        newMesh.primitives.back().emissiveTexture = mvGetTextureAssetID(&assetManager, model.root + newMesh.name + std::to_string(currentPrimitive) + uri + "_e", model.images[texture.image_index].data);
                     }
                     else
-                        newMesh.primitives.back().emissiveTexture = mvGetTextureAsset(&assetManager, model.root + uri);
+                        newMesh.primitives.back().emissiveTexture = mvGetTextureAssetID(&assetManager, model.root + uri);
                     materialData.useEmissiveMap = true;
                 }
 
@@ -728,14 +848,39 @@ mvLoadGLTFAssets(mvAssetManager& assetManager, mvGLTFModel& model)
                     std::string uri = model.images[texture.image_index].uri;
                     if (model.images[texture.image_index].embedded)
                     {
-                        newMesh.primitives.back().occlusionTexture = mvGetTextureAsset(&assetManager, model.root + newMesh.name + std::to_string(currentPrimitive) + uri + "_o", model.images[texture.image_index].data);
+                        newMesh.primitives.back().occlusionTexture = mvGetTextureAssetID(&assetManager, model.root + newMesh.name + std::to_string(currentPrimitive) + uri + "_o", model.images[texture.image_index].data);
                     }
                     else
-                        newMesh.primitives.back().occlusionTexture = mvGetTextureAsset(&assetManager, model.root + uri);
+                        newMesh.primitives.back().occlusionTexture = mvGetTextureAssetID(&assetManager, model.root + uri);
                     materialData.useOcclusionMap = true;
                 }
 
-                newMesh.primitives.back().materialID = mvGetMaterialAsset(&assetManager, "PBR_VS.hlsl", "PBR_PS.hlsl", materialData);
+                std::string hash = std::string("PBR_PS.hlsl") +
+                    std::string("PBR_VS.hlsl") +
+                    std::to_string(materialData.albedo.x) +
+                    std::to_string(materialData.albedo.y) +
+                    std::to_string(materialData.albedo.z) +
+                    std::to_string(materialData.albedo.w) +
+                    std::to_string(materialData.metalness) +
+                    std::to_string(materialData.roughness) +
+                    std::to_string(materialData.emisiveFactor.x) +
+                    std::to_string(materialData.emisiveFactor.y) +
+                    std::to_string(materialData.emisiveFactor.z) +
+                    std::to_string(materialData.radiance) +
+                    std::to_string(materialData.fresnel) +
+                    std::string(materialData.hasAlpha ? "T" : "F") +
+                    std::string(materialData.useAlbedoMap ? "T" : "F") +
+                    std::string(materialData.useNormalMap ? "T" : "F") +
+                    std::string(materialData.useRoughnessMap ? "T" : "F") +
+                    std::string(materialData.useOcclusionMap ? "T" : "F") +
+                    std::string(materialData.useEmissiveMap ? "T" : "F") +
+                    std::string(materialData.useMetalMap ? "T" : "F");
+
+                newMesh.primitives.back().materialID = mvGetMaterialAssetID(&assetManager, hash);
+                if (newMesh.primitives.back().materialID == -1)
+                {
+                    newMesh.primitives.back().materialID = mvRegisterAsset(&assetManager, hash, mvCreateMaterial(assetManager, "PBR_VS.hlsl", "PBR_PS.hlsl", materialData));
+                }
 
             }
             else
@@ -745,19 +890,47 @@ mvLoadGLTFAssets(mvAssetManager& assetManager, mvGLTFModel& model)
                 materialData.metalness = 0.0f;
                 materialData.roughness = 0.5f;
                 materialData.hasAlpha = true;
-                newMesh.primitives.back().materialID = mvGetMaterialAsset(&assetManager, "PBR_VS.hlsl", "PBR_PS.hlsl", materialData);
+                std::string hash = std::string("PBR_PS.hlsl") +
+                    std::string("PBR_VS.hlsl") +
+                    std::to_string(materialData.albedo.x) +
+                    std::to_string(materialData.albedo.y) +
+                    std::to_string(materialData.albedo.z) +
+                    std::to_string(materialData.albedo.w) +
+                    std::to_string(materialData.metalness) +
+                    std::to_string(materialData.roughness) +
+                    std::to_string(materialData.emisiveFactor.x) +
+                    std::to_string(materialData.emisiveFactor.y) +
+                    std::to_string(materialData.emisiveFactor.z) +
+                    std::to_string(materialData.radiance) +
+                    std::to_string(materialData.fresnel) +
+                    std::string(materialData.hasAlpha ? "T" : "F") +
+                    std::string(materialData.useAlbedoMap ? "T" : "F") +
+                    std::string(materialData.useNormalMap ? "T" : "F") +
+                    std::string(materialData.useRoughnessMap ? "T" : "F") +
+                    std::string(materialData.useOcclusionMap ? "T" : "F") +
+                    std::string(materialData.useEmissiveMap ? "T" : "F") +
+                    std::string(materialData.useMetalMap ? "T" : "F");
+
+                newMesh.primitives.back().materialID = mvGetMaterialAssetID(&assetManager, hash);
+                if (newMesh.primitives.back().materialID == -1)
+                {
+                    newMesh.primitives.back().materialID = mvRegisterAsset(&assetManager, hash, mvCreateMaterial(assetManager, "PBR_VS.hlsl", "PBR_PS.hlsl", materialData));
+                }
             }
 
-            newMesh.primitives.back().indexBuffer = mvGetBufferAsset(&assetManager, 
-                indexBuffer.data(), indexBuffer.size() * sizeof(u32), D3D11_BIND_INDEX_BUFFER, std::string(glmesh.name) + std::to_string(currentPrimitive) + "_indexbuffer");
-            newMesh.primitives.back().vertexBuffer = mvGetBufferAsset(&assetManager,
+            newMesh.primitives.back().indexBuffer = mvGetBufferAssetID(&assetManager,
+                std::string(glmesh.name) + std::to_string(currentPrimitive) + "_indexbuffer",
+                indexBuffer.data(), 
+                indexBuffer.size() * sizeof(u32), 
+                D3D11_BIND_INDEX_BUFFER);
+            newMesh.primitives.back().vertexBuffer = mvGetBufferAssetID(&assetManager,
+                std::string(glmesh.name) + std::to_string(currentPrimitive) + "_vertexBuffer",
                 vertexBuffer.data(),
                 vertexBuffer.size() * sizeof(f32),
-                D3D11_BIND_VERTEX_BUFFER,
-                std::string(glmesh.name) + std::to_string(currentPrimitive) + "_vertexBuffer");
+                D3D11_BIND_VERTEX_BUFFER);
         }
 
-        mvRegistryMeshAsset(&assetManager, newMesh);
+        mvRegisterAsset(&assetManager, newMesh.name + std::to_string(currentMesh), newMesh);
 
     }
 
@@ -768,9 +941,24 @@ mvLoadGLTFAssets(mvAssetManager& assetManager, mvGLTFModel& model)
         mvNode newNode{};
         newNode.name = glnode.name;
         if(glnode.mesh_index > -1)
-            newNode.mesh = glnode.mesh_index+meshOffset;
+            newNode.mesh = glnode.mesh_index + meshOffset;
         if (glnode.camera_index > -1)
-            newNode.camera = glnode.camera_index + meshOffset;
+        {
+            
+            newNode.camera = glnode.camera_index + cameraOffset;
+            mvCamera& camera = assetManager.cameras[newNode.camera].asset;
+
+            if (camera.type == MV_CAMERA_PERSPECTIVE)
+            {
+                mvMesh frustum1 = mvCreateFrustum2(assetManager, camera.fieldOfView*180.0f/M_PI, camera.aspectRatio, camera.nearZ, camera.farZ);
+                newNode.mesh = mvRegisterAsset(&assetManager, "node_camera_" + std::to_string(currentNode), frustum1);
+            }
+            else
+            {
+                mvMesh frustum1 = mvCreateOrthoFrustum(assetManager, camera.width, camera.height, camera.nearZ, camera.farZ);
+                newNode.mesh = mvRegisterAsset(&assetManager, "bad_node_camera_" + std::to_string(currentNode), frustum1);
+            }
+        }
         newNode.childCount = glnode.child_count;
 
         for (i32 i = 0; i < glnode.child_count; i++)
@@ -816,7 +1004,7 @@ mvLoadGLTFAssets(mvAssetManager& assetManager, mvGLTFModel& model)
             newNode.matrix = mvTranslate(mvIdentityMat4(), newNode.translation) * rotationMat * mvScale(mvIdentityMat4(), newNode.scale);
         }
 
-        mvRegistryNodeAsset(&assetManager, newNode);
+        mvRegisterAsset(&assetManager, "node_" + std::to_string(currentNode), newNode);
     }
 
     for (u32 currentScene = 0u; currentScene < model.scene_count; currentScene++)
@@ -829,6 +1017,6 @@ mvLoadGLTFAssets(mvAssetManager& assetManager, mvGLTFModel& model)
         for (i32 i = 0; i < glscene.node_count; i++)
             newScene.nodes[i] = glscene.nodes[i] + nodeOffset;
 
-        mvRegistrySceneAsset(&assetManager, newScene);
+        mvRegisterAsset(&assetManager, "scene_" + std::to_string(currentScene), newScene);
     }
 }

@@ -115,7 +115,7 @@ struct mvSkybox
     mvCubeTexture       cubeTexture;
     mvPipeline          pipeline;
 
-    mvSkybox()
+    mvSkybox(mvAssetManager& am)
     {
         // setup pipeline
         D3D11_DEPTH_STENCIL_DESC dsDesc = CD3D11_DEPTH_STENCIL_DESC{ CD3D11_DEFAULT{} };
@@ -146,6 +146,8 @@ struct mvSkybox
         pipeline.vertexBlob = vertexShader.blob;
         pipeline.inputLayout = vertexShader.inputLayout;
         pipeline.topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+
+        mvRegisterAsset(&am, "skybox_pipeline", pipeline);
 
         const float side = 1.0f / 2.0f;
         auto vertices = std::vector<f32>{
@@ -191,7 +193,7 @@ struct mvShadowMap
     ID3D11ShaderResourceView*      resourceView;
     ID3D11RasterizerState*         rasterizationState;
     ID3D11SamplerState*            sampler;
-    mvOrthoCamera                  camera;
+    mvCamera                       camera;
     D3D11_VIEWPORT                 viewport;
     mvConstBuffer                  buffer;
     DirectionalShadowTransformInfo info;
@@ -212,15 +214,14 @@ struct mvShadowMap
         f32 zcomponent = sinf(M_PI * angle / 180.0f);
         f32 ycomponent = cosf(M_PI * angle / 180.0f);
 
-        camera.pos = { 0.0f, 100.0f, 0.0f };
-        camera.dir = { 0.0f, -ycomponent, zcomponent };
-        camera.up = { 1.0f, 0.0f, 0.0f };
-        camera.left = -width;
-        camera.right = width;
-        camera.bottom = -width;
-        camera.top = width;
-        camera.nearZ = -121.0f;
-        camera.farZ = 121.0f;
+        camera = mvCreateOrthoCamera(
+            { 0.0f, 100.0f, 0.0f },
+            { 0.0f, -ycomponent, zcomponent },
+            width*2.0f,
+            width*2.0f,
+            -121.0f,
+            121.0f
+            );
 
         D3D11_TEXTURE2D_DESC shadowMapDesc;
         ZeroMemory(&shadowMapDesc, sizeof(D3D11_TEXTURE2D_DESC));
@@ -303,7 +304,13 @@ struct mvShadowMap
 
     mvMat4 getProjectionMatrix()
     {
-        return mvOrthoRH(camera.left, camera.right, camera.bottom, camera.top, camera.nearZ, camera.farZ);
+        return mvOrthoRH(
+            -camera.width/2.0f, 
+            camera.width / 2.0f, 
+            -camera.height / 2.0f, 
+            camera.height / 2.0f, 
+            camera.nearZ, 
+            camera.farZ);
     }
 };
 
@@ -420,8 +427,8 @@ struct mvShadowCubeMap
 
 struct mvOffscreen
 {
-    ID3D11Texture2D* texture;
-    ID3D11Texture2D* depthTexture;
+    ID3D11Texture2D*          texture;
+    ID3D11Texture2D*          depthTexture;
     ID3D11RenderTargetView*   targetView = nullptr;
     ID3D11DepthStencilView*   depthView = nullptr;
     ID3D11ShaderResourceView* resourceView = nullptr;
@@ -524,124 +531,23 @@ struct mvPointLight
     mvConstBuffer  buffer{};
     PointLightInfo info{};
     mvMesh         mesh{};
-    mvPipeline     pipeline{};
-    mvPipeline     pipeline2{};
 
     mvPointLight(mvAssetManager& am)
     {
-        // setup camera
-        camera.aspect = 1.0f;
-        camera.yaw = 0.0f;
-        camera.pitch = 0.0f;
-        camera.pos = info.viewLightPos.xyz();
+
+        camera = mvCreatePerspectiveCamera(
+            info.viewLightPos.xyz(),
+            (f32)M_PI_4,
+            1.0f,
+            0.1f,
+            400.0f
+        );
 
         // create mesh
         mesh = mvCreateCube(am, 0.25f);
 
         // create constant buffer
         buffer = mvCreateConstBuffer(&info, sizeof(PointLightInfo));
-
-        {
-            D3D11_RASTERIZER_DESC rasterDesc = CD3D11_RASTERIZER_DESC(CD3D11_DEFAULT{});
-            rasterDesc.CullMode = D3D11_CULL_BACK;
-            rasterDesc.FrontCounterClockwise = TRUE;
-
-            GContext->graphics.device->CreateRasterizerState(&rasterDesc, &pipeline.rasterizationState);
-
-            D3D11_DEPTH_STENCIL_DESC dsDesc = CD3D11_DEPTH_STENCIL_DESC{ CD3D11_DEFAULT{} };
-
-            // Depth test parameters
-            dsDesc.DepthEnable = true;
-            dsDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
-            dsDesc.DepthFunc = D3D11_COMPARISON_LESS;
-
-            // Stencil test parameters
-            dsDesc.StencilEnable = true;
-            dsDesc.StencilReadMask = 0xFF;
-            dsDesc.StencilWriteMask = 0xFF;
-
-            // Stencil operations if pixel is front-facing
-            dsDesc.FrontFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
-            dsDesc.FrontFace.StencilDepthFailOp = D3D11_STENCIL_OP_INCR;
-            dsDesc.FrontFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
-            dsDesc.FrontFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
-
-            // Stencil operations if pixel is back-facing
-            dsDesc.BackFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
-            dsDesc.BackFace.StencilDepthFailOp = D3D11_STENCIL_OP_DECR;
-            dsDesc.BackFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
-            dsDesc.BackFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
-
-            GContext->graphics.device->CreateDepthStencilState(&dsDesc, &pipeline.depthStencilState);
-
-            D3D11_BLEND_DESC blendDesc = CD3D11_BLEND_DESC{ CD3D11_DEFAULT{} };
-            auto& brt = blendDesc.RenderTarget[0];
-            brt.BlendEnable = TRUE;
-            brt.SrcBlend = D3D11_BLEND_SRC_ALPHA;
-            brt.DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
-            GContext->graphics.device->CreateBlendState(&blendDesc, &pipeline.blendState);
-
-            mvPixelShader pixelShader = mvCreatePixelShader(GContext->IO.shaderDirectory + "Solid_PS.hlsl");
-            mvVertexShader vertexShader = mvCreateVertexShader(GContext->IO.shaderDirectory + "Solid_VS.hlsl", mvCreateVertexLayout({ mvVertexElement::Position3D }));
-
-            pipeline.pixelShader = pixelShader.shader;
-            pipeline.pixelBlob = pixelShader.blob;
-            pipeline.vertexShader = vertexShader.shader;
-            pipeline.vertexBlob = vertexShader.blob;
-            pipeline.inputLayout = vertexShader.inputLayout;
-            pipeline.topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-        }
-
-        {
-            D3D11_RASTERIZER_DESC rasterDesc = CD3D11_RASTERIZER_DESC(CD3D11_DEFAULT{});
-            rasterDesc.CullMode = D3D11_CULL_NONE;
-            rasterDesc.FillMode = D3D11_FILL_WIREFRAME;
-
-            GContext->graphics.device->CreateRasterizerState(&rasterDesc, &pipeline2.rasterizationState);
-
-            D3D11_DEPTH_STENCIL_DESC dsDesc = CD3D11_DEPTH_STENCIL_DESC{ CD3D11_DEFAULT{} };
-
-            // Depth test parameters
-            dsDesc.DepthEnable = true;
-            dsDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
-            dsDesc.DepthFunc = D3D11_COMPARISON_LESS;
-
-            // Stencil test parameters
-            dsDesc.StencilEnable = true;
-            dsDesc.StencilReadMask = 0xFF;
-            dsDesc.StencilWriteMask = 0xFF;
-
-            // Stencil operations if pixel is front-facing
-            dsDesc.FrontFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
-            dsDesc.FrontFace.StencilDepthFailOp = D3D11_STENCIL_OP_INCR;
-            dsDesc.FrontFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
-            dsDesc.FrontFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
-
-            // Stencil operations if pixel is back-facing
-            dsDesc.BackFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
-            dsDesc.BackFace.StencilDepthFailOp = D3D11_STENCIL_OP_DECR;
-            dsDesc.BackFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
-            dsDesc.BackFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
-
-            GContext->graphics.device->CreateDepthStencilState(&dsDesc, &pipeline2.depthStencilState);
-
-            D3D11_BLEND_DESC blendDesc = CD3D11_BLEND_DESC{ CD3D11_DEFAULT{} };
-            auto& brt = blendDesc.RenderTarget[0];
-            brt.BlendEnable = TRUE;
-            brt.SrcBlend = D3D11_BLEND_SRC_ALPHA;
-            brt.DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
-            GContext->graphics.device->CreateBlendState(&blendDesc, &pipeline2.blendState);
-
-            mvPixelShader pixelShader = mvCreatePixelShader(GContext->IO.shaderDirectory + "Solid_PS.hlsl");
-            mvVertexShader vertexShader = mvCreateVertexShader(GContext->IO.shaderDirectory + "Solid_VS.hlsl", mvCreateVertexLayout({ mvVertexElement::Position3D }));
-
-            pipeline2.pixelShader = pixelShader.shader;
-            pipeline2.pixelBlob = pixelShader.blob;
-            pipeline2.vertexShader = vertexShader.shader;
-            pipeline2.vertexBlob = vertexShader.blob;
-            pipeline2.inputLayout = vertexShader.inputLayout;
-            pipeline2.topology = D3D11_PRIMITIVE_TOPOLOGY_LINELIST;
-        }
     }
 
 };

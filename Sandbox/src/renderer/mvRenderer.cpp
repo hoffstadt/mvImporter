@@ -10,6 +10,188 @@
 
 namespace Renderer{
 
+void 
+mvSetupCommonAssets(mvAssetManager& am)
+{
+    {
+        mvPipelineInfo pipelineInfo{};
+        pipelineInfo.pixelShader = "Shadow_PS.hlsl";
+        pipelineInfo.vertexShader = "Shadow_VS.hlsl";
+        pipelineInfo.depthBias = 50;
+        pipelineInfo.slopeBias = 2.0f;
+        pipelineInfo.clamp = 0.1f;
+        pipelineInfo.cull = false;
+
+        pipelineInfo.layout = mvCreateVertexLayout(
+            {
+                mvVertexElement::Position3D,
+                mvVertexElement::Normal,
+                mvVertexElement::Texture2D,
+                mvVertexElement::Tangent,
+                mvVertexElement::Bitangent
+            }
+        );
+
+        mvRegisterAsset(&am, "shadow_alpha", mvFinalizePipeline(pipelineInfo));
+    }
+
+    {
+        mvPipelineInfo pipelineInfo{};
+        pipelineInfo.pixelShader = "";
+        pipelineInfo.vertexShader = "Shadow_VS.hlsl";
+        pipelineInfo.depthBias = 50;
+        pipelineInfo.slopeBias = 2.0f;
+        pipelineInfo.clamp = 0.1f;
+        pipelineInfo.cull = false;
+
+        pipelineInfo.layout = mvCreateVertexLayout(
+            {
+                mvVertexElement::Position3D,
+                mvVertexElement::Normal,
+                mvVertexElement::Texture2D,
+                mvVertexElement::Tangent,
+                mvVertexElement::Bitangent
+            }
+        );
+
+        mvRegisterAsset(&am, "shadow_no_alpha", mvFinalizePipeline(pipelineInfo));
+    }
+
+    {
+        mvPipeline pipeline{};
+
+        D3D11_RASTERIZER_DESC rasterDesc = CD3D11_RASTERIZER_DESC(CD3D11_DEFAULT{});
+        rasterDesc.CullMode = D3D11_CULL_NONE;
+        rasterDesc.FillMode = D3D11_FILL_WIREFRAME;
+
+        GContext->graphics.device->CreateRasterizerState(&rasterDesc, &pipeline.rasterizationState);
+
+        D3D11_DEPTH_STENCIL_DESC dsDesc = CD3D11_DEPTH_STENCIL_DESC{ CD3D11_DEFAULT{} };
+
+        // Depth test parameters
+        dsDesc.DepthEnable = true;
+        dsDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
+        dsDesc.DepthFunc = D3D11_COMPARISON_LESS;
+
+        // Stencil test parameters
+        dsDesc.StencilEnable = true;
+        dsDesc.StencilReadMask = 0xFF;
+        dsDesc.StencilWriteMask = 0xFF;
+
+        // Stencil operations if pixel is front-facing
+        dsDesc.FrontFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
+        dsDesc.FrontFace.StencilDepthFailOp = D3D11_STENCIL_OP_INCR;
+        dsDesc.FrontFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
+        dsDesc.FrontFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
+
+        // Stencil operations if pixel is back-facing
+        dsDesc.BackFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
+        dsDesc.BackFace.StencilDepthFailOp = D3D11_STENCIL_OP_DECR;
+        dsDesc.BackFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
+        dsDesc.BackFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
+
+        GContext->graphics.device->CreateDepthStencilState(&dsDesc, &pipeline.depthStencilState);
+
+        D3D11_BLEND_DESC blendDesc = CD3D11_BLEND_DESC{ CD3D11_DEFAULT{} };
+        auto& brt = blendDesc.RenderTarget[0];
+        brt.BlendEnable = TRUE;
+        brt.SrcBlend = D3D11_BLEND_SRC_ALPHA;
+        brt.DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
+        GContext->graphics.device->CreateBlendState(&blendDesc, &pipeline.blendState);
+
+        mvPixelShader pixelShader = mvCreatePixelShader(GContext->IO.shaderDirectory + "Solid_PS.hlsl");
+        mvVertexShader vertexShader = mvCreateVertexShader(GContext->IO.shaderDirectory + "Solid_VS.hlsl", mvCreateVertexLayout({ mvVertexElement::Position3D }));
+
+        pipeline.pixelShader = pixelShader.shader;
+        pipeline.pixelBlob = pixelShader.blob;
+        pipeline.vertexShader = vertexShader.shader;
+        pipeline.vertexBlob = vertexShader.blob;
+        pipeline.inputLayout = vertexShader.inputLayout;
+        pipeline.topology = D3D11_PRIMITIVE_TOPOLOGY_LINELIST;
+
+        pipeline.info.depthBias = 50;
+        pipeline.info.slopeBias = 2.0f;
+        pipeline.info.clamp = 0.1f;
+        pipeline.info.cull = false;
+
+        pipeline.info.layout = mvCreateVertexLayout(
+            {
+                mvVertexElement::Position3D
+            }
+        );
+
+        mvRegisterAsset(&am, "solid_wireframe", pipeline);
+    }
+
+    {
+        mvPipeline pipeline{};
+
+        D3D11_RASTERIZER_DESC rasterDesc = CD3D11_RASTERIZER_DESC(CD3D11_DEFAULT{});
+        rasterDesc.CullMode = D3D11_CULL_BACK;
+        rasterDesc.FrontCounterClockwise = TRUE;
+
+        GContext->graphics.device->CreateRasterizerState(&rasterDesc, &pipeline.rasterizationState);
+
+        D3D11_DEPTH_STENCIL_DESC dsDesc = CD3D11_DEPTH_STENCIL_DESC{ CD3D11_DEFAULT{} };
+
+        // Depth test parameters
+        dsDesc.DepthEnable = true;
+        dsDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
+        dsDesc.DepthFunc = D3D11_COMPARISON_LESS;
+
+        // Stencil test parameters
+        dsDesc.StencilEnable = true;
+        dsDesc.StencilReadMask = 0xFF;
+        dsDesc.StencilWriteMask = 0xFF;
+
+        // Stencil operations if pixel is front-facing
+        dsDesc.FrontFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
+        dsDesc.FrontFace.StencilDepthFailOp = D3D11_STENCIL_OP_INCR;
+        dsDesc.FrontFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
+        dsDesc.FrontFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
+
+        // Stencil operations if pixel is back-facing
+        dsDesc.BackFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
+        dsDesc.BackFace.StencilDepthFailOp = D3D11_STENCIL_OP_DECR;
+        dsDesc.BackFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
+        dsDesc.BackFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
+
+        GContext->graphics.device->CreateDepthStencilState(&dsDesc, &pipeline.depthStencilState);
+
+        D3D11_BLEND_DESC blendDesc = CD3D11_BLEND_DESC{ CD3D11_DEFAULT{} };
+        auto& brt = blendDesc.RenderTarget[0];
+        brt.BlendEnable = TRUE;
+        brt.SrcBlend = D3D11_BLEND_SRC_ALPHA;
+        brt.DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
+        GContext->graphics.device->CreateBlendState(&blendDesc, &pipeline.blendState);
+
+        mvPixelShader pixelShader = mvCreatePixelShader(GContext->IO.shaderDirectory + "Solid_PS.hlsl");
+        mvVertexShader vertexShader = mvCreateVertexShader(GContext->IO.shaderDirectory + "Solid_VS.hlsl", mvCreateVertexLayout({ mvVertexElement::Position3D }));
+
+        pipeline.pixelShader = pixelShader.shader;
+        pipeline.pixelBlob = pixelShader.blob;
+        pipeline.vertexShader = vertexShader.shader;
+        pipeline.vertexBlob = vertexShader.blob;
+        pipeline.inputLayout = vertexShader.inputLayout;
+        pipeline.topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+
+        //pipeline.info.pixelShader = "";
+        //pipeline.info.vertexShader = "Shadow_VS.hlsl";
+        pipeline.info.depthBias = 50;
+        pipeline.info.slopeBias = 2.0f;
+        pipeline.info.clamp = 0.1f;
+        pipeline.info.cull = false;
+
+        pipeline.info.layout = mvCreateVertexLayout(
+            {
+                mvVertexElement::Position3D
+            }
+        );
+
+        mvRegisterAsset(&am, "solid", pipeline);
+    }
+}
+
 void
 mvRenderMesh(mvAssetManager& am, mvMesh& mesh, mvMat4 transform, mvMat4 cam, mvMat4 proj)
 {
@@ -25,21 +207,23 @@ mvRenderMesh(mvAssetManager& am, mvMesh& mesh, mvMat4 transform, mvMat4 cam, mvM
             assert(false && "material not assigned");
         }
 
-        mvMaterial* material = &am.materials[primitive.materialID].material;
-        mvTexture* albedoMap = primitive.albedoTexture == -1 ? nullptr : &am.textures[primitive.albedoTexture].texture;
-        mvTexture* normMap = primitive.normalTexture == -1 ? nullptr : &am.textures[primitive.normalTexture].texture;
-        mvTexture* metalRoughMap = primitive.metalRoughnessTexture == -1 ? nullptr : &am.textures[primitive.metalRoughnessTexture].texture;
-        mvTexture* emissiveMap = primitive.emissiveTexture == -1 ? nullptr : &am.textures[primitive.emissiveTexture].texture;
-        mvTexture* occlussionMap = primitive.occlusionTexture == -1 ? nullptr : &am.textures[primitive.occlusionTexture].texture;
+        mvMaterial* material = &am.materials[primitive.materialID].asset;
+        mvTexture* albedoMap = primitive.albedoTexture == -1 ? nullptr : &am.textures[primitive.albedoTexture].asset;
+        mvTexture* normMap = primitive.normalTexture == -1 ? nullptr : &am.textures[primitive.normalTexture].asset;
+        mvTexture* metalRoughMap = primitive.metalRoughnessTexture == -1 ? nullptr : &am.textures[primitive.metalRoughnessTexture].asset;
+        mvTexture* emissiveMap = primitive.emissiveTexture == -1 ? nullptr : &am.textures[primitive.emissiveTexture].asset;
+        mvTexture* occlussionMap = primitive.occlusionTexture == -1 ? nullptr : &am.textures[primitive.occlusionTexture].asset;
 
-        if (material->pipeline.info.layout != primitive.layout)
+        mvPipeline& pipeline = am.pipelines[material->pipeline].asset;
+
+        if (pipeline.info.layout != primitive.layout)
         {
             assert(false && "Mesh and material vertex layouts don't match.");
             return;
         }
 
         // pipeline
-        mvSetPipelineState(material->pipeline);
+        mvSetPipelineState(pipeline);
         device->PSSetSamplers(0, 1, material->colorSampler.state.GetAddressOf());
 
         // maps
@@ -66,13 +250,83 @@ mvRenderMesh(mvAssetManager& am, mvMesh& mesh, mvMat4 transform, mvMat4 cam, mvM
         // mesh
         static const UINT offset = 0u;
         device->VSSetConstantBuffers(0u, 1u, GContext->graphics.tranformCBuf.GetAddressOf());
-        device->IASetIndexBuffer(am.buffers[primitive.indexBuffer].buffer.buffer, DXGI_FORMAT_R32_UINT, 0u);
+        device->IASetIndexBuffer(am.buffers[primitive.indexBuffer].asset.buffer, DXGI_FORMAT_R32_UINT, 0u);
         device->IASetVertexBuffers(0u, 1u,
-            &am.buffers[primitive.vertexBuffer].buffer.buffer,
-            &material->pipeline.info.layout.size, &offset);
+            &am.buffers[primitive.vertexBuffer].asset.buffer,
+            &pipeline.info.layout.size, &offset);
 
         // draw
-        device->DrawIndexed(am.buffers[primitive.indexBuffer].buffer.size / sizeof(u32), 0u, 0u);
+        device->DrawIndexed(am.buffers[primitive.indexBuffer].asset.size / sizeof(u32), 0u, 0u);
+    }
+}
+
+void
+mvRenderMeshSolid(mvAssetManager& am, mvMesh& mesh, mvMat4 transform, mvMat4 cam, mvMat4 proj)
+{
+    auto device = GContext->graphics.imDeviceContext;
+    mvPipeline* pipeline = mvGetRawPipelineAsset(&am, "solid");
+
+    mvSetPipelineState(*pipeline);
+
+    for (u32 i = 0; i < mesh.primitives.size(); i++)
+    {
+        mvMeshPrimitive& primitive = mesh.primitives[i];
+
+        mvTransforms transforms{};
+        transforms.model = transform;
+        transforms.modelView = cam * transforms.model;
+        transforms.modelViewProjection = proj * cam * transforms.model;
+
+        D3D11_MAPPED_SUBRESOURCE mappedSubresource;
+        device->Map(GContext->graphics.tranformCBuf.Get(), 0u, D3D11_MAP_WRITE_DISCARD, 0u, &mappedSubresource);
+        memcpy(mappedSubresource.pData, &transforms, sizeof(mvTransforms));
+        device->Unmap(GContext->graphics.tranformCBuf.Get(), 0u);
+
+        // mesh
+        static const UINT offset = 0u;
+        device->VSSetConstantBuffers(0u, 1u, GContext->graphics.tranformCBuf.GetAddressOf());
+        device->IASetIndexBuffer(am.buffers[primitive.indexBuffer].asset.buffer, DXGI_FORMAT_R32_UINT, 0u);
+        device->IASetVertexBuffers(0u, 1u,
+            &am.buffers[primitive.vertexBuffer].asset.buffer,
+            &pipeline->info.layout.size, &offset);
+
+        // draw
+        device->DrawIndexed(am.buffers[primitive.indexBuffer].asset.size / sizeof(u32), 0u, 0u);
+    }
+}
+
+void
+mvRenderMeshSolidWireframe(mvAssetManager& am, mvMesh& mesh, mvMat4 transform, mvMat4 cam, mvMat4 proj)
+{
+    auto device = GContext->graphics.imDeviceContext;
+    mvPipeline* pipeline = mvGetRawPipelineAsset(&am, "solid_wireframe");
+
+    mvSetPipelineState(*pipeline);
+
+    for (u32 i = 0; i < mesh.primitives.size(); i++)
+    {
+        mvMeshPrimitive& primitive = mesh.primitives[i];
+
+        mvTransforms transforms{};
+        transforms.model = transform;
+        transforms.modelView = cam * transforms.model;
+        transforms.modelViewProjection = proj * cam * transforms.model;
+
+        D3D11_MAPPED_SUBRESOURCE mappedSubresource;
+        device->Map(GContext->graphics.tranformCBuf.Get(), 0u, D3D11_MAP_WRITE_DISCARD, 0u, &mappedSubresource);
+        memcpy(mappedSubresource.pData, &transforms, sizeof(mvTransforms));
+        device->Unmap(GContext->graphics.tranformCBuf.Get(), 0u);
+
+        // mesh
+        static const UINT offset = 0u;
+        device->VSSetConstantBuffers(0u, 1u, GContext->graphics.tranformCBuf.GetAddressOf());
+        device->IASetIndexBuffer(am.buffers[primitive.indexBuffer].asset.buffer, DXGI_FORMAT_R32_UINT, 0u);
+        device->IASetVertexBuffers(0u, 1u,
+            &am.buffers[primitive.vertexBuffer].asset.buffer,
+            &pipeline->info.layout.size, &offset);
+
+        // draw
+        device->DrawIndexed(am.buffers[primitive.indexBuffer].asset.size / sizeof(u32), 0u, 0u);
     }
 }
 
@@ -85,22 +339,19 @@ mvRenderMeshShadows(mvAssetManager& am, mvMesh& mesh, mvMat4 transform, mvMat4 c
     for (u32 i = 0; i < mesh.primitives.size(); i++)
     {
         mvMeshPrimitive& primitive = mesh.primitives[i];
-        mvMaterial* material = &am.materials[primitive.materialID].material;
-        mvTexture* albedoMap = primitive.albedoTexture == -1 ? nullptr : &am.textures[primitive.albedoTexture].texture;
+        mvMaterial* material = &am.materials[primitive.materialID].asset;
+        mvTexture* albedoMap = primitive.albedoTexture == -1 ? nullptr : &am.textures[primitive.albedoTexture].asset;
 
-        if (material->shadowPipeline.info.layout != primitive.layout)
-        {
-            assert(false && "Mesh and material vertex layouts don't match.");
-            return;
-        }
+        mvPipeline* pipeline = material->data.hasAlpha ? mvGetRawPipelineAsset(&am, "shadow_alpha") : mvGetRawPipelineAsset(&am, "shadow_no_alpha");
+
 
         // pipeline
-        device->IASetPrimitiveTopology(material->shadowPipeline.topology);
-        device->OMSetBlendState(material->shadowPipeline.blendState, nullptr, 0xFFFFFFFFu);
-        device->OMSetDepthStencilState(material->shadowPipeline.depthStencilState, 0xFF);;
-        device->IASetInputLayout(material->shadowPipeline.inputLayout);
-        device->VSSetShader(material->shadowPipeline.vertexShader, nullptr, 0);
-        device->PSSetShader(material->shadowPipeline.pixelShader, nullptr, 0);
+        device->IASetPrimitiveTopology(pipeline->topology);
+        device->OMSetBlendState(pipeline->blendState, nullptr, 0xFFFFFFFFu);
+        device->OMSetDepthStencilState(pipeline->depthStencilState, 0xFF);;
+        device->IASetInputLayout(pipeline->inputLayout);
+        device->VSSetShader(pipeline->vertexShader, nullptr, 0);
+        device->PSSetShader(pipeline->pixelShader, nullptr, 0);
         device->HSSetShader(nullptr, nullptr, 0);
         device->DSSetShader(nullptr, nullptr, 0);
         device->GSSetShader(nullptr, nullptr, 0);
@@ -126,13 +377,13 @@ mvRenderMeshShadows(mvAssetManager& am, mvMesh& mesh, mvMat4 transform, mvMat4 c
         // mesh
         static const UINT offset = 0u;
         device->VSSetConstantBuffers(0u, 1u, GContext->graphics.tranformCBuf.GetAddressOf());
-        device->IASetIndexBuffer(am.buffers[primitive.indexBuffer].buffer.buffer, DXGI_FORMAT_R32_UINT, 0u);
+        device->IASetIndexBuffer(am.buffers[primitive.indexBuffer].asset.buffer, DXGI_FORMAT_R32_UINT, 0u);
         device->IASetVertexBuffers(0u, 1u,
-            &am.buffers[primitive.vertexBuffer].buffer.buffer,
-            &material->pipeline.info.layout.size, &offset);
+            &am.buffers[primitive.vertexBuffer].asset.buffer,
+            &pipeline->info.layout.size, &offset);
 
         // draw
-        device->DrawIndexed(am.buffers[primitive.indexBuffer].buffer.size / sizeof(u32), 0u, 0u);
+        device->DrawIndexed(am.buffers[primitive.indexBuffer].asset.size / sizeof(u32), 0u, 0u);
     }
 }
 
@@ -140,12 +391,16 @@ static void
 mvRenderNode(mvAssetManager& am, mvNode& node, mvMat4 accumulatedTransform, mvMat4 cam, mvMat4 proj)
 {
 
-    if (node.mesh > -1)
-        mvRenderMesh(am, am.meshes[node.mesh].mesh, accumulatedTransform * node.matrix, cam, proj);
+    if (node.mesh > -1 && node.camera == -1)
+        mvRenderMesh(am, am.meshes[node.mesh].asset, accumulatedTransform * node.matrix, cam, proj);
+    else if (node.camera > -1)
+    {
+        mvRenderMeshSolidWireframe(am, am.meshes[node.mesh].asset, accumulatedTransform * node.matrix, cam, proj);
+    }
 
     for (u32 i = 0; i < node.childCount; i++)
     {
-        mvRenderNode(am, am.nodes[node.children[i]].node, accumulatedTransform* node.matrix, cam, proj);
+        mvRenderNode(am, am.nodes[node.children[i]].asset, accumulatedTransform * node.matrix, cam, proj);
     }
 }
 
@@ -154,14 +409,18 @@ mvRenderScene(mvAssetManager& am, mvScene& scene, mvMat4 cam, mvMat4 proj, mvMat
 {
     for (u32 i = 0; i < scene.nodeCount; i++)
     {
-        mvNode& rootNode = am.nodes[scene.nodes[i]].node;
+        mvNode& rootNode = am.nodes[scene.nodes[i]].asset;
 
-        if (rootNode.mesh > -1)
-            mvRenderMesh(am, am.meshes[rootNode.mesh].mesh, trans * rootNode.matrix * scale, cam, proj);
+        if (rootNode.mesh > -1 && rootNode.camera == -1)
+            mvRenderMesh(am, am.meshes[rootNode.mesh].asset, trans * rootNode.matrix * scale, cam, proj);
+        else if (rootNode.camera > -1)
+        {
+            mvRenderMeshSolidWireframe(am, am.meshes[rootNode.mesh].asset, trans * rootNode.matrix, cam, proj);
+        }
 
         for (u32 j = 0; j < rootNode.childCount; j++)
         {
-            mvRenderNode(am, am.nodes[rootNode.children[j]].node, trans * rootNode.matrix * scale, cam, proj);
+            mvRenderNode(am, am.nodes[rootNode.children[j]].asset, trans * rootNode.matrix * scale, cam, proj);
         }
     }
 }
@@ -170,12 +429,12 @@ static void
 mvRenderNodeShadows(mvAssetManager& am, mvNode& node, mvMat4 accumulatedTransform, mvMat4 cam, mvMat4 proj)
 {
 
-    if (node.mesh > -1)
-        mvRenderMeshShadows(am, am.meshes[node.mesh].mesh, accumulatedTransform * node.matrix, cam, proj);
+    if (node.mesh > -1 && node.camera == -1)
+        mvRenderMeshShadows(am, am.meshes[node.mesh].asset, accumulatedTransform * node.matrix, cam, proj);
 
     for (u32 i = 0; i < node.childCount; i++)
     {
-        mvRenderNodeShadows(am, am.nodes[node.children[i]].node, accumulatedTransform * node.matrix, cam, proj);
+        mvRenderNodeShadows(am, am.nodes[node.children[i]].asset, accumulatedTransform * node.matrix, cam, proj);
     }
 }
 
@@ -184,14 +443,14 @@ mvRenderSceneShadows(mvAssetManager& am, mvScene& scene, mvMat4 cam, mvMat4 proj
 {
     for (u32 i = 0; i < scene.nodeCount; i++)
     {
-        mvNode& rootNode = am.nodes[scene.nodes[i]].node;
+        mvNode& rootNode = am.nodes[scene.nodes[i]].asset;
 
-        if (rootNode.mesh > -1)
-            mvRenderMeshShadows(am, am.meshes[rootNode.mesh].mesh, trans * rootNode.matrix * scale, cam, proj);
+        if (rootNode.mesh > -1 && rootNode.camera == -1)
+            mvRenderMeshShadows(am, am.meshes[rootNode.mesh].asset, trans * rootNode.matrix * scale, cam, proj);
 
         for (u32 j = 0; j < rootNode.childCount; j++)
         {
-            mvRenderNodeShadows(am, am.nodes[rootNode.children[j]].node, trans *rootNode.matrix * scale, cam, proj);
+            mvRenderNodeShadows(am, am.nodes[rootNode.children[j]].asset, trans *rootNode.matrix * scale, cam, proj);
         }
     }
 }
