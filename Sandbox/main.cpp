@@ -334,8 +334,8 @@ int main()
 
             if (directionalCameraChange)
             {
-                directionalShadowMap.camera.width = directionalShadowMap.width*2.0f;
-                directionalShadowMap.camera.height = directionalShadowMap.width*2.0f;
+                directionalShadowMap.camera.width = directionalShadowMap.width;
+                directionalShadowMap.camera.height = directionalShadowMap.width;
 
                 f32 zcomponent = sinf(M_PI * directionalShadowMap.angle / 180.0f);
                 f32 ycomponent = cosf(M_PI * directionalShadowMap.angle / 180.0f);
@@ -344,12 +344,14 @@ int main()
                 directionalShadowMap.info.view = lookat(
                     directionalShadowMap.camera.pos, directionalShadowMap.camera.pos - directionalShadowMap.camera.dir, directionalShadowMap.camera.up);
                 directionalShadowMap.info.projection = ortho(
-                    -directionalShadowMap.camera.width * 2.0f,
-                    directionalShadowMap.camera.width * 2.0f,
-                    -directionalShadowMap.camera.height * 2.0f,
-                    directionalShadowMap.camera.height * 2.0f,
+                    -directionalShadowMap.camera.width/2.0f,
+                    directionalShadowMap.camera.width / 2.0f,
+                    -directionalShadowMap.camera.height / 2.0f,
+                    directionalShadowMap.camera.height / 2.0f,
                     directionalShadowMap.camera.nearZ, 
                     directionalShadowMap.camera.farZ);
+
+                //directionalLight.info.viewLightDir = directionalShadowMap.camera.dir;
             }
 
             ImGui::Dummy(ImVec2(50.0f, 25.0f));
