@@ -48,19 +48,19 @@ mvCreatePerspectiveCamera(mvVec3 pos, f32 fov, f32 aspect, f32 near, f32 far)
 mvMat4 
 mvCreateFPSView(mvCamera& camera)
 {
-    return mvFPSViewRH(camera.pos, camera.pitch, camera.yaw);
+    return mvFPSView(camera.pos, camera.pitch, camera.yaw);
 }
 
 mvMat4
 mvCreateOrthoView(mvCamera& camera)
 {
-    return mvLookAtRH(camera.pos, camera.pos + camera.dir, camera.up);
+    return mvLookAt(camera.pos, camera.pos + camera.dir, camera.up);
 }
 
 mvMat4
 mvCreateOrthoProjection(mvCamera& camera)
 {
-    return mvOrthoRH(-camera.width/2.0f, camera.width / 2.0f, -camera.height / 2.0f, -camera.height / 2.0f, camera.nearZ, camera.farZ);
+    return mvOrtho(-camera.width/2.0f, camera.width / 2.0f, -camera.height / 2.0f, -camera.height / 2.0f, camera.nearZ, camera.farZ);
 }
 
 mvMat4
@@ -71,13 +71,13 @@ mvCreateLookAtView(mvCamera& camera)
     direction.y = sin((camera.pitch));
     direction.z = sin((camera.yaw)) * cos((camera.pitch));
     direction = mvNormalize(direction);
-    return mvLookAtRH(camera.pos, camera.pos + direction, camera.up);
+    return mvLookAt(camera.pos, camera.pos + direction, camera.up);
 }
 
 mvMat4
 mvCreateLookAtProjection(mvCamera& camera)
 {
-    return mvPerspectiveRH(camera.fieldOfView, camera.aspectRatio, camera.nearZ, camera.farZ);
+    return mvPerspective(camera.fieldOfView, camera.aspectRatio, camera.nearZ, camera.farZ);
 }
 
 void 

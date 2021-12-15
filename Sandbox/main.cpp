@@ -1,8 +1,20 @@
-#include "helpers.h"
+#include <imgui.h>
+#include <implot.h>
+#include <imgui_impl_win32.h>
+#include <imgui_impl_dx11.h>
+#include "mvLights.h"
+#include "mvSkybox.h"
+#include "mvShadows.h"
+#include "mvOffscreenPass.h"
+#include "mvRenderer.h"
+#include "mvImporter.h"
+#include "mvTimer.h"
 
 // TODO: make most of these runtime options
 static const char* gltfAssetDirectory0 = "../../data/glTF-Sample-Models/2.0/Sponza/glTF/";
 static const char* gltfModel0 = "../../data/glTF-Sample-Models/2.0/Sponza/glTF/Sponza.gltf";
+//static const char* gltfAssetDirectory0 = "../../data/glTF-Sample-Models/2.0/AnimatedTriangle/glTF/";
+//static const char* gltfModel0 = "../../data/glTF-Sample-Models/2.0/AnimatedTriangle/glTF/AnimatedTriangle.gltf";
 static f32         shadowWidth = 95.0f;
 static int         initialWidth = 1850;
 static int         initialHeight = 900;
@@ -38,31 +50,30 @@ int main()
     // main camera
     mvCamera camera = mvCreatePerspectiveCamera({ -13.5f, 6.0f, 3.5f }, (f32)M_PI_4, 1.0f, 0.1f, 400.0f);
 
-    // helpers
-    mvShadowMap directionalShadowMap = mvShadowMap(4096, shadowWidth);
-    mvShadowCubeMap omniShadowMap = mvShadowCubeMap(2048);
-    mvSkybox skybox = mvSkybox(am);
-    mvPointLight pointlight = mvPointLight(am);
-    omniShadowMap.info.view = mvCreateLookAtView(pointlight.camera);
+    // lights
+    mvPointLight pointlight = create_point_light(am);
+    mvDirectionalLight directionalLight = create_directional_light(am);
 
-    // framework constant buffers
-    DirectionLightInfo directionLightInfo{};
-    mvConstBuffer directionLightBuffer = mvCreateConstBuffer(&directionLightInfo, sizeof(DirectionLightInfo));
+    // passes
+    mvOffscreenPass offscreen = mvOffscreenPass(500.0f, 500.0f);
+    mvDirectionalShadowPass directionalShadowMap = mvDirectionalShadowPass(am, 4096, shadowWidth);
+    mvOmniShadowPass omniShadowMap = mvOmniShadowPass(am, 2048);
+    mvSkybox skybox = create_skybox(am);
+    
+    omniShadowMap.info.view = mvCreateLookAtView(pointlight.camera);
 
     GlobalInfo globalInfo{};
     mvConstBuffer globalInfoBuffer = mvCreateConstBuffer(&globalInfo, sizeof(GlobalInfo));
+    mvRegisterAsset(&am, "global_constant_buffer", globalInfoBuffer);
 
-    mvOffscreen offscreen = mvOffscreen(500.0f, 500.0f);
     mvTimer timer;
-    bool recreatePrimary = false;
-    bool recreateShadowMapRS = false;
-    bool recreateOShadowMapRS = false;
-    f32 scale0 = 1.0f;
-    mvVec3 translate0 = { 0.0f, 0.0f, 0.0f };
+
     while (true)
     {
         const auto dt = timer.mark() * 1.0f;
 
+        static f32 scale0 = 1.0f;
+        static mvVec3 translate0 = { 0.0f, 0.0f, 0.0f };
         mvVec3 scaleVec0 = { scale0, scale0, scale0 };
         mvMat4 stransform0 = mvScale(mvIdentityMat4(), scaleVec0);
         mvMat4 ttransform0 = mvTranslate(mvIdentityMat4(), translate0);
@@ -75,50 +86,24 @@ int main()
             window->resized = false;
         }
 
+        static bool recreatePrimary = false;
         if (recreatePrimary)
         {
-            offscreen.targetView->Release();
-            offscreen.depthView->Release();
-            offscreen.resourceView->Release();
-            offscreen.texture->Release();
-            offscreen.depthTexture->Release();
-            offscreen.resize(offscreen.viewport.Width, offscreen.viewport.Height);
+            offscreen.recreate();
             recreatePrimary = false;
         }
 
+        static bool recreateShadowMapRS = false;
         if (recreateShadowMapRS)
         {
-            directionalShadowMap.rasterizationState->Release();
-
-            D3D11_RASTERIZER_DESC shadowRenderStateDesc;
-            ZeroMemory(&shadowRenderStateDesc, sizeof(D3D11_RASTERIZER_DESC));
-            shadowRenderStateDesc.CullMode = directionalShadowMap.backface ? D3D11_CULL_BACK : D3D11_CULL_FRONT;
-            shadowRenderStateDesc.FrontCounterClockwise = true;
-            shadowRenderStateDesc.FillMode = D3D11_FILL_SOLID;
-            shadowRenderStateDesc.DepthClipEnable = true;
-            shadowRenderStateDesc.DepthBias = directionalShadowMap.depthBias;
-            shadowRenderStateDesc.DepthBiasClamp = 0.0f;
-            shadowRenderStateDesc.SlopeScaledDepthBias = directionalShadowMap.slopeBias;
-
-            GContext->graphics.device->CreateRasterizerState(&shadowRenderStateDesc, &directionalShadowMap.rasterizationState);
+            directionalShadowMap.recreate();
             recreateShadowMapRS = false;
         }
 
+        static bool recreateOShadowMapRS = false;
         if (recreateOShadowMapRS)
         {
-            omniShadowMap.rasterizationState->Release();
-
-            D3D11_RASTERIZER_DESC shadowRenderStateDesc;
-            ZeroMemory(&shadowRenderStateDesc, sizeof(D3D11_RASTERIZER_DESC));
-            shadowRenderStateDesc.CullMode = D3D11_CULL_BACK;
-            shadowRenderStateDesc.FrontCounterClockwise = true;
-            shadowRenderStateDesc.FillMode = D3D11_FILL_SOLID;
-            shadowRenderStateDesc.DepthClipEnable = true;
-            shadowRenderStateDesc.DepthBias = omniShadowMap.depthBias;
-            shadowRenderStateDesc.DepthBiasClamp = 0.0f;
-            shadowRenderStateDesc.SlopeScaledDepthBias = omniShadowMap.slopeBias;
-
-            GContext->graphics.device->CreateRasterizerState(&shadowRenderStateDesc, &omniShadowMap.rasterizationState);
+            omniShadowMap.recreate();
             recreateOShadowMapRS = false;
         }
 
@@ -170,10 +155,10 @@ int main()
         {
             ctx->OMSetRenderTargets(0, nullptr, omniShadowMap.depthView[i]);
             mvVec3 look_target = pointlight.camera.pos + omniShadowMap.cameraDirections[i];
-            mvMat4 camera_matrix = mvLookAtRH(pointlight.camera.pos, look_target, omniShadowMap.cameraUps[i]);
+            mvMat4 camera_matrix = mvLookAt(pointlight.camera.pos, look_target, omniShadowMap.cameraUps[i]);
 
             for (int i = 0; i < am.sceneCount; i++)
-                Renderer::mvRenderSceneShadows(am, am.scenes[i].asset, camera_matrix, mvPerspectiveRH(M_PI_2, 1.0f, 0.5f, 100.0f), stransform0, ttransform0);
+                Renderer::mvRenderSceneShadows(am, am.scenes[i].asset, camera_matrix, mvPerspective(M_PI_2, 1.0f, 0.5f, 100.0f), stransform0, ttransform0);
         }
 
         //-----------------------------------------------------------------------------
@@ -186,11 +171,11 @@ int main()
         mvMat4 projMatrix = mvCreateLookAtProjection(camera);
 
         globalInfo.camPos = camera.pos;
-        directionLightInfo.viewLightDir = directionalShadowMap.camera.dir;
+        directionalLight.info.viewLightDir = directionalShadowMap.camera.dir;
 
         // update constant buffers
         mvUpdateConstBuffer(pointlight.buffer, &pointlight.info);
-        mvUpdateConstBuffer(directionLightBuffer, &directionLightInfo);
+        mvUpdateConstBuffer(directionalLight.buffer, &directionalLight.info);
         mvUpdateConstBuffer(globalInfoBuffer, &globalInfo);
         mvUpdateConstBuffer(directionalShadowMap.buffer, &directionalShadowMap.info);
         mvUpdateConstBuffer(omniShadowMap.buffer, &omniShadowMap.info);
@@ -201,7 +186,7 @@ int main()
 
         // pixel constant buffers
         ctx->PSSetConstantBuffers(0u, 1u, &pointlight.buffer.buffer);
-        ctx->PSSetConstantBuffers(2u, 1u, &directionLightBuffer.buffer);
+        ctx->PSSetConstantBuffers(2u, 1u, &directionalLight.buffer.buffer);
         ctx->PSSetConstantBuffers(3u, 1u, &globalInfoBuffer.buffer);
 
         // samplers
@@ -219,40 +204,7 @@ int main()
         for (int i = 0; i < am.sceneCount; i++)
             Renderer::mvRenderScene(am, am.scenes[i].asset, viewMatrix, projMatrix, stransform0, ttransform0);
 
-        //-----------------------------------------------------------------------------
-        // skybox pass
-        //-----------------------------------------------------------------------------
-        if (globalInfo.useSkybox)
-        {
-            ctx->OMSetRenderTargets(1, &offscreen.targetView, offscreen.depthView);
-            ctx->RSSetViewports(1u, &offscreen.viewport);
-            {
-
-                // pipeline
-                mvSetPipelineState(skybox.pipeline);
-                ctx->PSSetSamplers(0, 1, &skybox.cubeSampler);
-                ctx->PSSetShaderResources(0, 1, &skybox.cubeTexture.textureView);
-
-                mvTransforms transforms{};
-                transforms.model = mvIdentityMat4() * mvScale(mvIdentityMat4(), mvVec3{ 1.0f, 1.0f, -1.0f });
-                transforms.modelView = viewMatrix * transforms.model;
-                transforms.modelViewProjection = projMatrix * viewMatrix * transforms.model;
-
-                D3D11_MAPPED_SUBRESOURCE mappedSubresource;
-                ctx->Map(GContext->graphics.tranformCBuf.Get(), 0u, D3D11_MAP_WRITE_DISCARD, 0u, &mappedSubresource);
-                memcpy(mappedSubresource.pData, &transforms, sizeof(mvTransforms));
-                ctx->Unmap(GContext->graphics.tranformCBuf.Get(), 0u);
-
-                // mesh
-                static const UINT offset = 0u;
-                ctx->VSSetConstantBuffers(0u, 1u, GContext->graphics.tranformCBuf.GetAddressOf());
-                ctx->IASetIndexBuffer(skybox.indexBuffer.buffer, DXGI_FORMAT_R32_UINT, 0u);
-                ctx->IASetVertexBuffers(0u, 1u, &skybox.vertexBuffer.buffer, &skybox.vertexLayout.size, &offset);
-
-                // draw
-                ctx->DrawIndexed(skybox.indexBuffer.size / sizeof(u32), 0u, 0u);
-            }
-        }
+        if (globalInfo.useSkybox) render_skybox(skybox, viewMatrix, projMatrix);
 
         //-----------------------------------------------------------------------------
         // main pass
@@ -391,9 +343,9 @@ int main()
                 f32 ycomponent = cosf(M_PI * directionalShadowMap.angle / 180.0f);
 
                 directionalShadowMap.camera.dir = { 0.0f, -ycomponent, zcomponent };
-                directionalShadowMap.info.view = mvLookAtRH(
+                directionalShadowMap.info.view = mvLookAt(
                     directionalShadowMap.camera.pos, directionalShadowMap.camera.pos - directionalShadowMap.camera.dir, directionalShadowMap.camera.up);
-                directionalShadowMap.info.projection = mvOrthoRH(
+                directionalShadowMap.info.projection = mvOrtho(
                     -directionalShadowMap.camera.width * 2.0f,
                     directionalShadowMap.camera.width * 2.0f,
                     -directionalShadowMap.camera.height * 2.0f,
@@ -426,46 +378,17 @@ int main()
         }
     }
 
-    directionLightBuffer.buffer->Release();
-    globalInfoBuffer.buffer->Release();
-
-    offscreen.targetView->Release();
-    offscreen.depthView->Release();
-    offscreen.resourceView->Release();
-    offscreen.texture->Release();
-    offscreen.depthTexture->Release();
-
-    pointlight.buffer.buffer->Release();
-
-    skybox.cubeSampler->Release();
-    skybox.vertexBuffer.buffer->Release();
-    skybox.indexBuffer.buffer->Release();
-    skybox.cubeTexture.textureView->Release();
-
-    directionalShadowMap.texture->Release();
-    directionalShadowMap.depthView->Release();
-    directionalShadowMap.resourceView->Release();
-    directionalShadowMap.rasterizationState->Release();
-    directionalShadowMap.sampler->Release();
-    directionalShadowMap.buffer.buffer->Release();
-
-    omniShadowMap.rasterizationState->Release();
-
-    for (int i = 0; i < 6; i++)
-        omniShadowMap.depthView[i]->Release();
-    omniShadowMap.resourceView->Release();
-    omniShadowMap.sampler->Release();
-    omniShadowMap.buffer.buffer->Release();
-
-    mvCleanupAssetManager(&am);
+    offscreen.cleanup();
+    directionalShadowMap.cleanup();
+    omniShadowMap.cleanup();
 
     // Cleanup
+    mvCleanupAssetManager(&am);
     ImGui_ImplDX11_Shutdown();
     ImGui_ImplWin32_Shutdown();
     ImPlot::DestroyContext();
     ImGui::DestroyContext();
     mvCleanupGraphics();
-
     mvDestroyContext();
 }
 

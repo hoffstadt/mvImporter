@@ -7,12 +7,15 @@ mvInitializeAssetManager(mvAssetManager* manager)
 	manager->samplers = new mvSamplerAsset[manager->maxSamplerCount];
 	manager->materials = new mvMaterialAsset[manager->maxMaterialCount];
 	manager->buffers = new mvBufferAsset[manager->maxBufferCount];
+	manager->cbuffers = new mvCBufferAsset[manager->maxCBufferCount];
 	manager->meshes = new mvMeshAsset[manager->maxMeshCount];
 	manager->cubeTextures = new mvCubeTextureAsset[manager->maxCubeTextureCount];
 	manager->nodes = new mvNodeAsset[manager->maxNodeCount];
 	manager->scenes = new mvSceneAsset[manager->maxSceneCount];
 	manager->cameras = new mvCameraAsset[manager->maxCameraCount];
 	manager->pipelines = new mvPipelineAsset[manager->maxPipelineCount];
+	manager->targetViews = new mvTargetViewAsset[manager->maxTargetViewCount];
+	manager->depthViews = new mvDepthViewAsset[manager->maxDepthViewCount];
 }
 
 void 
@@ -21,20 +24,49 @@ mvCleanupAssetManager(mvAssetManager* manager)
 	for (int i = 0; i < manager->bufferCount; i++)
 		manager->buffers[i].asset.buffer->Release();
 
+	for (int i = 0; i < manager->cbufferCount; i++)
+		manager->cbuffers[i].asset.buffer->Release();
+
 	for (int i = 0; i < manager->materialCount; i++)
 	{
 		manager->materials[i].asset.buffer.buffer->Release();
 	}
 
+	for (int i = 0; i < manager->cubeTextureCount; i++)
+	{
+		manager->cubeTextures[i].asset.textureView->Release();
+	}
+
+	for (int i = 0; i < manager->samplerCount; i++)
+	{
+		manager->samplers[i].asset.state->Release();
+	}
+
+	for (int i = 0; i < manager->targetViewCount; i++)
+	{
+		manager->targetViews[i].asset->Release();
+	}
+
+	for (int i = 0; i < manager->depthViewCount; i++)
+	{
+		manager->depthViews[i].asset->Release();
+	}
+
 	for (int i = 0; i < manager->pipelineCount; i++)
 	{
-		manager->pipelines[i].asset.vertexShader->Release();
-		manager->pipelines[i].asset.vertexBlob->Release();
-		manager->pipelines[i].asset.inputLayout->Release();
-		manager->pipelines[i].asset.blendState->Release();
-		manager->pipelines[i].asset.depthStencilState->Release();
-		manager->pipelines[i].asset.rasterizationState->Release();
-
+		if (manager->pipelines[i].asset.vertexShader)
+		{
+			manager->pipelines[i].asset.vertexShader->Release();
+			manager->pipelines[i].asset.vertexBlob->Release();
+		}
+		if(manager->pipelines[i].asset.inputLayout)
+			manager->pipelines[i].asset.inputLayout->Release();
+		if(manager->pipelines[i].asset.blendState)
+			manager->pipelines[i].asset.blendState->Release();
+		if(manager->pipelines[i].asset.depthStencilState)
+			manager->pipelines[i].asset.depthStencilState->Release();
+		if(manager->pipelines[i].asset.rasterizationState)
+			manager->pipelines[i].asset.rasterizationState->Release();
 		if (manager->pipelines[i].asset.pixelShader)
 		{
 			manager->pipelines[i].asset.pixelBlob->Release();
@@ -52,6 +84,81 @@ mvCleanupAssetManager(mvAssetManager* manager)
 	delete[] manager->scenes;
 	delete[] manager->cameras;
 	delete[] manager->pipelines;
+	delete[] manager->cbuffers;
+	delete[] manager->targetViews;
+	delete[] manager->depthViews;
+}
+
+//-----------------------------------------------------------------------------
+// render target views
+//-----------------------------------------------------------------------------
+mvAssetID
+mvRegisterAsset(mvAssetManager* manager, const std::string& tag, ID3D11RenderTargetView* asset)
+{
+	manager->targetViews[manager->targetViewCount].asset = asset;
+	manager->targetViews[manager->targetViewCount].hash = tag;
+	manager->targetViewCount++;
+	return manager->targetViewCount - 1;
+}
+
+mvAssetID
+mvGetTargetViewAssetID(mvAssetManager* manager, const std::string& tag)
+{
+	for (s32 i = 0; i < manager->targetViewCount; i++)
+	{
+		if (manager->targetViews[i].hash == tag)
+			return i;
+	}
+
+	return -1;
+}
+
+ID3D11RenderTargetView*
+mvGetRawTargetViewAsset(mvAssetManager* manager, const std::string& tag)
+{
+	for (s32 i = 0; i < manager->targetViewCount; i++)
+	{
+		if (manager->targetViews[i].hash == tag)
+			return manager->targetViews[i].asset;
+	}
+
+	return nullptr;
+}
+
+//-----------------------------------------------------------------------------
+// depth views
+//-----------------------------------------------------------------------------
+mvAssetID
+mvRegisterAsset(mvAssetManager* manager, const std::string& tag, ID3D11DepthStencilView* asset)
+{
+	manager->depthViews[manager->depthViewCount].asset = asset;
+	manager->depthViews[manager->depthViewCount].hash = tag;
+	manager->depthViewCount++;
+	return manager->depthViewCount - 1;
+}
+
+mvAssetID
+mvGetDepthViewAssetID(mvAssetManager* manager, const std::string& tag)
+{
+	for (s32 i = 0; i < manager->depthViewCount; i++)
+	{
+		if (manager->depthViews[i].hash == tag)
+			return i;
+	}
+
+	return -1;
+}
+
+ID3D11DepthStencilView*
+mvGetRawDepthViewAsset(mvAssetManager* manager, const std::string& tag)
+{
+	for (s32 i = 0; i < manager->depthViewCount; i++)
+	{
+		if (manager->depthViews[i].hash == tag)
+			return manager->depthViews[i].asset;
+	}
+
+	return nullptr;
 }
 
 //-----------------------------------------------------------------------------
@@ -140,6 +247,15 @@ mvRegisterAsset(mvAssetManager* manager, const std::string& tag, mvTexture asset
 }
 
 mvAssetID
+mvRegisterAsset(mvAssetManager* manager, const std::string& tag, mvCubeTexture asset)
+{
+	manager->cubeTextures[manager->cubeTextureCount].asset = asset;
+	manager->cubeTextures[manager->cubeTextureCount].hash = tag;
+	manager->cubeTextureCount++;
+	return manager->cubeTextureCount - 1;
+}
+
+mvAssetID
 mvGetTextureAssetID(mvAssetManager* manager, const std::string& path)
 {
 	for (s32 i = 0; i < manager->textureCount; i++)
@@ -225,7 +341,7 @@ mvGetRawMeshAsset(mvAssetManager* manager, const std::string& tag)
 }
 
 //-----------------------------------------------------------------------------
-// uniform buffers
+// buffers
 //-----------------------------------------------------------------------------
 
 mvAssetID
@@ -259,6 +375,31 @@ mvGetRawBufferAsset(mvAssetManager* manager, const std::string& tag)
 	{
 		if (manager->buffers[i].hash == tag)
 			return &manager->buffers[i].asset;
+	}
+
+	return nullptr;
+}
+
+//-----------------------------------------------------------------------------
+// constant buffers
+//-----------------------------------------------------------------------------
+
+mvAssetID
+mvRegisterAsset(mvAssetManager* manager, const std::string& tag, mvConstBuffer asset)
+{
+	manager->cbuffers[manager->cbufferCount].asset = asset;
+	manager->cbuffers[manager->cbufferCount].hash = tag;
+	manager->cbufferCount++;
+	return manager->cbufferCount - 1;
+}
+
+mvConstBuffer*
+mvGetRawCBufferAsset(mvAssetManager* manager, const std::string& tag)
+{
+	for (s32 i = 0; i < manager->cbufferCount; i++)
+	{
+		if (manager->cbuffers[i].hash == tag)
+			return &manager->cbuffers[i].asset;
 	}
 
 	return nullptr;

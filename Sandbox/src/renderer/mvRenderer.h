@@ -7,6 +7,38 @@
 
 struct mvAssetManager;
 
+struct GlobalInfo
+{
+
+    mvVec3 ambientColor = { 0.1f, 0.1f, 0.1f };
+    b32    useShadows = true;
+    //-------------------------- ( 16 bytes )
+
+    b32  useOmniShadows = true;
+    b32  useSkybox = true;
+    b32  useAlbedo = true;
+    b32  useMetalness = true;
+    //-------------------------- ( 2*16 = 32 bytes )
+
+    b32 useRoughness = true;
+    b32 useIrradiance = false;
+    b32 useReflection = false;
+    b32 useEmissiveMap = true;
+    //-------------------------- ( 2*16 = 32 bytes )
+
+    mvMat4 projection;
+    mvMat4 model;
+    mvMat4 view;
+
+    mvVec3 camPos;
+    b32 useOcclusionMap = true;
+
+    b32 useNormalMap = true;
+    b32 usePCF = false;
+    i32 pcfRange = 1;
+    char _pad0[4];
+};
+
 namespace Renderer
 {
     void mvSetupCommonAssets(mvAssetManager& am);

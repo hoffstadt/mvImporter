@@ -393,7 +393,7 @@ mvDot(mvVec3 v1, mvVec3 v2)
 }
 
 mvMat4
-mvLookAtRH(mvVec3 eye, mvVec3 center, mvVec3 up)
+mvLookAt(mvVec3 eye, mvVec3 center, mvVec3 up)
 {
 	mvVec3 zaxis = mvNormalize(center - eye);
 	mvVec3 xaxis = mvNormalize(mvCross(up, zaxis));
@@ -423,7 +423,7 @@ mvLookAtRH(mvVec3 eye, mvVec3 center, mvVec3 up)
 }
 
 mvMat4 
-mvFPSViewRH(mvVec3 eye, float pitch, float yaw)
+mvFPSView(mvVec3 eye, float pitch, float yaw)
 {
 
 	// I assume the values are already converted to radians.
@@ -447,7 +447,7 @@ mvFPSViewRH(mvVec3 eye, float pitch, float yaw)
 }
 
 mvMat4
-mvOrthoRH(f32 left, f32 right, f32 bottom, f32 top, f32 zNear, f32 zFar)
+mvOrtho(f32 left, f32 right, f32 bottom, f32 top, f32 zNear, f32 zFar)
 {
 	mvMat4 result = mvIdentityMat4();
 	result[0][0] = 2.0f / (right - left);
@@ -460,7 +460,7 @@ mvOrthoRH(f32 left, f32 right, f32 bottom, f32 top, f32 zNear, f32 zFar)
 }
 
 mvMat4
-mvPerspectiveRH(f32 fovy, f32 aspect, f32 zNear, f32 zFar)
+mvPerspective(f32 fovy, f32 aspect, f32 zNear, f32 zFar)
 {
 	const f32 tanHalfFovy = tan(fovy / 2.0f);
 

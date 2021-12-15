@@ -34,22 +34,26 @@
 //-----------------------------------------------------------------------------
 // Forward Declarations
 //-----------------------------------------------------------------------------
-struct mvGLTFCamera;        // GLTF -> "cameras"
-struct mvGLTFPerspective;   // GLTF -> "perspective"
-struct mvGLTFOrthographic;  // GLTF -> "orthographic"
-struct mvGLTFNode;          // GLTF -> "nodes"
-struct mvGLTFScene;         // GLTF -> "scenes"
-struct mvGLTFMeshPrimitive; // GLTF -> "meshPrimitives"
-struct mvGLTFMesh;          // GLTF -> "meshes"
-struct mvGLTFMaterial;      // GLTF -> "materials"
-struct mvGLTFTexture;       // GLTF -> "textures"
-struct mvGLTFSampler;       // GLTF -> "samplers"
-struct mvGLTFImage;         // GLTF -> "images"
-struct mvGLTFBuffer;        // GLTF -> "buffers"
-struct mvGLTFBufferView;    // GLTF -> "bufferViews"
-struct mvGLTFAccessor;      // GLTF -> "accessors
-struct mvGLTFAttribute;     // GLTF -> "meshes" > "primitives" > "attributes"
-struct mvGLTFModel;         // contains arrays of the above and counts
+struct mvGLTFAnimationChannelTarget; // GLTF -> "animations.channel.target"
+struct mvGLTFAnimationChannel;       // GLTF -> "animations.channels"
+struct mvGLTFAnimationSampler;       // GLTF -> "animations.samplers"
+struct mvGLTFAnimation;              // GLTF -> "animations"
+struct mvGLTFCamera;                 // GLTF -> "cameras"
+struct mvGLTFPerspective;            // GLTF -> "perspective"
+struct mvGLTFOrthographic;           // GLTF -> "orthographic"
+struct mvGLTFNode;                   // GLTF -> "nodes"
+struct mvGLTFScene;                  // GLTF -> "scenes"
+struct mvGLTFMeshPrimitive;          // GLTF -> "meshPrimitives"
+struct mvGLTFMesh;                   // GLTF -> "meshes"
+struct mvGLTFMaterial;               // GLTF -> "materials"
+struct mvGLTFTexture;                // GLTF -> "textures"
+struct mvGLTFSampler;                // GLTF -> "samplers"
+struct mvGLTFImage;                  // GLTF -> "images"
+struct mvGLTFBuffer;                 // GLTF -> "buffers"
+struct mvGLTFBufferView;             // GLTF -> "bufferViews"
+struct mvGLTFAccessor;               // GLTF -> "accessors
+struct mvGLTFAttribute;              // GLTF -> "meshes" > "primitives" > "attributes"
+struct mvGLTFModel;                  // contains arrays of the above and counts
 
 //-----------------------------------------------------------------------------
 // mvImporter End-User API
@@ -266,6 +270,34 @@ struct mvGLTFNode
 	bool        hadMatrix = false;
 };
 
+struct mvGLTFAnimationChannelTarget
+{
+	mvS32       node = -1;
+	std::string path;
+};
+
+struct mvGLTFAnimationChannel
+{
+	mvS32                        sampler = -1;
+	mvGLTFAnimationChannelTarget target;
+};
+
+struct mvGLTFAnimationSampler
+{
+	mvS32       input = -1;
+	mvS32       output = -1;
+	std::string interpolation = "LINEAR";
+};
+
+struct mvGLTFAnimation
+{
+	std::string             name;
+	mvGLTFAnimationChannel* channels = nullptr;
+	mvU32                   channel_count = 0u;
+	mvGLTFAnimationSampler* samplers = nullptr;
+	mvU32                   sampler_count = 0u;
+};
+
 struct mvGLTFScene
 {
 	mvU32* nodes = nullptr;
@@ -286,6 +318,7 @@ struct mvGLTFModel
 	mvGLTFBufferView* bufferviews = nullptr;
 	mvGLTFAccessor*   accessors   = nullptr;
 	mvGLTFCamera*     cameras     = nullptr;
+	mvGLTFAnimation*  animations  = nullptr;
 
 	mvU32 scene_count      = 0u;
 	mvU32 node_count       = 0u;
@@ -298,6 +331,7 @@ struct mvGLTFModel
 	mvU32 bufferview_count = 0u;
 	mvU32 accessor_count   = 0u;
 	mvU32 camera_count     = 0u;
+	mvU32 animation_count  = 0u;
 };
 
 //-----------------------------------------------------------------------------
@@ -1062,6 +1096,94 @@ mvJsonMember::operator mvJsonObject& ()
 
 namespace mvImp {
 
+	static mvGLTFAnimation*
+	_LoadAnimations(mvJsonContext& j, mvU32& size)
+	{
+		if (!j.doesMemberExist("animations"))
+			return nullptr;
+
+		mvU32 animationCount = j["animations"].members.size();
+
+		mvGLTFAnimation* animations = new mvGLTFAnimation[animationCount];
+
+		for (int i = 0; i < animationCount; i++)
+		{
+			mvJsonObject& janimation = j["animations"][i];
+			mvGLTFAnimation& animation = animations[i];
+
+			if (janimation.doesMemberExist("name"))
+			{
+				animation.name = janimation.getMember("name");
+			}
+
+			if (janimation.doesMemberExist("samplers"))
+			{
+				mvU32 samplerCount = janimation["samplers"].members.size();
+				animation.samplers = new mvGLTFAnimationSampler[samplerCount];
+
+				for (int i = 0; i < samplerCount; i++)
+				{
+					mvJsonObject& jsampler = janimation["samplers"][i];
+					mvGLTFAnimationSampler& sampler = animation.samplers[i];
+
+					if (jsampler.doesMemberExist("input"))
+					{
+						sampler.input = jsampler.getMember("input");
+					}
+
+					if (jsampler.doesMemberExist("output"))
+					{
+						sampler.output = jsampler.getMember("output");
+					}
+
+					if (jsampler.doesMemberExist("interpolation"))
+					{
+						sampler.interpolation = jsampler.getMember("interpolation");
+					}
+				}
+			}
+
+			if (janimation.doesMemberExist("channels"))
+			{
+				mvU32 channelCount = janimation["channels"].members.size();
+				animation.channels = new mvGLTFAnimationChannel[channelCount];
+
+				for (int i = 0; i < channelCount; i++)
+				{
+					mvJsonObject& jchannel = janimation["channels"][i];
+					mvGLTFAnimationChannel& channel = animation.channels[i];
+
+					if (jchannel.doesMemberExist("sampler"))
+					{
+						channel.sampler = jchannel.getMember("sampler");
+					}
+
+					if (jchannel.doesMemberExist("target"))
+					{
+
+						mvJsonObject& jchanneltarget = jchannel.getMember("target");
+						mvGLTFAnimationChannelTarget target{};
+
+						if (jchanneltarget.doesMemberExist("node"))
+						{
+							channel.target.node = jchanneltarget.getMember("node");
+						}
+
+						if (jchanneltarget.doesMemberExist("path"))
+						{
+							channel.target.path = jchanneltarget.getMember("path");
+						}
+
+					}
+				}
+			}
+
+			size++;
+		}
+
+		return animations;
+	}
+
 	static mvGLTFCamera*
 	_LoadCameras(mvJsonContext& j, mvU32& size)
 	{
@@ -1734,6 +1856,7 @@ mvLoadBinaryGLTF(const char* root, const char* file)
 	model.bufferviews = mvImp::_LoadBufferViews(context, model.bufferview_count);
 	model.accessors = mvImp::_LoadAccessors(context, model.accessor_count);
 	model.cameras = mvImp::_LoadCameras(context, model.camera_count);
+	model.animations = mvImp::_LoadAnimations(context, model.animation_count);
 
 	if (chunkLength + 20 != length)
 	{
@@ -1844,6 +1967,7 @@ mvLoadGLTF(const char* root, const char* file)
 	model.bufferviews = mvImp::_LoadBufferViews(context, model.bufferview_count);
 	model.accessors = mvImp::_LoadAccessors(context, model.accessor_count);
 	model.cameras = mvImp::_LoadCameras(context, model.camera_count);
+	model.animations = mvImp::_LoadAnimations(context, model.animation_count);
 
 	for (mvU32 i = 0; i < model.image_count; i++)
 	{
@@ -1918,6 +2042,13 @@ mvCleanupGLTF(mvGLTFModel& model)
 			delete[] model.scenes[i].nodes;
 	}
 
+	for (mvU32 i = 0; i < model.animation_count; i++)
+	{
+		if (model.animations[i].sampler_count > 0)
+			delete[] model.animations[i].samplers;
+		if (model.animations[i].channel_count > 0)
+			delete[] model.animations[i].channels;
+	}
 
 	delete[] model.scenes;
 	delete[] model.nodes;
@@ -1929,6 +2060,8 @@ mvCleanupGLTF(mvGLTFModel& model)
 	delete[] model.buffers;
 	delete[] model.bufferviews;
 	delete[] model.accessors;
+	delete[] model.cameras;
+	delete[] model.animations;
 
 	model.scenes = nullptr;
 	model.nodes = nullptr;
@@ -1940,6 +2073,8 @@ mvCleanupGLTF(mvGLTFModel& model)
 	model.buffers = nullptr;
 	model.bufferviews = nullptr;
 	model.accessors = nullptr;
+	model.cameras = nullptr;
+	model.animations = nullptr;
 
 	model.scene_count = 0u;
 	model.node_count = 0u;
@@ -1951,6 +2086,8 @@ mvCleanupGLTF(mvGLTFModel& model)
 	model.buffer_count = 0u;
 	model.bufferview_count = 0u;
 	model.accessor_count = 0u;
+	model.camera_count = 0u;
+	model.animation_count = 0u;
 }
 
 #endif
