@@ -5,7 +5,7 @@
 #include "mvPipeline.h"
 
 void
-mvSetupGraphics(mvViewport& viewport)
+setup_graphics(mvViewport& viewport)
 {
     GContext->graphics.threadID = std::this_thread::get_id();
 
@@ -103,12 +103,7 @@ mvSetupGraphics(mvViewport& viewport)
 }
 
 void
-mvCleanupGraphics()
-{
-}
-
-void
-mvRecreateSwapChain(unsigned width, unsigned height)
+recreate_swapchain(unsigned width, unsigned height)
 {
     if (GContext->graphics.device)
     {
@@ -164,7 +159,7 @@ mvRecreateSwapChain(unsigned width, unsigned height)
 }
 
 void 
-mvSetPipelineState(mvPipeline& pipeline)
+set_pipeline_state(mvPipeline& pipeline)
 {
     auto device = GContext->graphics.imDeviceContext;
     device->IASetPrimitiveTopology(pipeline.topology);

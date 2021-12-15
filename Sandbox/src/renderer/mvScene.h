@@ -11,7 +11,7 @@ struct mvNode
     mvAssetID   camera = -1;
     mvAssetID   children[256];
     u32         childCount = 0u;
-    mvMat4      matrix      = mvIdentityMat4();
+    mvMat4      matrix      = identity_mat4();
     mvVec3      translation = { 0.0f, 0.0f, 0.0f };
     mvVec4      rotation    = { 0.0f, 0.0f, 0.0f, 1.0f };
     mvVec3      scale       = { 1.0f, 1.0f, 1.0f };

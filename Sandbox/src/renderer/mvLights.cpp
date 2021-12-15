@@ -7,7 +7,7 @@ create_point_light(mvAssetManager& am)
 {
     mvPointLight light;
 
-    light.camera = mvCreatePerspectiveCamera(
+    light.camera = create_perspective_camera(
         light.info.viewLightPos.xyz(),
         (f32)M_PI_4,
         1.0f,
@@ -16,12 +16,12 @@ create_point_light(mvAssetManager& am)
     );
 
     // create mesh
-    light.mesh = mvCreateCube(am, 0.25f);
+    light.mesh = create_cube(am, 0.25f);
 
     // create constant buffer
-    light.buffer = mvCreateConstBuffer(&light.info, sizeof(PointLightInfo));
+    light.buffer = create_const_buffer(&light.info, sizeof(mvPointLightInfo));
 
-    mvRegisterAsset(&am, "pointlight_buffer", light.buffer);
+    register_asset(&am, "pointlight_buffer", light.buffer);
 
     return light;
 }
@@ -31,9 +31,9 @@ create_directional_light(mvAssetManager& am)
 {
     mvDirectionalLight light;
 
-    light.buffer = mvCreateConstBuffer(&light.info, sizeof(DirectionLightInfo));
+    light.buffer = create_const_buffer(&light.info, sizeof(mvDirectionLightInfo));
 
-    mvRegisterAsset(&am, "directionallight_buffer", light.buffer);
+    register_asset(&am, "directionallight_buffer", light.buffer);
 
     return light;
 }

@@ -9,13 +9,13 @@
 
 struct DirectionalShadowTransformInfo
 {
-    mvMat4 view = mvIdentityMat4();
-    mvMat4 projection = mvIdentityMat4();
+    mvMat4 view = identity_mat4();
+    mvMat4 projection = identity_mat4();
 };
 
 struct OmniShadowTransformInfo
 {
-    mvMat4 view = mvIdentityMat4();
+    mvMat4 view = identity_mat4();
 };
 
 struct mvDirectionalShadowPass
@@ -40,13 +40,13 @@ struct mvDirectionalShadowPass
         width = w;
         viewport = { 0.0f, 0.0f, (f32)resolution, (f32)resolution, 0.0f, 1.0f };
 
-        buffer = mvCreateConstBuffer(&info, sizeof(DirectionalShadowTransformInfo));
+        buffer = create_const_buffer(&info, sizeof(DirectionalShadowTransformInfo));
 
         // setup camera
         f32 zcomponent = sinf(M_PI * angle / 180.0f);
         f32 ycomponent = cosf(M_PI * angle / 180.0f);
 
-        camera = mvCreateOrthoCamera(
+        camera = create_ortho_camera(
             { 0.0f, 100.0f, 0.0f },
             { 0.0f, -ycomponent, zcomponent },
             width * 2.0f,
@@ -128,9 +128,9 @@ struct mvDirectionalShadowPass
         info.view = getViewMatrix();
         info.projection = getProjectionMatrix();
 
-        mvRegisterAsset(&am, "shadowmap_depthview", depthView);
-        mvRegisterAsset(&am, "shadowmap_sampler", mvSampler{ sampler });
-        mvRegisterAsset(&am, "shadowmap_buffer", buffer);
+        register_asset(&am, "shadowmap_depthview", depthView);
+        register_asset(&am, "shadowmap_sampler", mvSampler{ sampler });
+        register_asset(&am, "shadowmap_buffer", buffer);
 
     }
 
@@ -160,12 +160,12 @@ struct mvDirectionalShadowPass
 
     mvMat4 getViewMatrix()
     {
-        return mvLookAt(camera.pos, camera.pos - camera.dir, camera.up);
+        return lookat(camera.pos, camera.pos - camera.dir, camera.up);
     }
 
     mvMat4 getProjectionMatrix()
     {
-        return mvOrtho(
+        return ortho(
             -camera.width / 2.0f,
             camera.width / 2.0f,
             -camera.height / 2.0f,
@@ -277,12 +277,12 @@ struct mvOmniShadowPass
 
         GContext->graphics.device->CreateRasterizerState(&shadowRenderStateDesc, &rasterizationState);
 
-        buffer = mvCreateConstBuffer(&info, sizeof(OmniShadowTransformInfo));
+        buffer = create_const_buffer(&info, sizeof(OmniShadowTransformInfo));
 
-        mvRegisterAsset(&am, "oshadowmap_sampler", mvSampler{sampler});
-        mvRegisterAsset(&am, "oshadowmap_buffer", buffer);
+        register_asset(&am, "oshadowmap_sampler", mvSampler{sampler});
+        register_asset(&am, "oshadowmap_buffer", buffer);
         for (int i = 0; i < 6; i++)
-            mvRegisterAsset(&am, "oshadowmap_depthview" + std::to_string(i), depthView[i]);
+            register_asset(&am, "oshadowmap_depthview" + std::to_string(i), depthView[i]);
 
     }
 

@@ -85,7 +85,7 @@ mvGetVertexElementInfo(mvVertexElement element)
 }
 
 mvVertexLayout
-mvCreateVertexLayout(std::vector<mvVertexElement> elements)
+create_vertex_layout(std::vector<mvVertexElement> elements)
 {
     mvVertexLayout layout{};
 

@@ -7,6 +7,10 @@
 #include "mvTextures.h"
 
 struct mvAssetManager;
+struct mvMaterial;
+struct mvMaterialData;
+
+mvMaterial create_material(mvAssetManager& am, const std::string& vs, const std::string& ps, mvMaterialData& materialData);
 
 struct mvMaterialData
 {
@@ -47,5 +51,3 @@ struct mvMaterial
     mvAssetID      pipeline;
     mvSampler      colorSampler;
 };
-
-mvMaterial mvCreateMaterial(mvAssetManager& am, const std::string& vs, const std::string& ps, mvMaterialData& materialData);

@@ -6,7 +6,7 @@
 #include "stb_image.h"
 
 mvTexture
-mvCreateTexture(std::vector<unsigned char> data)
+create_texture(std::vector<unsigned char> data)
 {
 	mvTexture texture{};
 
@@ -60,7 +60,7 @@ mvCreateTexture(std::vector<unsigned char> data)
 }
 
 mvTexture
-mvCreateTexture(const std::string& path)
+create_texture(const std::string& path)
 {
     mvTexture texture{};
 
@@ -116,7 +116,7 @@ mvCreateTexture(const std::string& path)
 }
 
 mvCubeTexture
-mvCreateCubeTexture(const std::string& path)
+create_cube_texture(const std::string& path)
 {
     mvCubeTexture texture{};
 
@@ -230,7 +230,7 @@ mvCreateCubeTexture(const std::string& path)
 }
 
 mvSampler
-mvCreateSampler(D3D11_FILTER mode, D3D11_TEXTURE_ADDRESS_MODE addressing, b8 hwPcf)
+create_sampler(D3D11_FILTER mode, D3D11_TEXTURE_ADDRESS_MODE addressing, b8 hwPcf)
 {
     mvSampler sampler{};
 

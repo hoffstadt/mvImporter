@@ -3,6 +3,15 @@
 #include <string>
 #include "mvVertexLayout.h"
 
+struct mvPixelShader;
+struct mvVertexShader;
+struct mvPipelineInfo;
+struct mvPipeline;
+
+mvPipeline     finalize_pipeline   (mvPipelineInfo& info);
+mvPixelShader  create_pixel_shader (const std::string& path);
+mvVertexShader create_vertex_shader(const std::string& path, mvVertexLayout& layout);
+
 struct mvPixelShader
 {
     ID3D11PixelShader* shader;
@@ -43,6 +52,4 @@ struct mvPipeline
     mvPipelineInfo                    info;
 };
 
-mvPipeline     mvFinalizePipeline  (mvPipelineInfo& info);
-mvPixelShader  mvCreatePixelShader (const std::string& path);
-mvVertexShader mvCreateVertexShader(const std::string& path, mvVertexLayout& layout);
+

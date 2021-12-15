@@ -6,7 +6,13 @@
 #include "mvCamera.h"
 #include "mvBuffers.h"
 
-struct PointLightInfo
+struct mvPointLight;
+struct mvDirectionalLight;
+
+mvPointLight       create_point_light      (mvAssetManager& am);
+mvDirectionalLight create_directional_light(mvAssetManager& am);
+
+struct mvPointLightInfo
 {
 
     mvVec4 viewLightPos = { 0.0f, 15.0f, 0.0f, 1.0f };
@@ -25,7 +31,7 @@ struct PointLightInfo
     //-------------------------- ( 4*16 = 64 bytes )
 };
 
-struct DirectionLightInfo
+struct mvDirectionLightInfo
 {
 
     f32    diffuseIntensity = 1.0f;
@@ -43,15 +49,12 @@ struct mvPointLight
 {
     mvCamera       camera{};
     mvConstBuffer  buffer{};
-    PointLightInfo info{};
+    mvPointLightInfo info{};
     mvMesh         mesh{};
 };
 
 struct mvDirectionalLight
 {
     mvConstBuffer      buffer{};
-    DirectionLightInfo info{};
+    mvDirectionLightInfo info{};
 };
-
-mvPointLight       create_point_light(mvAssetManager& am);
-mvDirectionalLight create_directional_light(mvAssetManager& am);

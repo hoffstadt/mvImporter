@@ -1,7 +1,7 @@
 #include "mvMath.h"
 
 f32 
-mvRadians(f32 degrees)
+radians(f32 degrees)
 {
 	return degrees * 0.01745329251994329576923690768489f;
 }
@@ -252,7 +252,7 @@ operator*(mvMat4 left, f32 right)
 }
 
 mvMat4 
-mvIdentityMat4()
+identity_mat4()
 {
 	mvMat4 result{};
 
@@ -265,7 +265,7 @@ mvIdentityMat4()
 }
 
 mvMat4 
-mvTranslate(mvMat4 m, mvVec3 v)
+translate(mvMat4 m, mvVec3 v)
 {
 	mvMat4 result = m;
 
@@ -279,13 +279,13 @@ mvTranslate(mvMat4 m, mvVec3 v)
 }
 
 mvMat4 
-mvRotate(mvMat4 m, f32 angle, mvVec3 v)
+rotate(mvMat4 m, f32 angle, mvVec3 v)
 {
 	const f32 a = angle;
 	const f32 c = cos(a);
 	const f32 s = sin(a);
 
-	mvVec3 axis = mvNormalize(v);
+	mvVec3 axis = normalize(v);
 	mvVec3 temp = axis * (1.0f - c);
 
 	mvMat4 rotate{};
@@ -312,7 +312,7 @@ mvRotate(mvMat4 m, f32 angle, mvVec3 v)
 }
 
 mvMat4 
-mvYawPitchRoll(f32 yaw, f32 pitch, f32 roll)
+yaw_pitch_roll(f32 yaw, f32 pitch, f32 roll)
 {
 	// x = roll
 	// y = pitch
@@ -355,7 +355,7 @@ mvYawPitchRoll(f32 yaw, f32 pitch, f32 roll)
 }
 
 mvMat4 
-mvScale(mvMat4 m, mvVec3 v)
+scale(mvMat4 m, mvVec3 v)
 {
 	mvMat4 result{};
 	result[0] = m[0] * v[0];
@@ -366,7 +366,7 @@ mvScale(mvMat4 m, mvVec3 v)
 }
 
 mvVec3 
-mvNormalize(mvVec3 v)
+normalize(mvVec3 v)
 {
 	f32 length = sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
 	mvVec3 result{};
@@ -377,7 +377,7 @@ mvNormalize(mvVec3 v)
 }
 
 mvVec3 
-mvCross(mvVec3 v1, mvVec3 v2)
+cross(mvVec3 v1, mvVec3 v2)
 {
 	mvVec3 result{};
 	result.x = v1.y * v2.z - v2.y * v1.z;
@@ -387,43 +387,43 @@ mvCross(mvVec3 v1, mvVec3 v2)
 }
 
 f32
-mvDot(mvVec3 v1, mvVec3 v2)
+dot(mvVec3 v1, mvVec3 v2)
 {
 	return v1.x * v2.x + v1.y * v2.y + v1.z * v2.z;
 }
 
 mvMat4
-mvLookAt(mvVec3 eye, mvVec3 center, mvVec3 up)
+lookat(mvVec3 eye, mvVec3 center, mvVec3 up)
 {
-	mvVec3 zaxis = mvNormalize(center - eye);
-	mvVec3 xaxis = mvNormalize(mvCross(up, zaxis));
-	mvVec3 yaxis = mvCross(zaxis, xaxis);
+	mvVec3 zaxis = normalize(center - eye);
+	mvVec3 xaxis = normalize(cross(up, zaxis));
+	mvVec3 yaxis = cross(zaxis, xaxis);
 
-	mvMat4 viewMatrix = mvIdentityMat4();
+	mvMat4 viewMatrix = identity_mat4();
 
 	// row 0
 	viewMatrix[0][0] = xaxis.x;
 	viewMatrix[1][0] = xaxis.y;
 	viewMatrix[2][0] = xaxis.z;
-	viewMatrix[3][0] = -mvDot(xaxis, eye);
+	viewMatrix[3][0] = -dot(xaxis, eye);
 
 	// row 1
 	viewMatrix[0][1] = yaxis.x;
 	viewMatrix[1][1] = yaxis.y;
 	viewMatrix[2][1] = yaxis.z;
-	viewMatrix[3][1] = -mvDot(yaxis, eye);
+	viewMatrix[3][1] = -dot(yaxis, eye);
 
 	// row 2
 	viewMatrix[0][2] = zaxis.x;
 	viewMatrix[1][2] = zaxis.y;
 	viewMatrix[2][2] = zaxis.z;
-	viewMatrix[3][2] = -mvDot(zaxis, eye);
+	viewMatrix[3][2] = -dot(zaxis, eye);
 
 	return viewMatrix;
 }
 
 mvMat4 
-mvFPSView(mvVec3 eye, float pitch, float yaw)
+fps(mvVec3 eye, float pitch, float yaw)
 {
 
 	// I assume the values are already converted to radians.
@@ -436,20 +436,20 @@ mvFPSView(mvVec3 eye, float pitch, float yaw)
 	mvVec3 yaxis = { sinYaw * sinPitch, cosPitch, cosYaw * sinPitch };
 	mvVec3 zaxis = { sinYaw * cosPitch, -sinPitch, cosPitch * cosYaw };
 
-	mvMat4 viewMatrix = mvConstructMat4(
+	mvMat4 viewMatrix = construct_mat4(
 		mvVec4{ xaxis.x, yaxis.x, zaxis.x, 0 },
 		mvVec4{ xaxis.y, yaxis.y, zaxis.y, 0 },
 		mvVec4{ xaxis.z, yaxis.z, zaxis.z, 0 },
-		mvVec4{ -mvDot(xaxis, eye), -mvDot(yaxis, eye), -mvDot(zaxis, eye), 1 }
+		mvVec4{ -dot(xaxis, eye), -dot(yaxis, eye), -dot(zaxis, eye), 1 }
 	);
 
 	return viewMatrix;
 }
 
 mvMat4
-mvOrtho(f32 left, f32 right, f32 bottom, f32 top, f32 zNear, f32 zFar)
+ortho(f32 left, f32 right, f32 bottom, f32 top, f32 zNear, f32 zFar)
 {
-	mvMat4 result = mvIdentityMat4();
+	mvMat4 result = identity_mat4();
 	result[0][0] = 2.0f / (right - left);
 	result[1][1] = 2.0f / (top - bottom);
 	result[2][2] = -2.0f / (zFar - zNear);
@@ -460,7 +460,7 @@ mvOrtho(f32 left, f32 right, f32 bottom, f32 top, f32 zNear, f32 zFar)
 }
 
 mvMat4
-mvPerspective(f32 fovy, f32 aspect, f32 zNear, f32 zFar)
+perspective(f32 fovy, f32 aspect, f32 zNear, f32 zFar)
 {
 	const f32 tanHalfFovy = tan(fovy / 2.0f);
 
@@ -474,7 +474,7 @@ mvPerspective(f32 fovy, f32 aspect, f32 zNear, f32 zFar)
 }
 
 mvMat4
-mvInvert(mvMat4& m)
+invert(mvMat4& m)
 {
 	float Coef00 = m[2][2] * m[3][3] - m[3][2] * m[2][3];
 	float Coef02 = m[1][2] * m[3][3] - m[3][2] * m[1][3];
@@ -520,7 +520,7 @@ mvInvert(mvMat4& m)
 	mvVec4 SignA = {+1.0f, -1.0f, +1.0f, -1.0f};
 	mvVec4 SignB = {-1.0f, +1.0f, -1.0f, +1.0f};
 
-	mvMat4 Inverse = mvConstructMat4(Inv0 * SignA, Inv1 * SignB, Inv2 * SignA, Inv3 * SignB);
+	mvMat4 Inverse = construct_mat4(Inv0 * SignA, Inv1 * SignB, Inv2 * SignA, Inv3 * SignB);
 
 	mvVec4 Row0 = { Inverse[0][0], Inverse[1][0], Inverse[2][0], Inverse[3][0] };
 
@@ -533,7 +533,7 @@ mvInvert(mvMat4& m)
 }
 
 mvMat4
-mvConstructMat4(mvVec4 c0, mvVec4 c1, mvVec4 c2, mvVec4 c3)
+construct_mat4(mvVec4 c0, mvVec4 c1, mvVec4 c2, mvVec4 c3)
 {
 	mvMat4 result{};
 	result[0] = c0;
@@ -544,7 +544,7 @@ mvConstructMat4(mvVec4 c0, mvVec4 c1, mvVec4 c2, mvVec4 c3)
 }
 
 mvMat4 
-mvCreateMatrix(
+create_matrix(
 	f32 m00, f32 m01, f32 m02, f32 m03,
 	f32 m10, f32 m11, f32 m12, f32 m13,
 	f32 m20, f32 m21, f32 m22, f32 m23,

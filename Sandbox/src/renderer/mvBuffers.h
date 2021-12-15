@@ -17,6 +17,6 @@ struct mvConstBuffer
 	ID3D11Buffer* buffer;
 };
 
-mvBuffer      mvCreateBuffer     (void* data, u32 size, D3D11_BIND_FLAG flags);
-mvConstBuffer mvCreateConstBuffer(void* data, u32 size);
-void          mvUpdateConstBuffer(mvConstBuffer& buffer, void* data);
+mvBuffer      create_buffer      (void* data, u32 size, D3D11_BIND_FLAG flags);
+mvConstBuffer create_const_buffer(void* data, u32 size);
+void          update_const_buffer(mvConstBuffer& buffer, void* data);

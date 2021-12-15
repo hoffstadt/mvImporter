@@ -3,7 +3,7 @@
 #include <assert.h>
 
 mvBuffer
-mvCreateBuffer(void* data, u32 size, D3D11_BIND_FLAG flags)
+create_buffer(void* data, u32 size, D3D11_BIND_FLAG flags)
 {
 	mvBuffer buffer{};
 	buffer.size = size;
@@ -39,7 +39,7 @@ mvCreateBuffer(void* data, u32 size, D3D11_BIND_FLAG flags)
 }
 
 mvConstBuffer
-mvCreateConstBuffer(void* data, u32 size)
+create_const_buffer(void* data, u32 size)
 {
     mvConstBuffer buffer{};
     buffer.size = size;
@@ -65,7 +65,7 @@ mvCreateConstBuffer(void* data, u32 size)
 }
 
 void
-mvUpdateConstBuffer(mvConstBuffer& buffer, void* data)
+update_const_buffer(mvConstBuffer& buffer, void* data)
 {
     D3D11_MAPPED_SUBRESOURCE mappedSubresource;
     GContext->graphics.imDeviceContext->Map(buffer.buffer, 0u, D3D11_MAP_WRITE_DISCARD, 0u, &mappedSubresource);

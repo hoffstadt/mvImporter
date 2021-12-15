@@ -2,7 +2,7 @@
 #include "mvAssetManager.h"
 
 mvMaterial
-mvCreateMaterial(mvAssetManager& am, const std::string& vs, const std::string& ps, mvMaterialData& materialData)
+create_material(mvAssetManager& am, const std::string& vs, const std::string& ps, mvMaterialData& materialData)
 {
 	mvMaterial material{};
 
@@ -14,7 +14,7 @@ mvCreateMaterial(mvAssetManager& am, const std::string& vs, const std::string& p
 	pipelineInfo.clamp = 0.0f;
 	pipelineInfo.cull = !materialData.hasAlpha;
 
-	pipelineInfo.layout = mvCreateVertexLayout(
+	pipelineInfo.layout = create_vertex_layout(
 		{
 			mvVertexElement::Position3D,
 			mvVertexElement::Normal,
@@ -47,12 +47,12 @@ mvCreateMaterial(mvAssetManager& am, const std::string& vs, const std::string& p
 	material.pipeline = mvGetMaterialAssetID(&am, hash);
 	if (material.pipeline == -1)
 	{
-		material.pipeline = mvRegisterAsset(&am, hash, mvFinalizePipeline(pipelineInfo));
+		material.pipeline = register_asset(&am, hash, finalize_pipeline(pipelineInfo));
 	}
 
-	material.colorSampler = mvCreateSampler();
+	material.colorSampler = create_sampler();
 	material.data = materialData;
-	material.buffer = mvCreateConstBuffer(&material.data, sizeof(mvMaterialData));
+	material.buffer = create_const_buffer(&material.data, sizeof(mvMaterialData));
 
 	return material;
 }

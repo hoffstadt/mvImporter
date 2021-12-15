@@ -93,7 +93,7 @@ mvCleanupAssetManager(mvAssetManager* manager)
 // render target views
 //-----------------------------------------------------------------------------
 mvAssetID
-mvRegisterAsset(mvAssetManager* manager, const std::string& tag, ID3D11RenderTargetView* asset)
+register_asset(mvAssetManager* manager, const std::string& tag, ID3D11RenderTargetView* asset)
 {
 	manager->targetViews[manager->targetViewCount].asset = asset;
 	manager->targetViews[manager->targetViewCount].hash = tag;
@@ -129,7 +129,7 @@ mvGetRawTargetViewAsset(mvAssetManager* manager, const std::string& tag)
 // depth views
 //-----------------------------------------------------------------------------
 mvAssetID
-mvRegisterAsset(mvAssetManager* manager, const std::string& tag, ID3D11DepthStencilView* asset)
+register_asset(mvAssetManager* manager, const std::string& tag, ID3D11DepthStencilView* asset)
 {
 	manager->depthViews[manager->depthViewCount].asset = asset;
 	manager->depthViews[manager->depthViewCount].hash = tag;
@@ -165,7 +165,7 @@ mvGetRawDepthViewAsset(mvAssetManager* manager, const std::string& tag)
 // pipelines
 //-----------------------------------------------------------------------------
 mvAssetID
-mvRegisterAsset(mvAssetManager* manager, const std::string& tag, mvPipeline asset)
+register_asset(mvAssetManager* manager, const std::string& tag, mvPipeline asset)
 {
 	manager->pipelines[manager->pipelineCount].asset = asset;
 	manager->pipelines[manager->pipelineCount].hash = tag;
@@ -201,7 +201,7 @@ mvGetRawPipelineAsset(mvAssetManager* manager, const std::string& tag)
 // scenes
 //-----------------------------------------------------------------------------
 mvAssetID
-mvRegisterAsset(mvAssetManager* manager, const std::string& tag, mvScene asset)
+register_asset(mvAssetManager* manager, const std::string& tag, mvScene asset)
 {
 	manager->scenes[manager->sceneCount].asset = asset;
 	manager->scenes[manager->sceneCount].hash = tag;
@@ -238,7 +238,7 @@ mvGetRawSceneAsset(mvAssetManager* manager, const std::string& tag)
 //-----------------------------------------------------------------------------
 
 mvAssetID
-mvRegisterAsset(mvAssetManager* manager, const std::string& tag, mvTexture asset)
+register_asset(mvAssetManager* manager, const std::string& tag, mvTexture asset)
 {
 	manager->textures[manager->textureCount].asset = asset;
 	manager->textures[manager->textureCount].hash = tag;
@@ -247,7 +247,7 @@ mvRegisterAsset(mvAssetManager* manager, const std::string& tag, mvTexture asset
 }
 
 mvAssetID
-mvRegisterAsset(mvAssetManager* manager, const std::string& tag, mvCubeTexture asset)
+register_asset(mvAssetManager* manager, const std::string& tag, mvCubeTexture asset)
 {
 	manager->cubeTextures[manager->cubeTextureCount].asset = asset;
 	manager->cubeTextures[manager->cubeTextureCount].hash = tag;
@@ -265,7 +265,7 @@ mvGetTextureAssetID(mvAssetManager* manager, const std::string& path)
 	}
 
 	manager->textures[manager->textureCount].hash = path;
-	manager->textures[manager->textureCount].asset = mvCreateTexture(path);
+	manager->textures[manager->textureCount].asset = create_texture(path);
 	manager->textureCount++;
 	return manager->textureCount - 1;
 }
@@ -280,7 +280,7 @@ mvGetTextureAssetID(mvAssetManager* manager, const std::string& path, std::vecto
 	}
 
 	manager->textures[manager->textureCount].hash = path;
-	manager->textures[manager->textureCount].asset = mvCreateTexture(data);
+	manager->textures[manager->textureCount].asset = create_texture(data);
 	manager->textureCount++;
 	return manager->textureCount - 1;
 }
@@ -295,7 +295,7 @@ mvGetCubeTextureAssetID(mvAssetManager* manager, const std::string& path)
 	}
 
 	manager->cubeTextures[manager->cubeTextureCount].hash = path;
-	manager->cubeTextures[manager->cubeTextureCount].asset = mvCreateCubeTexture(path);
+	manager->cubeTextures[manager->cubeTextureCount].asset = create_cube_texture(path);
 	manager->cubeTextureCount++;
 	return manager->cubeTextureCount - 1;
 }
@@ -310,7 +310,7 @@ mvGetRawTextureAsset(mvAssetManager* manager, const std::string& path)
 	}
 
 	manager->textures[manager->textureCount].hash = path;
-	manager->textures[manager->textureCount].asset = mvCreateTexture(path);
+	manager->textures[manager->textureCount].asset = create_texture(path);
 	manager->textureCount++;
 	return &manager->textures[manager->textureCount - 1].asset;
 }
@@ -320,7 +320,7 @@ mvGetRawTextureAsset(mvAssetManager* manager, const std::string& path)
 //-----------------------------------------------------------------------------
 
 mvAssetID
-mvRegisterAsset(mvAssetManager* manager, const std::string& tag, mvMesh asset)
+register_asset(mvAssetManager* manager, const std::string& tag, mvMesh asset)
 {
 	manager->meshes[manager->meshCount].asset = asset;
 	manager->meshes[manager->meshCount].hash = tag;
@@ -345,7 +345,7 @@ mvGetRawMeshAsset(mvAssetManager* manager, const std::string& tag)
 //-----------------------------------------------------------------------------
 
 mvAssetID
-mvRegisterAsset(mvAssetManager* manager, const std::string& tag, mvBuffer asset)
+register_asset(mvAssetManager* manager, const std::string& tag, mvBuffer asset)
 {
 	manager->buffers[manager->bufferCount].asset = asset;
 	manager->buffers[manager->bufferCount].hash = tag;
@@ -363,7 +363,7 @@ mvGetBufferAssetID(mvAssetManager* manager, const std::string& tag, void* data, 
 	}
 
 	manager->buffers[manager->bufferCount].hash = tag;
-	manager->buffers[manager->bufferCount].asset = mvCreateBuffer(data, size, flags);
+	manager->buffers[manager->bufferCount].asset = create_buffer(data, size, flags);
 	manager->bufferCount++;
 	return manager->bufferCount - 1;
 }
@@ -385,7 +385,7 @@ mvGetRawBufferAsset(mvAssetManager* manager, const std::string& tag)
 //-----------------------------------------------------------------------------
 
 mvAssetID
-mvRegisterAsset(mvAssetManager* manager, const std::string& tag, mvConstBuffer asset)
+register_asset(mvAssetManager* manager, const std::string& tag, mvConstBuffer asset)
 {
 	manager->cbuffers[manager->cbufferCount].asset = asset;
 	manager->cbuffers[manager->cbufferCount].hash = tag;
@@ -410,7 +410,7 @@ mvGetRawCBufferAsset(mvAssetManager* manager, const std::string& tag)
 //-----------------------------------------------------------------------------
 
 mvAssetID
-mvRegisterAsset(mvAssetManager* manager, const std::string& tag, mvMaterial asset)
+register_asset(mvAssetManager* manager, const std::string& tag, mvMaterial asset)
 {
 	manager->materials[manager->materialCount].asset = asset;
 	manager->materials[manager->materialCount].hash = tag;
@@ -448,7 +448,7 @@ mvGetRawMaterialAsset(mvAssetManager* manager, const std::string& tag)
 //-----------------------------------------------------------------------------
 
 mvAssetID
-mvRegisterAsset(mvAssetManager* manager, const std::string& tag, mvNode asset)
+register_asset(mvAssetManager* manager, const std::string& tag, mvNode asset)
 {
 	manager->nodes[manager->nodeCount].asset = asset;
 	manager->nodes[manager->nodeCount].hash = tag;
@@ -485,7 +485,7 @@ mvGetRawNodeAsset(mvAssetManager* manager, const std::string& tag)
 //-----------------------------------------------------------------------------
 
 mvAssetID
-mvRegisterAsset(mvAssetManager* manager, const std::string& tag, mvCamera asset)
+register_asset(mvAssetManager* manager, const std::string& tag, mvCamera asset)
 {
 	manager->cameras[manager->cameraCount].asset = asset;
 	manager->cameras[manager->cameraCount].hash = tag;
@@ -522,7 +522,7 @@ mvGetRawCameraAsset(mvAssetManager* manager, const std::string& tag)
 //-----------------------------------------------------------------------------
 
 mvAssetID
-mvRegisterAsset(mvAssetManager* manager, const std::string& tag, mvSampler asset)
+register_asset(mvAssetManager* manager, const std::string& tag, mvSampler asset)
 {
 	manager->samplers[manager->samplerCount].asset = asset;
 	manager->samplers[manager->samplerCount].hash = tag;

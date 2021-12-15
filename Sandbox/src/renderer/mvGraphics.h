@@ -8,10 +8,9 @@
 struct mvViewport;
 struct mvPipeline;
 
-void mvSetupGraphics(mvViewport& viewport);
-void mvCleanupGraphics();
-void mvRecreateSwapChain(unsigned width, unsigned height);
-void mvSetPipelineState(mvPipeline& pipeline);
+void setup_graphics(mvViewport& viewport);
+void recreate_swapchain(unsigned width, unsigned height);
+void set_pipeline_state(mvPipeline& pipeline);
 
 template <typename T>
 using mvComPtr = Microsoft::WRL::ComPtr<T>;

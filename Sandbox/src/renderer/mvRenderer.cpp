@@ -22,7 +22,7 @@ mvSetupCommonAssets(mvAssetManager& am)
         pipelineInfo.clamp = 0.1f;
         pipelineInfo.cull = false;
 
-        pipelineInfo.layout = mvCreateVertexLayout(
+        pipelineInfo.layout = create_vertex_layout(
             {
                 mvVertexElement::Position3D,
                 mvVertexElement::Normal,
@@ -32,7 +32,7 @@ mvSetupCommonAssets(mvAssetManager& am)
             }
         );
 
-        mvRegisterAsset(&am, "shadow_alpha", mvFinalizePipeline(pipelineInfo));
+        register_asset(&am, "shadow_alpha", finalize_pipeline(pipelineInfo));
     }
 
     {
@@ -44,7 +44,7 @@ mvSetupCommonAssets(mvAssetManager& am)
         pipelineInfo.clamp = 0.1f;
         pipelineInfo.cull = false;
 
-        pipelineInfo.layout = mvCreateVertexLayout(
+        pipelineInfo.layout = create_vertex_layout(
             {
                 mvVertexElement::Position3D,
                 mvVertexElement::Normal,
@@ -54,7 +54,7 @@ mvSetupCommonAssets(mvAssetManager& am)
             }
         );
 
-        mvRegisterAsset(&am, "shadow_no_alpha", mvFinalizePipeline(pipelineInfo));
+        register_asset(&am, "shadow_no_alpha", finalize_pipeline(pipelineInfo));
     }
 
     {
@@ -99,8 +99,8 @@ mvSetupCommonAssets(mvAssetManager& am)
         brt.DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
         GContext->graphics.device->CreateBlendState(&blendDesc, &pipeline.blendState);
 
-        mvPixelShader pixelShader = mvCreatePixelShader(GContext->IO.shaderDirectory + "Solid_PS.hlsl");
-        mvVertexShader vertexShader = mvCreateVertexShader(GContext->IO.shaderDirectory + "Solid_VS.hlsl", mvCreateVertexLayout({ mvVertexElement::Position3D }));
+        mvPixelShader pixelShader = create_pixel_shader(GContext->IO.shaderDirectory + "Solid_PS.hlsl");
+        mvVertexShader vertexShader = create_vertex_shader(GContext->IO.shaderDirectory + "Solid_VS.hlsl", create_vertex_layout({ mvVertexElement::Position3D }));
 
         pipeline.pixelShader = pixelShader.shader;
         pipeline.pixelBlob = pixelShader.blob;
@@ -114,13 +114,13 @@ mvSetupCommonAssets(mvAssetManager& am)
         pipeline.info.clamp = 0.1f;
         pipeline.info.cull = false;
 
-        pipeline.info.layout = mvCreateVertexLayout(
+        pipeline.info.layout = create_vertex_layout(
             {
                 mvVertexElement::Position3D
             }
         );
 
-        mvRegisterAsset(&am, "solid_wireframe", pipeline);
+        register_asset(&am, "solid_wireframe", pipeline);
     }
 
     {
@@ -165,8 +165,8 @@ mvSetupCommonAssets(mvAssetManager& am)
         brt.DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
         GContext->graphics.device->CreateBlendState(&blendDesc, &pipeline.blendState);
 
-        mvPixelShader pixelShader = mvCreatePixelShader(GContext->IO.shaderDirectory + "Solid_PS.hlsl");
-        mvVertexShader vertexShader = mvCreateVertexShader(GContext->IO.shaderDirectory + "Solid_VS.hlsl", mvCreateVertexLayout({ mvVertexElement::Position3D }));
+        mvPixelShader pixelShader = create_pixel_shader(GContext->IO.shaderDirectory + "Solid_PS.hlsl");
+        mvVertexShader vertexShader = create_vertex_shader(GContext->IO.shaderDirectory + "Solid_VS.hlsl", create_vertex_layout({ mvVertexElement::Position3D }));
 
         pipeline.pixelShader = pixelShader.shader;
         pipeline.pixelBlob = pixelShader.blob;
@@ -182,18 +182,18 @@ mvSetupCommonAssets(mvAssetManager& am)
         pipeline.info.clamp = 0.1f;
         pipeline.info.cull = false;
 
-        pipeline.info.layout = mvCreateVertexLayout(
+        pipeline.info.layout = create_vertex_layout(
             {
                 mvVertexElement::Position3D
             }
         );
 
-        mvRegisterAsset(&am, "solid", pipeline);
+        register_asset(&am, "solid", pipeline);
     }
 }
 
 void
-mvRenderMesh(mvAssetManager& am, mvMesh& mesh, mvMat4 transform, mvMat4 cam, mvMat4 proj)
+render_mesh(mvAssetManager& am, mvMesh& mesh, mvMat4 transform, mvMat4 cam, mvMat4 proj)
 {
     auto device = GContext->graphics.imDeviceContext;
 
@@ -223,7 +223,7 @@ mvRenderMesh(mvAssetManager& am, mvMesh& mesh, mvMat4 transform, mvMat4 cam, mvM
         }
 
         // pipeline
-        mvSetPipelineState(pipeline);
+        set_pipeline_state(pipeline);
         device->PSSetSamplers(0, 1, material->colorSampler.state.GetAddressOf());
 
         // maps
@@ -234,7 +234,7 @@ mvRenderMesh(mvAssetManager& am, mvMesh& mesh, mvMat4 transform, mvMat4 cam, mvM
         device->PSSetShaderResources(3, 1, emissiveMap ? emissiveMap->textureView.GetAddressOf() : pSRV);
         device->PSSetShaderResources(4, 1, occlussionMap ? occlussionMap->textureView.GetAddressOf() : pSRV);
 
-        mvUpdateConstBuffer(material->buffer, &material->data);
+        update_const_buffer(material->buffer, &material->data);
         device->PSSetConstantBuffers(1u, 1u, &material->buffer.buffer);
 
         mvTransforms transforms{};
@@ -261,12 +261,12 @@ mvRenderMesh(mvAssetManager& am, mvMesh& mesh, mvMat4 transform, mvMat4 cam, mvM
 }
 
 void
-mvRenderMeshSolid(mvAssetManager& am, mvMesh& mesh, mvMat4 transform, mvMat4 cam, mvMat4 proj)
+render_mesh_solid(mvAssetManager& am, mvMesh& mesh, mvMat4 transform, mvMat4 cam, mvMat4 proj)
 {
     auto device = GContext->graphics.imDeviceContext;
     mvPipeline* pipeline = mvGetRawPipelineAsset(&am, "solid");
 
-    mvSetPipelineState(*pipeline);
+    set_pipeline_state(*pipeline);
 
     for (u32 i = 0; i < mesh.primitives.size(); i++)
     {
@@ -296,12 +296,12 @@ mvRenderMeshSolid(mvAssetManager& am, mvMesh& mesh, mvMat4 transform, mvMat4 cam
 }
 
 void
-mvRenderMeshSolidWireframe(mvAssetManager& am, mvMesh& mesh, mvMat4 transform, mvMat4 cam, mvMat4 proj)
+render_mesh_wireframe(mvAssetManager& am, mvMesh& mesh, mvMat4 transform, mvMat4 cam, mvMat4 proj)
 {
     auto device = GContext->graphics.imDeviceContext;
     mvPipeline* pipeline = mvGetRawPipelineAsset(&am, "solid_wireframe");
 
-    mvSetPipelineState(*pipeline);
+    set_pipeline_state(*pipeline);
 
     for (u32 i = 0; i < mesh.primitives.size(); i++)
     {
@@ -331,7 +331,7 @@ mvRenderMeshSolidWireframe(mvAssetManager& am, mvMesh& mesh, mvMat4 transform, m
 }
 
 void
-mvRenderMeshShadows(mvAssetManager& am, mvMesh& mesh, mvMat4 transform, mvMat4 cam, mvMat4 proj)
+render_mesh_shadow(mvAssetManager& am, mvMesh& mesh, mvMat4 transform, mvMat4 cam, mvMat4 proj)
 {
 
     auto device = GContext->graphics.imDeviceContext;
@@ -361,7 +361,7 @@ mvRenderMeshShadows(mvAssetManager& am, mvMesh& mesh, mvMat4 transform, mvMat4 c
         ID3D11ShaderResourceView* const pSRV[1] = { NULL };
         device->PSSetShaderResources(0, 1, albedoMap ? albedoMap->textureView.GetAddressOf() : pSRV);
 
-        mvUpdateConstBuffer(material->buffer, &material->data);
+        update_const_buffer(material->buffer, &material->data);
         GContext->graphics.imDeviceContext->PSSetConstantBuffers(1u, 1u, &material->buffer.buffer);
 
         mvTransforms transforms{};
@@ -392,10 +392,10 @@ mvRenderNode(mvAssetManager& am, mvNode& node, mvMat4 accumulatedTransform, mvMa
 {
 
     if (node.mesh > -1 && node.camera == -1)
-        mvRenderMesh(am, am.meshes[node.mesh].asset, accumulatedTransform * node.matrix, cam, proj);
+        render_mesh(am, am.meshes[node.mesh].asset, accumulatedTransform * node.matrix, cam, proj);
     else if (node.camera > -1)
     {
-        mvRenderMeshSolidWireframe(am, am.meshes[node.mesh].asset, accumulatedTransform * node.matrix * mvScale(mvIdentityMat4(), { -1.0f, -1.0f, -1.0f }), cam, proj);
+        render_mesh_wireframe(am, am.meshes[node.mesh].asset, accumulatedTransform * node.matrix * scale(identity_mat4(), { -1.0f, -1.0f, -1.0f }), cam, proj);
     }
 
     for (u32 i = 0; i < node.childCount; i++)
@@ -405,22 +405,22 @@ mvRenderNode(mvAssetManager& am, mvNode& node, mvMat4 accumulatedTransform, mvMa
 }
 
 void
-mvRenderScene(mvAssetManager& am, mvScene& scene, mvMat4 cam, mvMat4 proj, mvMat4 scale, mvMat4 trans)
+render_scene(mvAssetManager& am, mvScene& scene, mvMat4 cam, mvMat4 proj, mvMat4 scaleM, mvMat4 trans)
 {
     for (u32 i = 0; i < scene.nodeCount; i++)
     {
         mvNode& rootNode = am.nodes[scene.nodes[i]].asset;
 
         if (rootNode.mesh > -1 && rootNode.camera == -1)
-            mvRenderMesh(am, am.meshes[rootNode.mesh].asset, trans * rootNode.matrix * scale, cam, proj);
+            render_mesh(am, am.meshes[rootNode.mesh].asset, trans * rootNode.matrix * scaleM, cam, proj);
         else if (rootNode.camera > -1)
         {
-            mvRenderMeshSolidWireframe(am, am.meshes[rootNode.mesh].asset, trans * rootNode.matrix * mvScale(mvIdentityMat4(), { -1.0f, -1.0f, -1.0f }), cam, proj);
+            render_mesh_wireframe(am, am.meshes[rootNode.mesh].asset, trans * rootNode.matrix * scale(identity_mat4(), { -1.0f, -1.0f, -1.0f }), cam, proj);
         }
 
         for (u32 j = 0; j < rootNode.childCount; j++)
         {
-            mvRenderNode(am, am.nodes[rootNode.children[j]].asset, trans * rootNode.matrix * scale, cam, proj);
+            mvRenderNode(am, am.nodes[rootNode.children[j]].asset, trans * rootNode.matrix * scaleM, cam, proj);
         }
     }
 }
@@ -430,7 +430,7 @@ mvRenderNodeShadows(mvAssetManager& am, mvNode& node, mvMat4 accumulatedTransfor
 {
 
     if (node.mesh > -1 && node.camera == -1)
-        mvRenderMeshShadows(am, am.meshes[node.mesh].asset, accumulatedTransform * node.matrix, cam, proj);
+        render_mesh_shadow(am, am.meshes[node.mesh].asset, accumulatedTransform * node.matrix, cam, proj);
 
     for (u32 i = 0; i < node.childCount; i++)
     {
@@ -439,14 +439,14 @@ mvRenderNodeShadows(mvAssetManager& am, mvNode& node, mvMat4 accumulatedTransfor
 }
 
 void
-mvRenderSceneShadows(mvAssetManager& am, mvScene& scene, mvMat4 cam, mvMat4 proj, mvMat4 scale, mvMat4 trans)
+render_scene_shadows(mvAssetManager& am, mvScene& scene, mvMat4 cam, mvMat4 proj, mvMat4 scale, mvMat4 trans)
 {
     for (u32 i = 0; i < scene.nodeCount; i++)
     {
         mvNode& rootNode = am.nodes[scene.nodes[i]].asset;
 
         if (rootNode.mesh > -1 && rootNode.camera == -1)
-            mvRenderMeshShadows(am, am.meshes[rootNode.mesh].asset, trans * rootNode.matrix * scale, cam, proj);
+            render_mesh_shadow(am, am.meshes[rootNode.mesh].asset, trans * rootNode.matrix * scale, cam, proj);
 
         for (u32 j = 0; j < rootNode.childCount; j++)
         {

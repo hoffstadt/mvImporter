@@ -6,6 +6,11 @@
 #include "mvGraphics.h"
 #include "mvTypes.h"
 
+enum class mvVertexElement;
+struct mvVertexLayout;
+
+mvVertexLayout create_vertex_layout(std::vector<mvVertexElement> elements);
+
 enum class mvVertexElement
 {
 	Position2D,
@@ -24,8 +29,6 @@ struct mvVertexLayout
 	std::vector<DXGI_FORMAT>              formats;
 	std::vector<D3D11_INPUT_ELEMENT_DESC> d3dLayout;
 };
-
-mvVertexLayout mvCreateVertexLayout(std::vector<mvVertexElement> elements);
 
 bool operator==(mvVertexLayout& left, mvVertexLayout& right);
 bool operator!=(mvVertexLayout& left, mvVertexLayout& right);

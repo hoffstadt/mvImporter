@@ -27,8 +27,8 @@ create_skybox(mvAssetManager& am)
     GContext->graphics.device->CreateRasterizerState(&skyboxRasterDesc, &skybox.pipeline.rasterizationState);
     GContext->graphics.device->CreateBlendState(&blendDesc, &skybox.pipeline.blendState);
 
-    mvPixelShader pixelShader = mvCreatePixelShader(GContext->IO.shaderDirectory + "Skybox_PS.hlsl");
-    mvVertexShader vertexShader = mvCreateVertexShader(GContext->IO.shaderDirectory + "Skybox_VS.hlsl", mvCreateVertexLayout({ mvVertexElement::Position3D }));
+    mvPixelShader pixelShader = create_pixel_shader(GContext->IO.shaderDirectory + "Skybox_PS.hlsl");
+    mvVertexShader vertexShader = create_vertex_shader(GContext->IO.shaderDirectory + "Skybox_VS.hlsl", create_vertex_layout({ mvVertexElement::Position3D }));
 
     skybox.pipeline.pixelShader = pixelShader.shader;
     skybox.pipeline.pixelBlob = pixelShader.blob;
@@ -36,8 +36,6 @@ create_skybox(mvAssetManager& am)
     skybox.pipeline.vertexBlob = vertexShader.blob;
     skybox.pipeline.inputLayout = vertexShader.inputLayout;
     skybox.pipeline.topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-
-    mvRegisterAsset(&am, "skybox_pipeline", skybox.pipeline);
 
     const float side = 1.0f / 2.0f;
     auto vertices = std::vector<f32>{
@@ -60,10 +58,10 @@ create_skybox(mvAssetManager& am)
         0, 1, 4, 1, 5, 4
     };
 
-    skybox.vertexBuffer = mvCreateBuffer(vertices.data(), vertices.size() * sizeof(f32), D3D11_BIND_VERTEX_BUFFER);
-    skybox.indexBuffer = mvCreateBuffer(indices.data(), indices.size() * sizeof(u32), D3D11_BIND_INDEX_BUFFER);
-    skybox.vertexLayout = mvCreateVertexLayout({ mvVertexElement::Position3D });
-    skybox.cubeTexture = mvCreateCubeTexture("../../Resources/SkyBox");
+    skybox.vertexBuffer = create_buffer(vertices.data(), vertices.size() * sizeof(f32), D3D11_BIND_VERTEX_BUFFER);
+    skybox.indexBuffer = create_buffer(indices.data(), indices.size() * sizeof(u32), D3D11_BIND_INDEX_BUFFER);
+    skybox.vertexLayout = create_vertex_layout({ mvVertexElement::Position3D });
+    skybox.cubeTexture = create_cube_texture("../../Resources/SkyBox");
 
     D3D11_SAMPLER_DESC samplerDesc{};
     samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_BORDER;
@@ -74,10 +72,11 @@ create_skybox(mvAssetManager& am)
     samplerDesc.MaxAnisotropy = D3D11_REQ_MAXANISOTROPY;
     GContext->graphics.device->CreateSamplerState(&samplerDesc, &skybox.cubeSampler);
 
-    mvRegisterAsset(&am, "skybox_texture", skybox.cubeTexture);
-    mvRegisterAsset(&am, "skybox_sampler", mvSampler{ skybox.cubeSampler });
-    mvRegisterAsset(&am, "skybox_ibuffer", skybox.indexBuffer);
-    mvRegisterAsset(&am, "skybox_vbuffer", skybox.vertexBuffer);
+    register_asset(&am, "skybox_pipeline", skybox.pipeline);
+    register_asset(&am, "skybox_texture", skybox.cubeTexture);
+    register_asset(&am, "skybox_sampler", mvSampler{ skybox.cubeSampler });
+    register_asset(&am, "skybox_ibuffer", skybox.indexBuffer);
+    register_asset(&am, "skybox_vbuffer", skybox.vertexBuffer);
 
     return skybox;
 }
@@ -89,12 +88,12 @@ render_skybox(mvSkybox& skybox, mvMat4 cam, mvMat4 proj)
     auto ctx = GContext->graphics.imDeviceContext;
 
     // pipeline
-    mvSetPipelineState(skybox.pipeline);
+    set_pipeline_state(skybox.pipeline);
     ctx->PSSetSamplers(0, 1, &skybox.cubeSampler);
     ctx->PSSetShaderResources(0, 1, &skybox.cubeTexture.textureView);
 
     mvTransforms transforms{};
-    transforms.model = mvIdentityMat4() * mvScale(mvIdentityMat4(), mvVec3{ 1.0f, 1.0f, -1.0f });
+    transforms.model = identity_mat4() * scale(identity_mat4(), mvVec3{ 1.0f, 1.0f, -1.0f });
     transforms.modelView = cam * transforms.model;
     transforms.modelViewProjection = proj * cam * transforms.model;
 

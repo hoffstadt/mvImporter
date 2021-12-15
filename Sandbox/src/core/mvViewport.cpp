@@ -9,7 +9,7 @@ static LRESULT CALLBACK
 HandleMsgSetup(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 mvViewport*
-mvInitializeViewport(i32 width, i32 height)
+initialize_viewport(i32 width, i32 height)
 {
     mvViewport* viewport = new mvViewport{
         width,
@@ -58,7 +58,7 @@ mvInitializeViewport(i32 width, i32 height)
 }
     
 std::optional<i32>
-mvProcessViewportEvents()
+process_viewport_events()
 {
     MSG msg;
         

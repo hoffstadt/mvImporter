@@ -8,10 +8,10 @@
 #include "mvImporter.h"
 
 mvMesh
-mvCreateCube(mvAssetManager& assetManager, f32 size)
+create_cube(mvAssetManager& assetManager, f32 size)
 {
 
-    mvVertexLayout layout = mvCreateVertexLayout(
+    mvVertexLayout layout = create_vertex_layout(
         {
             mvVertexElement::Position3D
         }
@@ -73,10 +73,10 @@ mvCreateCube(mvAssetManager& assetManager, f32 size)
 }
 
 mvMesh
-mvCreateTexturedCube(mvAssetManager& assetManager, f32 size)
+create_textured_cube(mvAssetManager& assetManager, f32 size)
 {
 
-    mvVertexLayout layout = mvCreateVertexLayout(
+    mvVertexLayout layout = create_vertex_layout(
         {
             mvVertexElement::Position3D,
             mvVertexElement::Normal,
@@ -135,7 +135,7 @@ mvCreateTexturedCube(mvAssetManager& assetManager, f32 size)
         mvVec3 p1 = { vertices[14 * indices[i+1]], vertices[14 * indices[i + 1] + 1], vertices[14 * indices[i + 1] + 2] };
         mvVec3 p2 = { vertices[14 * indices[i+2]], vertices[14 * indices[i + 2] + 1], vertices[14 * indices[i + 2] + 2] };
 
-        mvVec3 n = mvNormalize(mvCross(p1 - p0, p2 - p0));
+        mvVec3 n = normalize(cross(p1 - p0, p2 - p0));
         vertices[14 * indices[i] + 3] = n[0];
         vertices[14 * indices[i] + 4] = n[1];
         vertices[14 * indices[i] + 5] = n[2];
@@ -166,10 +166,10 @@ mvCreateTexturedCube(mvAssetManager& assetManager, f32 size)
 }
 
 mvMesh
-mvCreateTexturedQuad(mvAssetManager& assetManager, f32 size)
+create_textured_quad(mvAssetManager& assetManager, f32 size)
 {
 
-    mvVertexLayout layout = mvCreateVertexLayout(
+    mvVertexLayout layout = create_vertex_layout(
         {
             mvVertexElement::Position3D,
             mvVertexElement::Normal,
@@ -198,7 +198,7 @@ mvCreateTexturedQuad(mvAssetManager& assetManager, f32 size)
         mvVec3 p1 = { vertices[14 * indices[i + 1]], vertices[14 * indices[i + 1] + 1], vertices[14 * indices[i + 1] + 2] };
         mvVec3 p2 = { vertices[14 * indices[i + 2]], vertices[14 * indices[i + 2] + 1], vertices[14 * indices[i + 2] + 2] };
 
-        mvVec3 n = mvNormalize(mvCross(p1 - p0, p2 - p0));
+        mvVec3 n = normalize(cross(p1 - p0, p2 - p0));
         vertices[14 * indices[i] + 3] = n[0];
         vertices[14 * indices[i] + 4] = n[1];
         vertices[14 * indices[i] + 5] = n[2];
@@ -230,12 +230,12 @@ mvCreateTexturedQuad(mvAssetManager& assetManager, f32 size)
 }
 
 mvMesh
-mvCreateFrustum(mvAssetManager& assetManager, f32 width, f32 height, f32 nearZ, f32 farZ)
+create_frustum(mvAssetManager& assetManager, f32 width, f32 height, f32 nearZ, f32 farZ)
 {
     static u32 id = 0;
     id++;
 
-    mvVertexLayout layout = mvCreateVertexLayout(
+    mvVertexLayout layout = create_vertex_layout(
         {
             mvVertexElement::Position3D
         }
@@ -290,11 +290,11 @@ mvCreateFrustum(mvAssetManager& assetManager, f32 width, f32 height, f32 nearZ, 
 }
 
 mvMesh
-mvCreateFrustum2(mvAssetManager& assetManager, f32 fov, f32 aspect, f32 nearZ, f32 farZ)
+create_frustum2(mvAssetManager& assetManager, f32 fov, f32 aspect, f32 nearZ, f32 farZ)
 {
     static u32 id = 0;
     id++;
-    mvVertexLayout layout = mvCreateVertexLayout(
+    mvVertexLayout layout = create_vertex_layout(
         {
             mvVertexElement::Position3D
         }
@@ -353,12 +353,12 @@ mvCreateFrustum2(mvAssetManager& assetManager, f32 fov, f32 aspect, f32 nearZ, f
 }
 
 mvMesh
-mvCreateOrthoFrustum(mvAssetManager& assetManager, f32 width, f32 height, f32 nearZ, f32 farZ)
+create_ortho_frustum(mvAssetManager& assetManager, f32 width, f32 height, f32 nearZ, f32 farZ)
 {
     static u32 id = 0;
     id++;
 
-    mvVertexLayout layout = mvCreateVertexLayout(
+    mvVertexLayout layout = create_vertex_layout(
         {
             mvVertexElement::Position3D
         }
@@ -408,7 +408,6 @@ mvCreateOrthoFrustum(mvAssetManager& assetManager, f32 width, f32 height, f32 ne
 
     return mesh;
 }
-
 
 static u8
 mvGetAccessorItemCompCount(mvGLTFAccessor& accessor)
@@ -495,7 +494,7 @@ mvFillBuffer(mvGLTFModel& model, mvGLTFAccessor& accessor, std::vector<W>& outBu
 }
 
 void
-mvLoadGLTFAssets(mvAssetManager& assetManager, mvGLTFModel& model)
+load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
 {
 
     u32 nodeOffset = assetManager.nodeCount;
@@ -525,7 +524,7 @@ mvLoadGLTFAssets(mvAssetManager& assetManager, mvGLTFModel& model)
             camera.height = glcamera.orthographic.ymag * 2.0f;
         }
 
-        mvRegisterAsset(&assetManager, glcamera.name, camera);
+        register_asset(&assetManager, glcamera.name, camera);
     }
 
     for (u32 currentMesh = 0u; currentMesh < model.mesh_count; currentMesh++)
@@ -600,7 +599,7 @@ mvLoadGLTFAssets(mvAssetManager& assetManager, mvGLTFModel& model)
                 }
             }
 
-            mvVertexLayout currentlayout = mvCreateVertexLayout(attributes);
+            mvVertexLayout currentlayout = create_vertex_layout(attributes);
 
             std::vector<u32> indexBuffer;
             std::vector<f32> vertexBuffer;
@@ -704,14 +703,14 @@ mvLoadGLTFAssets(mvAssetManager& assetManager, mvGLTFModel& model)
 
                 // project tangent and bitangent into the plane formed by the vertex' normal
                 //mvVec3 newTangent = cNormalize(tangent - n * (tangent * n));
-                *((mvVec3*)&combinedVertexBuffer[i0 * 14 + 8]) = mvNormalize(tangent - n0 * (tangent * n0));
-                *((mvVec3*)&combinedVertexBuffer[i1 * 14 + 8]) = mvNormalize(tangent - n1 * (tangent * n1));
-                *((mvVec3*)&combinedVertexBuffer[i2 * 14 + 8]) = mvNormalize(tangent - n2 * (tangent * n2));
+                *((mvVec3*)&combinedVertexBuffer[i0 * 14 + 8]) = normalize(tangent - n0 * (tangent * n0));
+                *((mvVec3*)&combinedVertexBuffer[i1 * 14 + 8]) = normalize(tangent - n1 * (tangent * n1));
+                *((mvVec3*)&combinedVertexBuffer[i2 * 14 + 8]) = normalize(tangent - n2 * (tangent * n2));
 
                 //mvVec3 newBitangent = cNormalize(bitangent - n * (bitangent * n));
-                *((mvVec3*)&combinedVertexBuffer[i0 * 14 + 11]) = mvNormalize(bitangent - n0 * (bitangent * n0));
-                *((mvVec3*)&combinedVertexBuffer[i1 * 14 + 11]) = mvNormalize(bitangent - n1 * (bitangent * n1));
-                *((mvVec3*)&combinedVertexBuffer[i2 * 14 + 11]) = mvNormalize(bitangent - n2 * (bitangent * n2));
+                *((mvVec3*)&combinedVertexBuffer[i0 * 14 + 11]) = normalize(bitangent - n0 * (bitangent * n0));
+                *((mvVec3*)&combinedVertexBuffer[i1 * 14 + 11]) = normalize(bitangent - n1 * (bitangent * n1));
+                *((mvVec3*)&combinedVertexBuffer[i2 * 14 + 11]) = normalize(bitangent - n2 * (bitangent * n2));
 
                 // vertex 0
                 vertexBuffer.push_back(p0.x);
@@ -764,7 +763,7 @@ mvLoadGLTFAssets(mvAssetManager& assetManager, mvGLTFModel& model)
             }
 
             newMesh.primitives.push_back({});
-            newMesh.primitives.back().layout = mvCreateVertexLayout(
+            newMesh.primitives.back().layout = create_vertex_layout(
                 {
                     mvVertexElement::Position3D,
                     mvVertexElement::Normal,
@@ -879,7 +878,7 @@ mvLoadGLTFAssets(mvAssetManager& assetManager, mvGLTFModel& model)
                 newMesh.primitives.back().materialID = mvGetMaterialAssetID(&assetManager, hash);
                 if (newMesh.primitives.back().materialID == -1)
                 {
-                    newMesh.primitives.back().materialID = mvRegisterAsset(&assetManager, hash, mvCreateMaterial(assetManager, "PBR_VS.hlsl", "PBR_PS.hlsl", materialData));
+                    newMesh.primitives.back().materialID = register_asset(&assetManager, hash, create_material(assetManager, "PBR_VS.hlsl", "PBR_PS.hlsl", materialData));
                 }
 
             }
@@ -914,7 +913,7 @@ mvLoadGLTFAssets(mvAssetManager& assetManager, mvGLTFModel& model)
                 newMesh.primitives.back().materialID = mvGetMaterialAssetID(&assetManager, hash);
                 if (newMesh.primitives.back().materialID == -1)
                 {
-                    newMesh.primitives.back().materialID = mvRegisterAsset(&assetManager, hash, mvCreateMaterial(assetManager, "PBR_VS.hlsl", "PBR_PS.hlsl", materialData));
+                    newMesh.primitives.back().materialID = register_asset(&assetManager, hash, create_material(assetManager, "PBR_VS.hlsl", "PBR_PS.hlsl", materialData));
                 }
             }
 
@@ -930,7 +929,7 @@ mvLoadGLTFAssets(mvAssetManager& assetManager, mvGLTFModel& model)
                 D3D11_BIND_VERTEX_BUFFER);
         }
 
-        mvRegisterAsset(&assetManager, newMesh.name + std::to_string(currentMesh), newMesh);
+        register_asset(&assetManager, newMesh.name + std::to_string(currentMesh), newMesh);
 
     }
 
@@ -950,13 +949,13 @@ mvLoadGLTFAssets(mvAssetManager& assetManager, mvGLTFModel& model)
 
             if (camera.type == MV_CAMERA_PERSPECTIVE)
             {
-                mvMesh frustum1 = mvCreateFrustum2(assetManager, camera.fieldOfView*180.0f/M_PI, camera.aspectRatio, camera.nearZ, camera.farZ);
-                newNode.mesh = mvRegisterAsset(&assetManager, "node_camera_" + std::to_string(currentNode), frustum1);
+                mvMesh frustum1 = create_frustum2(assetManager, camera.fieldOfView*180.0f/M_PI, camera.aspectRatio, camera.nearZ, camera.farZ);
+                newNode.mesh = register_asset(&assetManager, "node_camera_" + std::to_string(currentNode), frustum1);
             }
             else
             {
-                mvMesh frustum1 = mvCreateOrthoFrustum(assetManager, camera.width, camera.height, camera.nearZ, camera.farZ);
-                newNode.mesh = mvRegisterAsset(&assetManager, "bad_node_camera_" + std::to_string(currentNode), frustum1);
+                mvMesh frustum1 = create_ortho_frustum(assetManager, camera.width, camera.height, camera.nearZ, camera.farZ);
+                newNode.mesh = register_asset(&assetManager, "bad_node_camera_" + std::to_string(currentNode), frustum1);
             }
         }
         newNode.childCount = glnode.child_count;
@@ -995,16 +994,16 @@ mvLoadGLTFAssets(mvAssetManager& assetManager, mvGLTFModel& model)
             float m21 = 2.0f * (yz + xw);
             float m22 = -x2 - y2 + z2 + w2;
 
-            mvMat4 rotationMat = mvCreateMatrix(
+            mvMat4 rotationMat = create_matrix(
                 m00, m01, m02, 0.0f,
                 m10, m11, m12, 0.0f,
                 m20, m21, m22, 0.0f,
                 0.0f, 0.0f, 0.0f, 1.0f);
 
-            newNode.matrix = mvTranslate(mvIdentityMat4(), newNode.translation) * rotationMat * mvScale(mvIdentityMat4(), newNode.scale);
+            newNode.matrix = translate(identity_mat4(), newNode.translation) * rotationMat * scale(identity_mat4(), newNode.scale);
         }
 
-        mvRegisterAsset(&assetManager, "node_" + std::to_string(currentNode), newNode);
+        register_asset(&assetManager, "node_" + std::to_string(currentNode), newNode);
     }
 
     for (u32 currentScene = 0u; currentScene < model.scene_count; currentScene++)
@@ -1017,6 +1016,6 @@ mvLoadGLTFAssets(mvAssetManager& assetManager, mvGLTFModel& model)
         for (i32 i = 0; i < glscene.node_count; i++)
             newScene.nodes[i] = glscene.nodes[i] + nodeOffset;
 
-        mvRegisterAsset(&assetManager, "scene_" + std::to_string(currentScene), newScene);
+        register_asset(&assetManager, "scene_" + std::to_string(currentScene), newScene);
     }
 }

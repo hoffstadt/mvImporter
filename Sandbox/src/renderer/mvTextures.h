@@ -5,6 +5,15 @@
 #include "mvTypes.h"
 #include "mvGraphics.h"
 
+struct mvTexture;
+struct mvCubeTexture;
+struct mvSampler;
+
+mvTexture     create_texture     (const std::string& path);
+mvTexture     create_texture     (std::vector<unsigned char> data);
+mvCubeTexture create_cube_texture(const std::string& path);
+mvSampler     create_sampler     (D3D11_FILTER mode = D3D11_FILTER_ANISOTROPIC, D3D11_TEXTURE_ADDRESS_MODE addressing = D3D11_TEXTURE_ADDRESS_WRAP, b8 hwPcf = false);
+
 struct mvTexture
 {
     mvComPtr<ID3D11Texture2D>          texture;
@@ -22,7 +31,3 @@ struct mvSampler
     mvComPtr<ID3D11SamplerState> state;
 };
 
-mvTexture     mvCreateTexture    (const std::string& path);
-mvTexture     mvCreateTexture    (std::vector<unsigned char> data);
-mvCubeTexture mvCreateCubeTexture(const std::string& path);
-mvSampler     mvCreateSampler    (D3D11_FILTER mode = D3D11_FILTER_ANISOTROPIC, D3D11_TEXTURE_ADDRESS_MODE addressing = D3D11_TEXTURE_ADDRESS_WRAP, b8 hwPcf=false);

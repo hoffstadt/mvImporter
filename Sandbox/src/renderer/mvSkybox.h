@@ -7,6 +7,10 @@
 #include "mvTextures.h"
 
 struct mvAssetManager;
+struct mvSkybox;
+
+mvSkybox create_skybox(mvAssetManager& am);
+void     render_skybox(mvSkybox& skybox, mvMat4 cam, mvMat4 proj);
 
 struct mvSkybox
 {
@@ -17,6 +21,3 @@ struct mvSkybox
     mvCubeTexture       cubeTexture;
     mvPipeline          pipeline;
 };
-
-mvSkybox create_skybox(mvAssetManager& am);
-void     render_skybox(mvSkybox& skybox, mvMat4 cam, mvMat4 proj);

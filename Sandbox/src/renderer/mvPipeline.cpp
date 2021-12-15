@@ -12,7 +12,7 @@ ToWide(const std::string& narrow)
 }
 
 mvPixelShader
-mvCreatePixelShader(const std::string& path)
+create_pixel_shader(const std::string& path)
 {
     mvPixelShader shader{};
     shader.path = path;
@@ -39,7 +39,7 @@ mvCreatePixelShader(const std::string& path)
 }
 
 mvVertexShader
-mvCreateVertexShader(const std::string& path, mvVertexLayout& layout)
+create_vertex_shader(const std::string& path, mvVertexLayout& layout)
 {
     mvVertexShader shader{};
     shader.path = path;
@@ -90,7 +90,7 @@ mvCreateVertexShader(const std::string& path, mvVertexLayout& layout)
 }
 
 mvPipeline
-mvFinalizePipeline(mvPipelineInfo& info)
+finalize_pipeline(mvPipelineInfo& info)
 {
     mvPipeline pipeline{};
     pipeline.info = info;
@@ -140,12 +140,12 @@ mvFinalizePipeline(mvPipelineInfo& info)
 
     if (!info.pixelShader.empty())
     {
-        mvPixelShader pixelShader = mvCreatePixelShader(GContext->IO.shaderDirectory + info.pixelShader);
+        mvPixelShader pixelShader = create_pixel_shader(GContext->IO.shaderDirectory + info.pixelShader);
         pipeline.pixelShader = pixelShader.shader;
         pipeline.pixelBlob = pixelShader.blob;
     }
 
-    mvVertexShader vertexShader = mvCreateVertexShader(GContext->IO.shaderDirectory + info.vertexShader, info.layout);
+    mvVertexShader vertexShader = create_vertex_shader(GContext->IO.shaderDirectory + info.vertexShader, info.layout);
 
     pipeline.vertexShader = vertexShader.shader;
     pipeline.vertexBlob = vertexShader.blob;

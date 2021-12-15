@@ -13,8 +13,6 @@
 // TODO: make most of these runtime options
 static const char* gltfAssetDirectory0 = "../../data/glTF-Sample-Models/2.0/Sponza/glTF/";
 static const char* gltfModel0 = "../../data/glTF-Sample-Models/2.0/Sponza/glTF/Sponza.gltf";
-//static const char* gltfAssetDirectory0 = "../../data/glTF-Sample-Models/2.0/AnimatedTriangle/glTF/";
-//static const char* gltfModel0 = "../../data/glTF-Sample-Models/2.0/AnimatedTriangle/glTF/AnimatedTriangle.gltf";
 static f32         shadowWidth = 95.0f;
 static int         initialWidth = 1850;
 static int         initialHeight = 900;
@@ -26,8 +24,8 @@ int main()
     GContext->IO.shaderDirectory = "../../Sandbox/shaders/";
     GContext->IO.resourceDirectory = "../../Resources/";
 
-    mvViewport* window = mvInitializeViewport(initialWidth, initialHeight);
-    mvSetupGraphics(*window);
+    mvViewport* window = initialize_viewport(initialWidth, initialHeight);
+    setup_graphics(*window);
     ID3D11DeviceContext* ctx = GContext->graphics.imDeviceContext.Get();
 
     // setup imgui
@@ -44,11 +42,11 @@ int main()
 
     // assets & meshes
     mvGLTFModel gltfmodel0 = mvLoadGLTF(gltfAssetDirectory0, gltfModel0);
-    mvLoadGLTFAssets(am, gltfmodel0);
+    load_gltf_assets(am, gltfmodel0);
     mvCleanupGLTF(gltfmodel0);
 
     // main camera
-    mvCamera camera = mvCreatePerspectiveCamera({ -13.5f, 6.0f, 3.5f }, (f32)M_PI_4, 1.0f, 0.1f, 400.0f);
+    mvCamera camera = create_perspective_camera({ -13.5f, 6.0f, 3.5f }, (f32)M_PI_4, 1.0f, 0.1f, 400.0f);
 
     // lights
     mvPointLight pointlight = create_point_light(am);
@@ -60,11 +58,11 @@ int main()
     mvOmniShadowPass omniShadowMap = mvOmniShadowPass(am, 2048);
     mvSkybox skybox = create_skybox(am);
     
-    omniShadowMap.info.view = mvCreateLookAtView(pointlight.camera);
+    omniShadowMap.info.view = create_lookat_view(pointlight.camera);
 
     GlobalInfo globalInfo{};
-    mvConstBuffer globalInfoBuffer = mvCreateConstBuffer(&globalInfo, sizeof(GlobalInfo));
-    mvRegisterAsset(&am, "global_constant_buffer", globalInfoBuffer);
+    mvConstBuffer globalInfoBuffer = create_const_buffer(&globalInfo, sizeof(GlobalInfo));
+    register_asset(&am, "global_constant_buffer", globalInfoBuffer);
 
     mvTimer timer;
 
@@ -75,14 +73,14 @@ int main()
         static f32 scale0 = 1.0f;
         static mvVec3 translate0 = { 0.0f, 0.0f, 0.0f };
         mvVec3 scaleVec0 = { scale0, scale0, scale0 };
-        mvMat4 stransform0 = mvScale(mvIdentityMat4(), scaleVec0);
-        mvMat4 ttransform0 = mvTranslate(mvIdentityMat4(), translate0);
+        mvMat4 stransform0 = scale(identity_mat4(), scaleVec0);
+        mvMat4 ttransform0 = translate(identity_mat4(), translate0);
 
-        if (const auto ecode = mvProcessViewportEvents()) break;
+        if (const auto ecode = process_viewport_events()) break;
 
         if (window->resized)
         {
-            mvRecreateSwapChain(window->width, window->height);
+            recreate_swapchain(window->width, window->height);
             window->resized = false;
         }
 
@@ -143,7 +141,7 @@ int main()
         ctx->RSSetState(directionalShadowMap.rasterizationState);
 
         for (int i = 0; i < am.sceneCount; i++)
-            Renderer::mvRenderSceneShadows(am, am.scenes[i].asset, directionalShadowMap.getViewMatrix(), directionalShadowMap.getProjectionMatrix(), stransform0, ttransform0);
+            Renderer::render_scene_shadows(am, am.scenes[i].asset, directionalShadowMap.getViewMatrix(), directionalShadowMap.getProjectionMatrix(), stransform0, ttransform0);
 
         //-----------------------------------------------------------------------------
         // omni shadow pass
@@ -155,10 +153,10 @@ int main()
         {
             ctx->OMSetRenderTargets(0, nullptr, omniShadowMap.depthView[i]);
             mvVec3 look_target = pointlight.camera.pos + omniShadowMap.cameraDirections[i];
-            mvMat4 camera_matrix = mvLookAt(pointlight.camera.pos, look_target, omniShadowMap.cameraUps[i]);
+            mvMat4 camera_matrix = lookat(pointlight.camera.pos, look_target, omniShadowMap.cameraUps[i]);
 
             for (int i = 0; i < am.sceneCount; i++)
-                Renderer::mvRenderSceneShadows(am, am.scenes[i].asset, camera_matrix, mvPerspective(M_PI_2, 1.0f, 0.5f, 100.0f), stransform0, ttransform0);
+                Renderer::render_scene_shadows(am, am.scenes[i].asset, camera_matrix, perspective(M_PI_2, 1.0f, 0.5f, 100.0f), stransform0, ttransform0);
         }
 
         //-----------------------------------------------------------------------------
@@ -167,18 +165,18 @@ int main()
         ctx->OMSetRenderTargets(1, &offscreen.targetView, offscreen.depthView);
         ctx->RSSetViewports(1u, &offscreen.viewport);
 
-        mvMat4 viewMatrix = mvCreateFPSView(camera);
-        mvMat4 projMatrix = mvCreateLookAtProjection(camera);
+        mvMat4 viewMatrix = create_fps_view(camera);
+        mvMat4 projMatrix = create_projection(camera);
 
         globalInfo.camPos = camera.pos;
         directionalLight.info.viewLightDir = directionalShadowMap.camera.dir;
 
         // update constant buffers
-        mvUpdateConstBuffer(pointlight.buffer, &pointlight.info);
-        mvUpdateConstBuffer(directionalLight.buffer, &directionalLight.info);
-        mvUpdateConstBuffer(globalInfoBuffer, &globalInfo);
-        mvUpdateConstBuffer(directionalShadowMap.buffer, &directionalShadowMap.info);
-        mvUpdateConstBuffer(omniShadowMap.buffer, &omniShadowMap.info);
+        update_const_buffer(pointlight.buffer, &pointlight.info);
+        update_const_buffer(directionalLight.buffer, &directionalLight.info);
+        update_const_buffer(globalInfoBuffer, &globalInfo);
+        update_const_buffer(directionalShadowMap.buffer, &directionalShadowMap.info);
+        update_const_buffer(omniShadowMap.buffer, &omniShadowMap.info);
 
         // vertex constant buffers
         ctx->VSSetConstantBuffers(1u, 1u, &directionalShadowMap.buffer.buffer);
@@ -199,10 +197,10 @@ int main()
         ctx->PSSetShaderResources(6u, 1, &omniShadowMap.resourceView);
         ctx->PSSetShaderResources(7u, 1, &skybox.cubeTexture.textureView);
 
-        Renderer::mvRenderMeshSolid(am, pointlight.mesh, mvTranslate(mvIdentityMat4(), pointlight.camera.pos), viewMatrix, projMatrix);
+        Renderer::render_mesh_solid(am, pointlight.mesh, translate(identity_mat4(), pointlight.camera.pos), viewMatrix, projMatrix);
 
         for (int i = 0; i < am.sceneCount; i++)
-            Renderer::mvRenderScene(am, am.scenes[i].asset, viewMatrix, projMatrix, stransform0, ttransform0);
+            Renderer::render_scene(am, am.scenes[i].asset, viewMatrix, projMatrix, stransform0, ttransform0);
 
         if (globalInfo.useSkybox) render_skybox(skybox, viewMatrix, projMatrix);
 
@@ -299,7 +297,7 @@ int main()
                 ImColor(0.0f, 1.0f, 0.0f), std::string(std::to_string(ImGui::GetIO().Framerate) + " FPS").c_str());
 
             if (ImGui::IsWindowHovered())
-                mvUpdateCameraFPSCamera(camera, dt, 12.0f, 0.004f);
+                update_fps_camera(camera, dt, 12.0f, 0.004f);
 
             ImVec2 contentSize = ImGui::GetContentRegionAvail();
             offscreen.viewport = { 0.0f, 0.0f, contentSize.x, contentSize.y, 0.0f, 1.0f };
@@ -343,9 +341,9 @@ int main()
                 f32 ycomponent = cosf(M_PI * directionalShadowMap.angle / 180.0f);
 
                 directionalShadowMap.camera.dir = { 0.0f, -ycomponent, zcomponent };
-                directionalShadowMap.info.view = mvLookAt(
+                directionalShadowMap.info.view = lookat(
                     directionalShadowMap.camera.pos, directionalShadowMap.camera.pos - directionalShadowMap.camera.dir, directionalShadowMap.camera.up);
-                directionalShadowMap.info.projection = mvOrtho(
+                directionalShadowMap.info.projection = ortho(
                     -directionalShadowMap.camera.width * 2.0f,
                     directionalShadowMap.camera.width * 2.0f,
                     -directionalShadowMap.camera.height * 2.0f,
@@ -359,7 +357,7 @@ int main()
             if (ImGui::SliderFloat3("Position##o", &pointlight.info.viewLightPos.x, -25.0f, 50.0f))
             {
                 pointlight.camera.pos = { pointlight.info.viewLightPos.x, pointlight.info.viewLightPos.y, pointlight.info.viewLightPos.z };
-                omniShadowMap.info.view = mvCreateLookAtView(pointlight.camera);
+                omniShadowMap.info.view = create_lookat_view(pointlight.camera);
             }
 
             ImGui::Unindent(14.0f);
@@ -388,7 +386,6 @@ int main()
     ImGui_ImplWin32_Shutdown();
     ImPlot::DestroyContext();
     ImGui::DestroyContext();
-    mvCleanupGraphics();
     mvDestroyContext();
 }
 

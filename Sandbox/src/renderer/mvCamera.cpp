@@ -16,7 +16,7 @@ wrap_angle(T theta) noexcept
 }
 
 mvCamera 
-mvCreateOrthoCamera(mvVec3 pos, mvVec3 dir, f32 width, f32 height, f32 near, f32 far)
+create_ortho_camera(mvVec3 pos, mvVec3 dir, f32 width, f32 height, f32 near, f32 far)
 {
     mvCamera camera{};
     camera.type = MV_CAMERA_ORTHOGRAPHIC;
@@ -31,7 +31,7 @@ mvCreateOrthoCamera(mvVec3 pos, mvVec3 dir, f32 width, f32 height, f32 near, f32
 }
 
 mvCamera
-mvCreatePerspectiveCamera(mvVec3 pos, f32 fov, f32 aspect, f32 near, f32 far)
+create_perspective_camera(mvVec3 pos, f32 fov, f32 aspect, f32 near, f32 far)
 {
     mvCamera camera{};
     camera.type = MV_CAMERA_PERSPECTIVE;
@@ -46,42 +46,38 @@ mvCreatePerspectiveCamera(mvVec3 pos, f32 fov, f32 aspect, f32 near, f32 far)
 }
 
 mvMat4 
-mvCreateFPSView(mvCamera& camera)
+create_fps_view(mvCamera& camera)
 {
-    return mvFPSView(camera.pos, camera.pitch, camera.yaw);
+    return fps(camera.pos, camera.pitch, camera.yaw);
 }
 
 mvMat4
-mvCreateOrthoView(mvCamera& camera)
+create_ortho_view(mvCamera& camera)
 {
-    return mvLookAt(camera.pos, camera.pos + camera.dir, camera.up);
+    return lookat(camera.pos, camera.pos + camera.dir, camera.up);
 }
 
 mvMat4
-mvCreateOrthoProjection(mvCamera& camera)
+create_projection(mvCamera& camera)
 {
-    return mvOrtho(-camera.width/2.0f, camera.width / 2.0f, -camera.height / 2.0f, -camera.height / 2.0f, camera.nearZ, camera.farZ);
+    if(camera.type == MV_CAMERA_ORTHOGRAPHIC)
+        return ortho(-camera.width/2.0f, camera.width / 2.0f, -camera.height / 2.0f, -camera.height / 2.0f, camera.nearZ, camera.farZ);
+    return perspective(camera.fieldOfView, camera.aspectRatio, camera.nearZ, camera.farZ);
 }
 
 mvMat4
-mvCreateLookAtView(mvCamera& camera)
+create_lookat_view(mvCamera& camera)
 {
     mvVec3 direction{};
     direction.x = cos((camera.yaw)) * cos((camera.pitch));
     direction.y = sin((camera.pitch));
     direction.z = sin((camera.yaw)) * cos((camera.pitch));
-    direction = mvNormalize(direction);
-    return mvLookAt(camera.pos, camera.pos + direction, camera.up);
-}
-
-mvMat4
-mvCreateLookAtProjection(mvCamera& camera)
-{
-    return mvPerspective(camera.fieldOfView, camera.aspectRatio, camera.nearZ, camera.farZ);
+    direction = normalize(direction);
+    return lookat(camera.pos, camera.pos + direction, camera.up);
 }
 
 void 
-mvUpdateCameraFPSCamera(mvCamera& camera, f32 dt, f32 travelSpeed, f32 rotationSpeed)
+update_fps_camera(mvCamera& camera, f32 dt, f32 travelSpeed, f32 rotationSpeed)
 {
     // for now, we will just use imgui's input
     if (ImGui::GetIO().KeysDown['W'])
@@ -133,21 +129,21 @@ mvTranslateCamera(mvCamera& camera, f32 dx, f32 dy, f32 dz, f32 travelSpeed)
     direction.x = cos((camera.yaw)) * cos((camera.pitch));
     direction.y = sin((camera.pitch));
     direction.z = sin((camera.yaw)) * cos((camera.pitch));
-    direction = mvNormalize(direction);
+    direction = normalize(direction);
     camera.front = direction;
 
     if (dz != 0.0f)
         camera.pos = camera.pos - camera.front * travelSpeed * dz;
 
     if (dx != 0.0f)
-        camera.pos = camera.pos - mvNormalize(mvCross(camera.front, camera.up)) * travelSpeed * dx;
+        camera.pos = camera.pos - normalize(cross(camera.front, camera.up)) * travelSpeed * dx;
 
     if (dy != 0.0f)
         camera.pos.y += travelSpeed * dy;
 }
 
 void
-mvUpdateCameraLookAtCamera(mvCamera& camera, f32 dt, f32 travelSpeed, f32 rotationSpeed)
+update_lookat_camera(mvCamera& camera, f32 dt, f32 travelSpeed, f32 rotationSpeed)
 {
     if (ImGui::GetIO().KeysDown['W']) mvTranslateCamera(camera, 0.0f, 0.0f, dt, travelSpeed);
     if (ImGui::GetIO().KeysDown['S']) mvTranslateCamera(camera, 0.0f, 0.0f, -dt, travelSpeed);

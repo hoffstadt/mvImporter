@@ -13,5 +13,5 @@ struct mvViewport
     b8   resized = false;    
 };
 
-mvViewport*         mvInitializeViewport(i32 width, i32 height);
-std::optional<i32> mvProcessViewportEvents();
+mvViewport*        initialize_viewport(i32 width, i32 height);
+std::optional<i32> process_viewport_events();
