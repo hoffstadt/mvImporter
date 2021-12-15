@@ -3,10 +3,6 @@
 // TODO: make most of these runtime options
 static const char* gltfAssetDirectory0 = "../../data/glTF-Sample-Models/2.0/Sponza/glTF/";
 static const char* gltfModel0 = "../../data/glTF-Sample-Models/2.0/Sponza/glTF/Sponza.gltf";
-//static const char* gltfAssetDirectory0 = "../../data/glTF-Sample-Models/2.0/DamagedHelmet/glTF/";
-//static const char* gltfModel0 = "../../data/glTF-Sample-Models/2.0/DamagedHelmet/glTF/DamagedHelmet.gltf";
-//static const char* gltfAssetDirectory0 = "../../data/";
-//static const char* gltfModel0 = "../../data/untitled.gltf";
 static f32         shadowWidth = 95.0f;
 static int         initialWidth = 1850;
 static int         initialHeight = 900;
@@ -61,7 +57,7 @@ int main()
     bool recreatePrimary = false;
     bool recreateShadowMapRS = false;
     bool recreateOShadowMapRS = false;
-    f32 scale0 = 5.0f;
+    f32 scale0 = 1.0f;
     mvVec3 translate0 = { 0.0f, 0.0f, 0.0f };
     while (true)
     {

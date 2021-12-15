@@ -395,7 +395,7 @@ mvRenderNode(mvAssetManager& am, mvNode& node, mvMat4 accumulatedTransform, mvMa
         mvRenderMesh(am, am.meshes[node.mesh].asset, accumulatedTransform * node.matrix, cam, proj);
     else if (node.camera > -1)
     {
-        mvRenderMeshSolidWireframe(am, am.meshes[node.mesh].asset, accumulatedTransform * node.matrix, cam, proj);
+        mvRenderMeshSolidWireframe(am, am.meshes[node.mesh].asset, accumulatedTransform * node.matrix * mvScale(mvIdentityMat4(), { -1.0f, -1.0f, -1.0f }), cam, proj);
     }
 
     for (u32 i = 0; i < node.childCount; i++)
@@ -415,7 +415,7 @@ mvRenderScene(mvAssetManager& am, mvScene& scene, mvMat4 cam, mvMat4 proj, mvMat
             mvRenderMesh(am, am.meshes[rootNode.mesh].asset, trans * rootNode.matrix * scale, cam, proj);
         else if (rootNode.camera > -1)
         {
-            mvRenderMeshSolidWireframe(am, am.meshes[rootNode.mesh].asset, trans * rootNode.matrix, cam, proj);
+            mvRenderMeshSolidWireframe(am, am.meshes[rootNode.mesh].asset, trans * rootNode.matrix * mvScale(mvIdentityMat4(), { -1.0f, -1.0f, -1.0f }), cam, proj);
         }
 
         for (u32 j = 0; j < rootNode.childCount; j++)
