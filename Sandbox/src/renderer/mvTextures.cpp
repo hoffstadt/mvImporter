@@ -10,6 +10,20 @@ create_texture(std::vector<unsigned char> data)
 {
 	mvTexture texture{};
 
+	f32 gamma = 1.0f;
+	f32 gamma_scale = 1.0f;
+
+	if (stbi_is_hdr_from_memory(data.data(), data.size()))
+	{
+		stbi_hdr_to_ldr_gamma(gamma);
+		stbi_hdr_to_ldr_scale(gamma_scale);
+	}
+	else
+	{
+		stbi_ldr_to_hdr_gamma(gamma);
+		stbi_ldr_to_hdr_scale(gamma_scale);
+	}
+
 	// Load Image
 	i32 texWidth, texHeight, texNumChannels;
 	i32 texForceNumChannels = 4;
@@ -72,6 +86,20 @@ create_texture(const std::string& path)
         return texture;
     }
 
+	f32 gamma = 1.0f;
+	f32 gamma_scale = 1.0f;
+
+	if (stbi_is_hdr(path.c_str()))
+	{
+		stbi_hdr_to_ldr_gamma(gamma);
+		stbi_hdr_to_ldr_scale(gamma_scale);
+	}
+	else
+	{
+		stbi_ldr_to_hdr_gamma(gamma);
+		stbi_ldr_to_hdr_scale(gamma_scale);
+	}
+
     // Load Image
     i32 texWidth, texHeight, texNumChannels;
     i32 texForceNumChannels = 4;
@@ -127,9 +155,24 @@ create_cube_texture(const std::string& path)
 	std::vector<unsigned char*> surfaces;
 	int texForceNumChannels = 4;
 
+	f32 gamma = 1.0f;
+	f32 gamma_scale = 1.0f;
+
 	// right
 	{
 		std::string file = path + "\\right.png";
+
+		if (stbi_is_hdr(path.c_str()))
+		{
+			stbi_hdr_to_ldr_gamma(gamma);
+			stbi_hdr_to_ldr_scale(gamma_scale);
+		}
+		else
+		{
+			stbi_ldr_to_hdr_gamma(gamma);
+			stbi_ldr_to_hdr_scale(gamma_scale);
+		}
+
 		unsigned char* testTextureBytes = stbi_load(file.c_str(), &texWidth, &texHeight,
 			&texNumChannels, texForceNumChannels);
 		assert(testTextureBytes);
@@ -141,6 +184,18 @@ create_cube_texture(const std::string& path)
 	// left
 	{
 		std::string file = path + "\\left.png";
+
+		if (stbi_is_hdr(path.c_str()))
+		{
+			stbi_hdr_to_ldr_gamma(gamma);
+			stbi_hdr_to_ldr_scale(gamma_scale);
+		}
+		else
+		{
+			stbi_ldr_to_hdr_gamma(gamma);
+			stbi_ldr_to_hdr_scale(gamma_scale);
+		}
+
 		unsigned char* testTextureBytes = stbi_load(file.c_str(), &texWidth, &texHeight,
 			&texNumChannels, texForceNumChannels);
 		assert(testTextureBytes);
@@ -152,6 +207,18 @@ create_cube_texture(const std::string& path)
 	// top
 	{
 		std::string file = path + "\\top.png";
+
+		if (stbi_is_hdr(path.c_str()))
+		{
+			stbi_hdr_to_ldr_gamma(gamma);
+			stbi_hdr_to_ldr_scale(gamma_scale);
+		}
+		else
+		{
+			stbi_ldr_to_hdr_gamma(gamma);
+			stbi_ldr_to_hdr_scale(gamma_scale);
+		}
+
 		unsigned char* testTextureBytes = stbi_load(file.c_str(), &texWidth, &texHeight,
 			&texNumChannels, texForceNumChannels);
 		assert(testTextureBytes);
@@ -163,6 +230,18 @@ create_cube_texture(const std::string& path)
 	// bottom
 	{
 		std::string file = path + "\\bottom.png";
+
+		if (stbi_is_hdr(path.c_str()))
+		{
+			stbi_hdr_to_ldr_gamma(gamma);
+			stbi_hdr_to_ldr_scale(gamma_scale);
+		}
+		else
+		{
+			stbi_ldr_to_hdr_gamma(gamma);
+			stbi_ldr_to_hdr_scale(gamma_scale);
+		}
+
 		unsigned char* testTextureBytes = stbi_load(file.c_str(), &texWidth, &texHeight,
 			&texNumChannels, texForceNumChannels);
 		assert(testTextureBytes);
@@ -174,6 +253,18 @@ create_cube_texture(const std::string& path)
 	// front
 	{
 		std::string file = path + "\\front.png";
+
+		if (stbi_is_hdr(path.c_str()))
+		{
+			stbi_hdr_to_ldr_gamma(gamma);
+			stbi_hdr_to_ldr_scale(gamma_scale);
+		}
+		else
+		{
+			stbi_ldr_to_hdr_gamma(gamma);
+			stbi_ldr_to_hdr_scale(gamma_scale);
+		}
+
 		unsigned char* testTextureBytes = stbi_load(file.c_str(), &texWidth, &texHeight,
 			&texNumChannels, texForceNumChannels);
 		assert(testTextureBytes);
@@ -185,6 +276,18 @@ create_cube_texture(const std::string& path)
 	// back
 	{
 		std::string file = path + "\\back.png";
+
+		if (stbi_is_hdr(path.c_str()))
+		{
+			stbi_hdr_to_ldr_gamma(gamma);
+			stbi_hdr_to_ldr_scale(gamma_scale);
+		}
+		else
+		{
+			stbi_ldr_to_hdr_gamma(gamma);
+			stbi_ldr_to_hdr_scale(gamma_scale);
+		}
+
 		unsigned char* testTextureBytes = stbi_load(file.c_str(), &texWidth, &texHeight,
 			&texNumChannels, texForceNumChannels);
 		assert(testTextureBytes);

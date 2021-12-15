@@ -148,7 +148,6 @@ struct mvGlobalInfo
     int pcfRange;
 };
 
-
 //-----------------------------------------------------------------------------
 // textures
 //-----------------------------------------------------------------------------
@@ -201,7 +200,6 @@ float3 calculateNormal(VSOut input)
     }
     
     return N;
-    //return normalize(input.ViewNormal);
 }
 
 float3 specularContribution(float3 albedo, float2 inUV, float3 L, float3 V, float3 N, float3 F0, float metallic, float roughness)
@@ -340,12 +338,12 @@ float4 main(VSOut input) : SV_Target
 
         albedo = pow(albedo, float4(2.2, 2.2, 2.2, 1.0));
         
-        // flip normal when backface
-        if (dot(input.WorldNormal, input.WorldPos) >= 0.0f)
-        {
-            input.WorldNormal = -input.WorldNormal;
-        }
-       
+        //// flip normal when backface
+        //if (dot(input.WorldNormal, input.WorldPos) >= 0.0f)
+        //{
+        //    input.WorldNormal = -input.WorldNormal;
+        //}
+ 
     }
     else if (material.useAlbedoMap)
     {
@@ -353,6 +351,7 @@ float4 main(VSOut input) : SV_Target
 
         // bail if highly translucent
         clip(albedo_alpha < 0.1f ? -1 : 1);
+        
     }
 
     float3 N = calculateNormal(input);
@@ -362,7 +361,6 @@ float4 main(VSOut input) : SV_Target
     
     float3 V = normalize(info.camPos - input.WorldPos);
     float3 R = reflect(-V, N);
-    float dotNV = clamp(dot(N, V), 0.0, 1.0);
     
     if (material.useMetalMap && info.useMetalness)
     {
@@ -381,39 +379,32 @@ float4 main(VSOut input) : SV_Target
     float3 F0 = float3(0.04, 0.04, 0.04);
     F0 = lerp(F0, albedo.rgb, metallic);
     
-    float3 Lo = float3(0.0, 0.0, 0.0);
-    
     //-----------------------------------------------------------------------------
     // point light
     //-----------------------------------------------------------------------------
     input.oshadowWorldPos.z = -input.oshadowWorldPos.z;
     float shadowLevel = Shadow(input.oshadowWorldPos, ShadowMap, OShadowSampler);
     float3 L = normalize(PointLight.viewLightPos - input.WorldPos);
-    float3 brdf = float3(0.0, 0.0, 0.0);
+    float3 point_brdf = BRDF(L, V, N, metallic, roughness);
+    float3 point_spec = specularContribution(albedo.rgb, input.UV, L, V, N, F0, metallic, roughness);
     
     if (shadowLevel != 0.0f && info.useOmniShadows)
     {
-        Lo += specularContribution(albedo.rgb, input.UV, L, V, N, F0, metallic, roughness);
-        
-        brdf = BRDF(L, V, N, metallic, roughness);
-        
-        Lo *= shadowLevel;
-        brdf *= shadowLevel;
-        
+        point_spec *= shadowLevel;
+        point_brdf *= shadowLevel;     
     }
-    else if (info.useOmniShadows)
+    else if(info.useOmniShadows)
     {
-    }
-    else
-    {
-        Lo += specularContribution(albedo.rgb, input.UV, L, V, N, F0, metallic, roughness);
-        brdf = BRDF(L, V, N, metallic, roughness);
+        point_brdf = float3(0.0, 0.0, 0.0);
+        point_spec = float3(0.0, 0.0, 0.0);
     }
 
     //-----------------------------------------------------------------------------
     // directional light
     //-----------------------------------------------------------------------------
     L = -DirectionalLight.viewLightDir;
+    float3 direct_brdf = BRDF(L, V, N, metallic, roughness);
+    float3 direct_spec = specularContribution(albedo.rgb, input.UV, L, V, N, F0, metallic, roughness);
     float2 projectTexCoord;
     float lightDepthValue;
     
@@ -440,17 +431,16 @@ float4 main(VSOut input) : SV_Target
         
         if (shadowLevel != 0.0f) // not in shadow
         {
-            Lo += (shadowLevel * specularContribution(albedo.rgb, input.UV, L, V, N, F0, metallic, roughness));
-            brdf += (shadowLevel * BRDF(L, V, N, metallic, roughness));
+            direct_spec *= shadowLevel;
+            direct_brdf *= shadowLevel;
             
         }
+        else
+        {
+            direct_brdf = float3(0.0, 0.0, 0.0);
+            direct_spec = float3(0.0, 0.0, 0.0);
+        }
             
-    }
-    else
-    {
-        Lo += specularContribution(albedo.rgb, input.UV, L, V, N, F0, metallic, roughness);
-        brdf += BRDF(L, V, N, metallic, roughness);
-
     }
     
     if (info.useIrradiance)
@@ -459,7 +449,7 @@ float4 main(VSOut input) : SV_Target
     }
     else
     {
-                //irradiance = shadowLevel * Environment.Sample(EnvironmentSampler, N).rgb;
+        //irradiance = shadowLevel * Environment.Sample(EnvironmentSampler, N).rgb;
         irradiance = info.ambientColor;
     }
     
@@ -470,6 +460,9 @@ float4 main(VSOut input) : SV_Target
     float3 diffuse = irradiance * albedo.rgb;
 
     float3 F = F_SchlickR(max(dot(N, V), 0.0), F0, roughness);
+    
+    // total brdf
+    float3 brdf = point_brdf + direct_brdf;
     
     // Specular reflectance
     float3 specular = (F * brdf.x + brdf.y);
@@ -489,19 +482,22 @@ float4 main(VSOut input) : SV_Target
         ambient.b *= occlusionValue;
     }
     
+    float3 emissive_spec = float3(0.0, 0.0, 0.0);
     if(material.useEmissiveMap && info.useEmissiveMap)
     {
         float3 emissivity = EmmissiveTexture.Sample(Sampler, input.UV).rgb;
-        Lo += material.albedo.rgb * emissivity * material.emisiveFactor;
+        emissive_spec = material.albedo.rgb * emissivity * material.emisiveFactor;
     }
     
+    float3 Lo = direct_spec + point_spec + emissive_spec;
     float3 color = ambient + Lo;
     
     // Tone mapping
     //color = Uncharted2Tonemap(color * uboParams.exposure);
     //color = color * (1.0f / Uncharted2Tonemap((11.2f).xxx));
-    // Gamma correction
-    //color = pow(color, (1.0f / uboParams.gamma).xxx);
+    
+    // Gamma correct
+    color = pow(color, float3(0.4545, 0.4545, 0.4545));
 
     return float4(color, 1.0);
 }

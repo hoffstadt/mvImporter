@@ -10,7 +10,7 @@ struct mvAssetManager;
 struct GlobalInfo
 {
 
-    mvVec3 ambientColor = { 0.1f, 0.1f, 0.1f };
+    mvVec3 ambientColor = { 0.04f, 0.04f, 0.04f };
     b32    useShadows = true;
     //-------------------------- ( 16 bytes )
 
