@@ -11,13 +11,13 @@ struct mvGLTFModel;
 struct mvMeshPrimitive;
 struct mvMesh;
 
-mvMesh create_cube         (mvAssetManager& assetManager, f32 size = 1.0f);
-mvMesh create_textured_cube(mvAssetManager& assetManager, f32 size = 1.0f);
-mvMesh create_textured_quad(mvAssetManager& assetManager, f32 size = 1.0f);
-mvMesh create_frustum      (mvAssetManager& assetManager, f32 width, f32 height, f32 nearZ, f32 farZ);
-mvMesh create_frustum2     (mvAssetManager& assetManager, f32 fov, f32 aspect, f32 nearZ, f32 farZ);
-mvMesh create_ortho_frustum(mvAssetManager& assetManager, f32 width, f32 height, f32 nearZ, f32 farZ);
-void   load_gltf_assets    (mvAssetManager& assetManager, mvGLTFModel& model);
+mvMesh    create_cube         (mvAssetManager& assetManager, f32 size = 1.0f);
+mvMesh    create_textured_cube(mvAssetManager& assetManager, f32 size = 1.0f);
+mvMesh    create_textured_quad(mvAssetManager& assetManager, f32 size = 1.0f);
+mvMesh    create_frustum      (mvAssetManager& assetManager, f32 width, f32 height, f32 nearZ, f32 farZ);
+mvMesh    create_frustum2     (mvAssetManager& assetManager, f32 fov, f32 aspect, f32 nearZ, f32 farZ);
+mvMesh    create_ortho_frustum(mvAssetManager& assetManager, f32 width, f32 height, f32 nearZ, f32 farZ);
+mvAssetID load_gltf_assets    (mvAssetManager& assetManager, mvGLTFModel& model);
 
 struct mvMeshPrimitive
 {

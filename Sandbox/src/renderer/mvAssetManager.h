@@ -42,6 +42,15 @@ mvAssetID register_asset(mvAssetManager* manager, const std::string& tag, mvPipe
 mvAssetID register_asset(mvAssetManager* manager, const std::string& tag, ID3D11RenderTargetView* asset);
 mvAssetID register_asset(mvAssetManager* manager, const std::string& tag, ID3D11DepthStencilView* asset);
 
+// unregistering
+b8 unregister_texture_asset (mvAssetManager* manager, mvAssetID asset);
+b8 unregister_buffer_asset  (mvAssetManager* manager, mvAssetID asset);
+b8 unregister_mesh_asset    (mvAssetManager* manager, mvAssetID asset);
+b8 unregister_camera_asset  (mvAssetManager* manager, mvAssetID asset);
+b8 unregister_node_asset    (mvAssetManager* manager, mvAssetID asset);
+b8 unregister_material_asset(mvAssetManager* manager, mvAssetID asset);
+b8 unregister_scene_asset   (mvAssetManager* manager, mvAssetID asset);
+
 // ID retrieval
 mvAssetID mvGetSceneAssetID      (mvAssetManager* manager, const std::string& tag);
 mvAssetID mvGetTextureAssetID    (mvAssetManager* manager, const std::string& tag);
@@ -87,6 +96,7 @@ struct mvAssetManager
 	u32                 maxTextureCount = 500u;
 	u32                 textureCount = 0u;
 	mvTextureAsset*     textures = nullptr;
+	b8*                 freetextures = nullptr;
 						 
 	// cube textures	 
 	u32                 maxCubeTextureCount = 500u;
@@ -102,11 +112,13 @@ struct mvAssetManager
 	u32                 maxMaterialCount = 500u;
 	u32                 materialCount = 0u;
 	mvMaterialAsset*    materials = nullptr;
+	b8*                 freematerials = nullptr;
 					    				        
 	// buffers	        
 	u32                 maxBufferCount = 500u;
 	u32                 bufferCount = 0u;
 	mvBufferAsset*      buffers = nullptr;
+	b8*                 freebuffers = nullptr;
 
 	// const buffers	        
 	u32                 maxCBufferCount = 500u;
@@ -117,21 +129,25 @@ struct mvAssetManager
 	u32                 maxMeshCount = 500u;
 	u32                 meshCount = 0u;
 	mvMeshAsset*        meshes = nullptr;
+	b8*                 freemeshes = nullptr;
 					    
 	// nodes	        
 	u32                 maxNodeCount = 500u;
 	u32                 nodeCount = 0u;
 	mvNodeAsset*        nodes = nullptr;
+	b8*                 freenodes = nullptr;
 					    
 	// scenes		    
 	u32                 maxSceneCount = 500u;
 	u32                 sceneCount = 0u;
 	mvSceneAsset*       scenes = nullptr;
+	b8*                 freescenes = nullptr;
 
 	// cameras
 	u32                 maxCameraCount = 5u;
 	u32                 cameraCount = 0u;
 	mvCameraAsset*      cameras = nullptr;
+	b8*                 freecameras = nullptr;
 
 	// pipelines
 	u32                 maxPipelineCount = 100u;

@@ -307,6 +307,7 @@ struct mvGLTFScene
 struct mvGLTFModel
 {
 	std::string       root;
+	std::string       name;
 	mvGLTFScene*      scenes      = nullptr;
 	mvGLTFNode*       nodes       = nullptr;
 	mvGLTFMesh*       meshes      = nullptr;
@@ -320,6 +321,7 @@ struct mvGLTFModel
 	mvGLTFCamera*     cameras     = nullptr;
 	mvGLTFAnimation*  animations  = nullptr;
 
+	mvS32 scene            = -1;
 	mvU32 scene_count      = 0u;
 	mvU32 node_count       = 0u;
 	mvU32 mesh_count       = 0u;
@@ -410,7 +412,7 @@ struct mvJsonObject
 {
 	mvJsonType                type = MV_JSON_TYPE_NONE;
 	std::vector<mvJsonMember> members;
-	mvJsonContext* context = nullptr;
+	mvJsonContext*            context = nullptr;
 
 	mvJsonMember& getMember(const char* member);
 	bool          doesMemberExist(const char* member);
@@ -1265,6 +1267,7 @@ namespace mvImp {
 	static mvGLTFScene*
 	_LoadScenes(mvJsonContext& j, mvU32& size)
 	{
+
 		if (!j.doesMemberExist("scenes"))
 			return nullptr;
 
@@ -1825,6 +1828,7 @@ mvLoadBinaryGLTF(const char* root, const char* file)
 
 	mvGLTFModel model{};
 	model.root = root;
+	model.name = file;
 
 	mvU32 dataSize = 0u;
 	char* data = (char*)mvImp::_ReadFile(file, dataSize, "rb");
@@ -1844,6 +1848,21 @@ mvLoadBinaryGLTF(const char* root, const char* file)
 	}
 
 	mvJsonContext& context = *ParseJSON(chunkData, chunkLength);
+
+	if (context.doesMemberExist("scene"))
+	{
+		for (int i = 0; i < context.jsonObjects[1].members.size(); i++)
+		{
+			const char* name = context.jsonObjects[1].members[i].name.c_str();
+
+			if (strcmp("scene", name) == 0)
+			{
+				int index = context.jsonObjects[1].members[i].index;
+				mvJsonValue value = context.primitiveValues[index];
+				model.scene = stoi(value.value);
+			}
+		}
+	}
 
 	model.scenes = mvImp::_LoadScenes(context, model.scene_count);
 	model.nodes = mvImp::_LoadNodes(context, model.node_count);
@@ -1943,6 +1962,7 @@ mvLoadGLTF(const char* root, const char* file)
 	mvGLTFModel model{};
 
 	model.root = root;
+	model.name = file;
 
 	mvU32 dataSize = 0u;
 	char* data = mvImp::_ReadFile(file, dataSize, "rb");
@@ -1955,6 +1975,21 @@ mvLoadGLTF(const char* root, const char* file)
 
 	mvJsonContext& context = *ParseJSON(data, dataSize);
 	delete[] data;
+
+	if (context.doesMemberExist("scene"))
+	{
+		for (int i = 0; i < context.jsonObjects[1].members.size(); i++)
+		{
+			const char* name = context.jsonObjects[1].members[i].name.c_str();
+
+			if (strcmp("scene", name) == 0)
+			{
+				int index = context.jsonObjects[1].members[i].index;
+				mvJsonValue value = context.primitiveValues[index];
+				model.scene = stoi(value.value);
+			}
+		}
+	}
 
 	model.scenes = mvImp::_LoadScenes(context, model.scene_count);
 	model.nodes = mvImp::_LoadNodes(context, model.node_count);

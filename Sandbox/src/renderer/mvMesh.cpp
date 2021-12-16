@@ -493,14 +493,18 @@ mvFillBuffer(mvGLTFModel& model, mvGLTFAccessor& accessor, std::vector<W>& outBu
     }
 }
 
-void
+mvAssetID
 load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
 {
 
-    u32 nodeOffset = assetManager.nodeCount;
-    u32 meshOffset = assetManager.meshCount;
-    u32 materialOffset = assetManager.materialCount;
-    u32 cameraOffset = assetManager.cameraCount;
+    std::vector<mvAssetID> cameraMapping;
+    cameraMapping.resize(model.camera_count);
+
+    std::vector<mvAssetID> nodeMapping;
+    nodeMapping.resize(model.node_count);
+
+    std::vector<mvAssetID> meshMapping;
+    meshMapping.resize(model.mesh_count);
 
     for (u32 currentCamera = 0u; currentCamera < model.camera_count; currentCamera++)
     {
@@ -524,7 +528,7 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
             camera.height = glcamera.orthographic.ymag * 2.0f;
         }
 
-        register_asset(&assetManager, glcamera.name, camera);
+        cameraMapping[currentCamera] = register_asset(&assetManager, glcamera.name, camera);
     }
 
     for (u32 currentMesh = 0u; currentMesh < model.mesh_count; currentMesh++)
@@ -696,10 +700,10 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
                 };
 
                 mvVec3 bitangent = {
-				    ((edge1.x * uv2.x) - (edge2.x * uv1.x)) * dirCorrection,
-				    ((edge1.y * uv2.x) - (edge2.y * uv1.x)) * dirCorrection,
-				    ((edge1.z * uv2.x) - (edge2.z * uv1.x)) * dirCorrection
-			    };
+                    ((edge1.x * uv2.x) - (edge2.x * uv1.x)) * dirCorrection,
+                    ((edge1.y * uv2.x) - (edge2.y * uv1.x)) * dirCorrection,
+                    ((edge1.z * uv2.x) - (edge2.z * uv1.x)) * dirCorrection
+                };
 
                 // project tangent and bitangent into the plane formed by the vertex' normal
                 //mvVec3 newTangent = cNormalize(tangent - n * (tangent * n));
@@ -919,8 +923,8 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
 
             newMesh.primitives.back().indexBuffer = mvGetBufferAssetID(&assetManager,
                 std::string(glmesh.name) + std::to_string(currentPrimitive) + "_indexbuffer",
-                indexBuffer.data(), 
-                indexBuffer.size() * sizeof(u32), 
+                indexBuffer.data(),
+                indexBuffer.size() * sizeof(u32),
                 D3D11_BIND_INDEX_BUFFER);
             newMesh.primitives.back().vertexBuffer = mvGetBufferAssetID(&assetManager,
                 std::string(glmesh.name) + std::to_string(currentPrimitive) + "_vertexBuffer",
@@ -929,7 +933,7 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
                 D3D11_BIND_VERTEX_BUFFER);
         }
 
-        register_asset(&assetManager, newMesh.name + std::to_string(currentMesh), newMesh);
+        meshMapping[currentMesh] = register_asset(&assetManager, newMesh.name + std::to_string(currentMesh), newMesh);
 
     }
 
@@ -939,12 +943,12 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
 
         mvNode newNode{};
         newNode.name = glnode.name;
-        if(glnode.mesh_index > -1)
-            newNode.mesh = glnode.mesh_index + meshOffset;
+        if (glnode.mesh_index > -1)
+            newNode.mesh = meshMapping[glnode.mesh_index];
         if (glnode.camera_index > -1)
         {
             
-            newNode.camera = glnode.camera_index + cameraOffset;
+            newNode.camera = cameraMapping[glnode.camera_index];
             mvCamera& camera = assetManager.cameras[newNode.camera].asset;
 
             if (camera.type == MV_CAMERA_PERSPECTIVE)
@@ -961,7 +965,7 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
         newNode.childCount = glnode.child_count;
 
         for (i32 i = 0; i < glnode.child_count; i++)
-            newNode.children[i] = (mvAssetID)glnode.children[i] + nodeOffset;
+            newNode.children[i] = (mvAssetID)glnode.children[i];
 
         newNode.rotation = *(mvVec4*)(glnode.rotation);
         newNode.scale = *(mvVec3*)(glnode.scale);
@@ -1003,8 +1007,19 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
             newNode.matrix = translate(identity_mat4(), newNode.translation) * rotationMat * scale(identity_mat4(), newNode.scale);
         }
 
-        register_asset(&assetManager, "node_" + std::to_string(currentNode), newNode);
+        nodeMapping[currentNode] = register_asset(&assetManager, "node_" + std::to_string(currentNode), newNode);
     }
+
+    // update childre for actual offset
+    for (u32 currentNode = 0u; currentNode < model.node_count; currentNode++)
+    {
+
+        mvNode& node = assetManager.nodes[nodeMapping[currentNode]].asset;
+        for (i32 i = 0; i < node.childCount; i++)
+            node.children[i] = nodeMapping[node.children[i]];
+    }
+
+    mvAssetID defaultScene = -1;
 
     for (u32 currentScene = 0u; currentScene < model.scene_count; currentScene++)
     {
@@ -1014,8 +1029,14 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
         newScene.nodeCount = glscene.node_count;
 
         for (i32 i = 0; i < glscene.node_count; i++)
-            newScene.nodes[i] = glscene.nodes[i] + nodeOffset;
+            newScene.nodes[i] = nodeMapping[glscene.nodes[i]];
 
-        register_asset(&assetManager, "scene_" + std::to_string(currentScene), newScene);
+        
+        mvAssetID sceneId = register_asset(&assetManager, model.name + "_scene_" + std::to_string(currentScene), newScene);
+
+        if (currentScene == model.scene)
+            defaultScene = sceneId;
     }
+
+    return defaultScene;
 }

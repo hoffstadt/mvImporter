@@ -1,4 +1,5 @@
 #include "mvAssetManager.h"
+#include <assert.h>
 
 void 
 mvInitializeAssetManager(mvAssetManager* manager)
@@ -16,20 +17,52 @@ mvInitializeAssetManager(mvAssetManager* manager)
 	manager->pipelines = new mvPipelineAsset[manager->maxPipelineCount];
 	manager->targetViews = new mvTargetViewAsset[manager->maxTargetViewCount];
 	manager->depthViews = new mvDepthViewAsset[manager->maxDepthViewCount];
+
+	manager->freetextures = new b8[manager->maxTextureCount];
+	for (i32 i = 0; i < manager->maxTextureCount; i++)
+		manager->freetextures[i] = true;
+
+	manager->freebuffers = new b8[manager->maxBufferCount];
+	for (i32 i = 0; i < manager->maxBufferCount; i++)
+		manager->freebuffers[i] = true;
+
+	manager->freemeshes = new b8[manager->maxMeshCount];
+	for (i32 i = 0; i < manager->maxMeshCount; i++)
+		manager->freemeshes[i] = true;
+
+	manager->freecameras = new b8[manager->maxCameraCount];
+	for (i32 i = 0; i < manager->maxCameraCount; i++)
+		manager->freecameras[i] = true;
+
+	manager->freenodes = new b8[manager->maxNodeCount];
+	for (i32 i = 0; i < manager->maxNodeCount; i++)
+		manager->freenodes[i] = true;
+
+	manager->freematerials = new b8[manager->maxMaterialCount];
+	for (i32 i = 0; i < manager->maxMaterialCount; i++)
+		manager->freematerials[i] = true;
+
+	manager->freescenes = new b8[manager->maxSceneCount];
+	for (i32 i = 0; i < manager->maxSceneCount; i++)
+		manager->freescenes[i] = true;
 }
 
 void 
 mvCleanupAssetManager(mvAssetManager* manager)
 {
-	for (int i = 0; i < manager->bufferCount; i++)
-		manager->buffers[i].asset.buffer->Release();
+	for (int i = 0; i < manager->maxBufferCount; i++)
+	{
+		if(!manager->freebuffers[i])
+			manager->buffers[i].asset.buffer->Release();
+	}
 
 	for (int i = 0; i < manager->cbufferCount; i++)
 		manager->cbuffers[i].asset.buffer->Release();
 
-	for (int i = 0; i < manager->materialCount; i++)
+	for (int i = 0; i < manager->maxMaterialCount; i++)
 	{
-		manager->materials[i].asset.buffer.buffer->Release();
+		if (!manager->freematerials[i])
+			manager->materials[i].asset.buffer.buffer->Release();
 	}
 
 	for (int i = 0; i < manager->cubeTextureCount; i++)
@@ -74,6 +107,7 @@ mvCleanupAssetManager(mvAssetManager* manager)
 		}
 	}
 
+	// assets
 	delete[] manager->buffers;
 	delete[] manager->textures;
 	delete[] manager->cubeTextures;
@@ -87,6 +121,15 @@ mvCleanupAssetManager(mvAssetManager* manager)
 	delete[] manager->cbuffers;
 	delete[] manager->targetViews;
 	delete[] manager->depthViews;
+	
+	// free slots
+	delete[] manager->freetextures;
+	delete[] manager->freebuffers;
+	delete[] manager->freemeshes;
+	delete[] manager->freecameras;
+	delete[] manager->freenodes;
+	delete[] manager->freematerials;
+	delete[] manager->freescenes;
 }
 
 //-----------------------------------------------------------------------------
@@ -203,21 +246,34 @@ mvGetRawPipelineAsset(mvAssetManager* manager, const std::string& tag)
 mvAssetID
 register_asset(mvAssetManager* manager, const std::string& tag, mvScene asset)
 {
-	manager->scenes[manager->sceneCount].asset = asset;
-	manager->scenes[manager->sceneCount].hash = tag;
+	s32 freeIndex = -1;
+	for (s32 i = 0; i < manager->maxSceneCount; i++)
+	{
+		if (manager->freescenes[i])
+		{
+			freeIndex = i;
+			manager->freescenes[i] = false;
+			break;
+		}
+	}
+
+	assert(freeIndex > -1 && "No free index available");
+
+	manager->scenes[freeIndex].asset = asset;
+	manager->scenes[freeIndex].hash = tag;
 	manager->sceneCount++;
-	return manager->sceneCount - 1;
+	return freeIndex;
 }
 
 mvAssetID 
 mvGetSceneAssetID(mvAssetManager* manager, const std::string& tag)
 {
-	for (s32 i = 0; i < manager->sceneCount; i++)
+	for (s32 i = 0; i < manager->maxSceneCount; i++)
 	{
 		if (manager->scenes[i].hash == tag)
 			return i;
 	}
-
+	assert(false && "Scene not found.");
 	return -1;
 }
 
@@ -229,8 +285,25 @@ mvGetRawSceneAsset(mvAssetManager* manager, const std::string& tag)
 		if (manager->scenes[i].hash == tag)
 			return &manager->scenes[i].asset;
 	}
-
+	assert(false && "Scene not found.");
 	return nullptr;
+}
+
+b8
+unregister_scene_asset(mvAssetManager* manager, mvAssetID asset)
+{
+	if(asset == -1) return false;
+	assert(asset < manager->maxSceneCount && "Asset ID outside range");
+	//assert(manager->freescenes[asset] && "Scene already freed.");
+
+	if (!manager->freescenes[asset])
+	{
+		manager->freescenes[asset] = true;
+		manager->sceneCount--;
+		manager->scenes[asset].hash.clear();
+		return true;
+	}
+	return false;
 }
 
 //-----------------------------------------------------------------------------
@@ -240,10 +313,23 @@ mvGetRawSceneAsset(mvAssetManager* manager, const std::string& tag)
 mvAssetID
 register_asset(mvAssetManager* manager, const std::string& tag, mvTexture asset)
 {
-	manager->textures[manager->textureCount].asset = asset;
-	manager->textures[manager->textureCount].hash = tag;
+	s32 freeIndex = -1;
+	for (s32 i = 0; i < manager->maxTextureCount; i++)
+	{
+		if (manager->freetextures[i])
+		{
+			freeIndex = i;
+			manager->freetextures[i] = false;
+			break;
+		}
+	}
+
+	assert(freeIndex > -1 && "No free index available");
+
+	manager->textures[freeIndex].asset = asset;
+	manager->textures[freeIndex].hash = tag;
 	manager->textureCount++;
-	return manager->textureCount - 1;
+	return freeIndex;
 }
 
 mvAssetID
@@ -258,31 +344,27 @@ register_asset(mvAssetManager* manager, const std::string& tag, mvCubeTexture as
 mvAssetID
 mvGetTextureAssetID(mvAssetManager* manager, const std::string& path)
 {
-	for (s32 i = 0; i < manager->textureCount; i++)
+	for (s32 i = 0; i < manager->maxTextureCount; i++)
 	{
 		if (manager->textures[i].hash == path)
 			return i;
 	}
 
-	manager->textures[manager->textureCount].hash = path;
-	manager->textures[manager->textureCount].asset = create_texture(path);
-	manager->textureCount++;
-	return manager->textureCount - 1;
+	s32 freeIndex = register_asset(manager, path, create_texture(path));
+	return freeIndex;
 }
 
 mvAssetID
 mvGetTextureAssetID(mvAssetManager* manager, const std::string& path, std::vector<unsigned char> data)
 {
-	for (s32 i = 0; i < manager->textureCount; i++)
+	for (s32 i = 0; i < manager->maxTextureCount; i++)
 	{
 		if (manager->textures[i].hash == path)
 			return i;
 	}
 
-	manager->textures[manager->textureCount].hash = path;
-	manager->textures[manager->textureCount].asset = create_texture(data);
-	manager->textureCount++;
-	return manager->textureCount - 1;
+	s32 freeIndex = register_asset(manager, path, create_texture(data));
+	return freeIndex;
 }
 
 mvAssetID
@@ -315,6 +397,23 @@ mvGetRawTextureAsset(mvAssetManager* manager, const std::string& path)
 	return &manager->textures[manager->textureCount - 1].asset;
 }
 
+b8 
+unregister_texture_asset(mvAssetManager* manager, mvAssetID asset)
+{
+	if (asset == -1) return false;
+	assert(asset < manager->maxTextureCount && "Asset ID outside range");
+	//assert(manager->freetextures[asset] && "Texture already freed.");
+	
+	if (!manager->freetextures[asset])
+	{
+		manager->freetextures[asset] = true;
+		manager->textureCount--;
+		manager->textures[asset].hash.clear();
+		return true;
+	}
+	return false;
+}
+
 //-----------------------------------------------------------------------------
 // meshes
 //-----------------------------------------------------------------------------
@@ -322,22 +421,52 @@ mvGetRawTextureAsset(mvAssetManager* manager, const std::string& path)
 mvAssetID
 register_asset(mvAssetManager* manager, const std::string& tag, mvMesh asset)
 {
-	manager->meshes[manager->meshCount].asset = asset;
-	manager->meshes[manager->meshCount].hash = tag;
+	s32 freeIndex = -1;
+	for (s32 i = 0; i < manager->maxMeshCount; i++)
+	{
+		if (manager->freemeshes[i])
+		{
+			freeIndex = i;
+			manager->freemeshes[i] = false;
+			break;
+		}
+	}
+
+	assert(freeIndex > -1 && "No free index available");
+
+	manager->meshes[freeIndex].asset = asset;
+	manager->meshes[freeIndex].hash = tag;
 	manager->meshCount++;
-	return manager->meshCount - 1;
+	return freeIndex;
 }
 
 mvMesh*
 mvGetRawMeshAsset(mvAssetManager* manager, const std::string& tag)
 {
-	for (s32 i = 0; i < manager->meshCount; i++)
+	for (s32 i = 0; i < manager->maxMeshCount; i++)
 	{
 		if (manager->meshes[i].hash == tag)
 			return &manager->meshes[i].asset;
 	}
-
+	assert(false && "Mesh not found.");
 	return nullptr;
+}
+
+b8
+unregister_mesh_asset(mvAssetManager* manager, mvAssetID asset)
+{
+	if (asset == -1) return false;
+	assert(asset < manager->maxMeshCount && "Asset ID outside range");
+	//assert(manager->freemeshes[asset] && "Mesh already freed.");
+	
+	if (!manager->freemeshes[asset])
+	{
+		manager->freemeshes[asset] = true;
+		manager->meshCount--;
+		manager->meshes[asset].hash.clear();
+		return true;
+	}
+	return false;
 }
 
 //-----------------------------------------------------------------------------
@@ -347,37 +476,67 @@ mvGetRawMeshAsset(mvAssetManager* manager, const std::string& tag)
 mvAssetID
 register_asset(mvAssetManager* manager, const std::string& tag, mvBuffer asset)
 {
-	manager->buffers[manager->bufferCount].asset = asset;
-	manager->buffers[manager->bufferCount].hash = tag;
+	s32 freeIndex = -1;
+	for (s32 i = 0; i < manager->maxBufferCount; i++)
+	{
+		if (manager->freebuffers[i])
+		{
+			freeIndex = i;
+			manager->freebuffers[i] = false;
+			break;
+		}
+	}
+
+	assert(freeIndex > -1 && "No free index available");
+
+	manager->buffers[freeIndex].asset = asset;
+	manager->buffers[freeIndex].hash = tag;
 	manager->bufferCount++;
-	return manager->bufferCount - 1;
+	return freeIndex;
 }
 
 mvAssetID
 mvGetBufferAssetID(mvAssetManager* manager, const std::string& tag, void* data, u32 size, D3D11_BIND_FLAG flags)
 {
-	for (s32 i = 0; i < manager->bufferCount; i++)
+	for (s32 i = 0; i < manager->maxBufferCount; i++)
 	{
 		if (manager->buffers[i].hash == tag)
 			return i;
 	}
 
-	manager->buffers[manager->bufferCount].hash = tag;
-	manager->buffers[manager->bufferCount].asset = create_buffer(data, size, flags);
-	manager->bufferCount++;
-	return manager->bufferCount - 1;
+	mvBuffer asset = create_buffer(data, size, flags);
+	s32 freeIndex = register_asset(manager, tag, asset);
+	return freeIndex;
 }
 
 mvBuffer*
 mvGetRawBufferAsset(mvAssetManager* manager, const std::string& tag)
 {
-	for (s32 i = 0; i < manager->bufferCount; i++)
+	for (s32 i = 0; i < manager->maxBufferCount; i++)
 	{
 		if (manager->buffers[i].hash == tag)
 			return &manager->buffers[i].asset;
 	}
 
 	return nullptr;
+}
+
+b8
+unregister_buffer_asset(mvAssetManager* manager, mvAssetID asset)
+{
+	if (asset == -1) return false;
+	assert(asset < manager->maxBufferCount && "Asset ID outside range");
+	//assert(manager->freebuffers[asset] && "Buffer already freed.");
+	
+	if (!manager->freebuffers[asset])
+	{
+		manager->freebuffers[asset] = true;
+		manager->bufferCount--;
+		manager->buffers[asset].hash.clear();
+		manager->buffers[asset].asset.buffer->Release();
+		return true;
+	}
+	return false;
 }
 
 //-----------------------------------------------------------------------------
@@ -412,35 +571,65 @@ mvGetRawCBufferAsset(mvAssetManager* manager, const std::string& tag)
 mvAssetID
 register_asset(mvAssetManager* manager, const std::string& tag, mvMaterial asset)
 {
-	manager->materials[manager->materialCount].asset = asset;
-	manager->materials[manager->materialCount].hash = tag;
+	s32 freeIndex = -1;
+	for (s32 i = 0; i < manager->maxMaterialCount; i++)
+	{
+		if (manager->freematerials[i])
+		{
+			freeIndex = i;
+			manager->freematerials[i] = false;
+			break;
+		}
+	}
+
+	assert(freeIndex > -1 && "No free index available");
+
+	manager->materials[freeIndex].asset = asset;
+	manager->materials[freeIndex].hash = tag;
 	manager->materialCount++;
-	return manager->materialCount - 1;
+	return freeIndex;
 }
 
 mvAssetID
 mvGetMaterialAssetID(mvAssetManager* manager, const std::string& tag)
 {
 
-	for (s32 i = 0; i < manager->materialCount; i++)
+	for (s32 i = 0; i < manager->maxMaterialCount; i++)
 	{
 		if (manager->materials[i].hash == tag)
 			return i;
 	}
-
 	return -1;
 }
 
 mvMaterial*
 mvGetRawMaterialAsset(mvAssetManager* manager, const std::string& tag)
 {
-	for (s32 i = 0; i < manager->materialCount; i++)
+	for (s32 i = 0; i < manager->maxMaterialCount; i++)
 	{
 		if (manager->materials[i].hash == tag)
 			return &manager->materials[i].asset;
 	}
-
+	assert(false && "Material not found.");
 	return nullptr;
+}
+
+b8
+unregister_material_asset(mvAssetManager* manager, mvAssetID asset)
+{
+	if (asset == -1) return false;
+	assert(asset < manager->maxMaterialCount && "Asset ID outside range");
+	//assert(manager->freematerials[asset] && "Material already freed.");
+
+	if (!manager->freematerials[asset])
+	{
+		manager->freematerials[asset] = true;
+		manager->materialCount--;
+		manager->materials[asset].hash.clear();
+		manager->materials[asset].asset.buffer.buffer->Release();
+		return true;
+	}
+	return false;
 }
 
 //-----------------------------------------------------------------------------
@@ -450,21 +639,35 @@ mvGetRawMaterialAsset(mvAssetManager* manager, const std::string& tag)
 mvAssetID
 register_asset(mvAssetManager* manager, const std::string& tag, mvNode asset)
 {
-	manager->nodes[manager->nodeCount].asset = asset;
-	manager->nodes[manager->nodeCount].hash = tag;
+	s32 freeIndex = -1;
+	for (s32 i = 0; i < manager->maxNodeCount; i++)
+	{
+		if (manager->freenodes[i])
+		{
+			freeIndex = i;
+			manager->freenodes[i] = false;
+			break;
+		}
+	}
+
+	assert(freeIndex > -1 && "No free index available");
+
+	manager->nodes[freeIndex].asset = asset;
+	manager->nodes[freeIndex].hash = tag;
 	manager->nodeCount++;
-	return manager->nodeCount - 1;
+	return freeIndex;
 }
 
 mvAssetID
 mvGetNodeAssetID(mvAssetManager* manager, const std::string& tag)
 {
-	for (s32 i = 0; i < manager->nodeCount; i++)
+	for (s32 i = 0; i < manager->maxNodeCount; i++)
 	{
 		if (manager->nodes[i].hash == tag)
 			return i;
 	}
 
+	assert(false && "Node not found.");
 	return -1;
 }
 
@@ -477,7 +680,25 @@ mvGetRawNodeAsset(mvAssetManager* manager, const std::string& tag)
 			return &manager->nodes[i].asset;
 	}
 
+	assert(false && "Node not found.");
 	return nullptr;
+}
+
+b8
+unregister_node_asset(mvAssetManager* manager, mvAssetID asset)
+{
+	if (asset == -1) return false;
+	assert(asset < manager->maxNodeCount && "Asset ID outside range");
+	//assert(manager->freenodes[asset] && "Node already freed.");
+
+	if (!manager->freenodes[asset])
+	{
+		manager->freenodes[asset] = true;
+		manager->nodeCount--;
+		manager->nodes[asset].hash.clear();
+		return true;
+	}
+	return false;
 }
 
 //-----------------------------------------------------------------------------
@@ -487,34 +708,64 @@ mvGetRawNodeAsset(mvAssetManager* manager, const std::string& tag)
 mvAssetID
 register_asset(mvAssetManager* manager, const std::string& tag, mvCamera asset)
 {
-	manager->cameras[manager->cameraCount].asset = asset;
-	manager->cameras[manager->cameraCount].hash = tag;
+	s32 freeIndex = -1;
+	for (s32 i = 0; i < manager->maxCameraCount; i++)
+	{
+		if (manager->freecameras[i])
+		{
+			freeIndex = i;
+			manager->freecameras[i] = false;
+			break;
+		}
+	}
+
+	assert(freeIndex > -1 && "No free index available");
+
+	manager->cameras[freeIndex].asset = asset;
+	manager->cameras[freeIndex].hash = tag;
 	manager->cameraCount++;
-	return manager->cameraCount - 1;
+	return freeIndex;
 }
 
 mvAssetID
 mvGetCameraAssetID(mvAssetManager* manager, const std::string& tag)
 {
-	for (s32 i = 0; i < manager->cameraCount; i++)
+	for (s32 i = 0; i < manager->maxCameraCount; i++)
 	{
 		if (manager->cameras[i].hash == tag)
 			return i;
 	}
-
+	assert(false && "Camera not found");
 	return -1;
 }
 
 mvCamera*
 mvGetRawCameraAsset(mvAssetManager* manager, const std::string& tag)
 {
-	for (s32 i = 0; i < manager->cameraCount; i++)
+	for (s32 i = 0; i < manager->maxCameraCount; i++)
 	{
 		if (manager->cameras[i].hash == tag)
 			return &manager->cameras[i].asset;
 	}
-
+	assert(false && "Camera not found");
 	return nullptr;
+}
+
+b8
+unregister_camera_asset(mvAssetManager* manager, mvAssetID asset)
+{
+	if (asset == -1) return false;
+	assert(asset < manager->maxCameraCount && "Asset ID outside range");
+	assert(manager->freecameras[asset] && "Camera already freed.");
+	
+	if (!manager->freecameras[asset])
+	{
+		manager->freecameras[asset] = true;
+		manager->cameraCount--;
+		manager->cameras[asset].hash.clear();
+		return true;
+	}
+	return false;
 }
 
 //-----------------------------------------------------------------------------

@@ -9,10 +9,10 @@
 #include "mvRenderer.h"
 #include "mvImporter.h"
 #include "mvTimer.h"
+#include "gltf_scene_info.h"
 
 // TODO: make most of these runtime options
-static const char* gltfAssetDirectory0 = "../../data/glTF-Sample-Models/2.0/Sponza/glTF/";
-static const char* gltfModel0 = "../../data/glTF-Sample-Models/2.0/Sponza/glTF/Sponza.gltf";
+#define MODEL_CACHE_SIZE 5
 static f32         shadowWidth = 95.0f;
 static int         initialWidth = 1850;
 static int         initialHeight = 900;
@@ -20,6 +20,7 @@ static ImVec2      oldContentRegion = ImVec2(500, 500);
 
 int main()
 {
+
     mvCreateContext();
     GContext->IO.shaderDirectory = "../../Sandbox/shaders/";
     GContext->IO.resourceDirectory = "../../Resources/";
@@ -39,11 +40,6 @@ int main()
     mvAssetManager am{};
     mvInitializeAssetManager(&am);
     Renderer::mvSetupCommonAssets(am);
-
-    // assets & meshes
-    mvGLTFModel gltfmodel0 = mvLoadGLTF(gltfAssetDirectory0, gltfModel0);
-    load_gltf_assets(am, gltfmodel0);
-    mvCleanupGLTF(gltfmodel0);
 
     // main camera
     mvCamera camera = create_perspective_camera({ -13.5f, 6.0f, 3.5f }, (f32)M_PI_4, 1.0f, 0.1f, 400.0f);
@@ -65,7 +61,11 @@ int main()
     register_asset(&am, "global_constant_buffer", globalInfoBuffer);
 
     mvTimer timer;
-
+    int cacheModel[MODEL_CACHE_SIZE] = { -1, -1, -1 };
+    mvAssetID cacheScenes[MODEL_CACHE_SIZE] = { -1, -1, -1 };
+    int cacheIndex = 0;
+    int activeScene = -1;
+    int modelIndex = 0;
     while (true)
     {
         const auto dt = timer.mark() * 1.0f;
@@ -105,6 +105,67 @@ int main()
             recreateOShadowMapRS = false;
         }
 
+        static bool changeScene = false;
+        if (changeScene)
+        {
+            b8 cacheFound = false;
+            for (int i = 0; i < MODEL_CACHE_SIZE; i++)
+            {
+                if (cacheModel[i] == modelIndex)
+                {
+                    activeScene = cacheScenes[i];
+                    cacheFound = true;
+                    break;
+                }
+            }
+
+            if (!cacheFound)
+            {
+
+                mvAssetID sceneToRemove = cacheScenes[cacheIndex];
+
+                if (sceneToRemove > -1)
+                {
+                    mvScene* previousScene = &am.scenes[sceneToRemove].asset;
+                    for (int i = 0; i < previousScene->nodeCount; i++)
+                    {
+                        if (am.nodes[previousScene->nodes[i]].asset.mesh > -1)
+                        {
+                            mvMesh& mesh = am.meshes[am.nodes[previousScene->nodes[i]].asset.mesh].asset;
+                            for (int i = 0; i < mesh.primitives.size(); i++)
+                            {
+                                unregister_buffer_asset(&am, mesh.primitives[i].indexBuffer);
+                                unregister_buffer_asset(&am, mesh.primitives[i].vertexBuffer);
+                                unregister_texture_asset(&am, mesh.primitives[i].normalTexture);
+                                unregister_texture_asset(&am, mesh.primitives[i].specularTexture);
+                                unregister_texture_asset(&am, mesh.primitives[i].albedoTexture);
+                                unregister_texture_asset(&am, mesh.primitives[i].emissiveTexture);
+                                unregister_texture_asset(&am, mesh.primitives[i].occlusionTexture);
+                                unregister_texture_asset(&am, mesh.primitives[i].metalRoughnessTexture);
+                                unregister_material_asset(&am, mesh.primitives[i].materialID);
+                                unregister_material_asset(&am, mesh.primitives[i].shadowMaterialID);
+                            }
+                        }
+                        unregister_mesh_asset(&am, am.nodes[previousScene->nodes[i]].asset.mesh); // maybe do mesh offset?
+                        unregister_camera_asset(&am, am.nodes[previousScene->nodes[i]].asset.camera); // maybe do mesh offset?
+                        unregister_node_asset(&am, previousScene->nodes[i]);
+                    }
+                    unregister_scene_asset(&am, sceneToRemove);
+                }
+
+                mvGLTFModel gltfmodel0 = mvLoadGLTF(gltf_directories[modelIndex], gltf_models[modelIndex]);
+                activeScene = load_gltf_assets(am, gltfmodel0);
+                mvCleanupGLTF(gltfmodel0);
+                cacheScenes[cacheIndex] = activeScene;
+                cacheModel[cacheIndex] = modelIndex;
+                cacheIndex++;
+                if (cacheIndex == MODEL_CACHE_SIZE) cacheIndex = 0;
+
+            }
+
+            changeScene = false;
+        }
+
         //-----------------------------------------------------------------------------
         // clear targets
         //-----------------------------------------------------------------------------
@@ -140,8 +201,8 @@ int main()
         ctx->RSSetViewports(1u, &directionalShadowMap.viewport);
         ctx->RSSetState(directionalShadowMap.rasterizationState);
 
-        for (int i = 0; i < am.sceneCount; i++)
-            Renderer::render_scene_shadows(am, am.scenes[i].asset, directionalShadowMap.getViewMatrix(), directionalShadowMap.getProjectionMatrix(), stransform0, ttransform0);
+        if(activeScene > -1)
+            Renderer::render_scene_shadows(am, am.scenes[activeScene].asset, directionalShadowMap.getViewMatrix(), directionalShadowMap.getProjectionMatrix(), stransform0, ttransform0);
 
         //-----------------------------------------------------------------------------
         // omni shadow pass
@@ -155,8 +216,8 @@ int main()
             mvVec3 look_target = pointlight.camera.pos + omniShadowMap.cameraDirections[i];
             mvMat4 camera_matrix = lookat(pointlight.camera.pos, look_target, omniShadowMap.cameraUps[i]);
 
-            for (int i = 0; i < am.sceneCount; i++)
-                Renderer::render_scene_shadows(am, am.scenes[i].asset, camera_matrix, perspective(M_PI_2, 1.0f, 0.5f, 100.0f), stransform0, ttransform0);
+            if (activeScene > -1)
+                Renderer::render_scene_shadows(am, am.scenes[activeScene].asset, camera_matrix, perspective(M_PI_2, 1.0f, 0.5f, 100.0f), stransform0, ttransform0);
         }
 
         //-----------------------------------------------------------------------------
@@ -199,8 +260,8 @@ int main()
 
         Renderer::render_mesh_solid(am, pointlight.mesh, translate(identity_mat4(), pointlight.camera.pos), viewMatrix, projMatrix);
 
-        for (int i = 0; i < am.sceneCount; i++)
-            Renderer::render_scene(am, am.scenes[i].asset, viewMatrix, projMatrix, stransform0, ttransform0);
+        if (activeScene > -1)
+            Renderer::render_scene(am, am.scenes[activeScene].asset, viewMatrix, projMatrix, stransform0, ttransform0);
 
         if (globalInfo.useSkybox) render_skybox(skybox, viewMatrix, projMatrix);
 
@@ -315,6 +376,12 @@ int main()
             ImGui::Dummy(ImVec2(50.0f, 25.0f));
             ImGui::Indent(14.0f);
 
+            if (ImGui::ListBox("Model##separate", &modelIndex, gltf_names, 80+36+59, 20))
+            {
+                changeScene = true;
+            }
+
+            ImGui::Dummy(ImVec2(50.0f, 25.0f));
             ImGui::Text("%s", "Directional Light:");
             bool directionalCameraChange = false;
             if (ImGui::SliderFloat3("Position##d", &directionalShadowMap.camera.pos.x, -200.0f, 200.0f))
