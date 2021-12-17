@@ -1,65 +1,10 @@
 
 static const float PI = 3.14159265359;
 
-// shadows
-static const float zf = 100.0f;
-static const float zn = 0.5f;
-static const float c1 = (zf + zn) / (zf - zn);
-static const float c0 = -(2 * zn * zf) / (zf - zn);
-static const int PCFRANGE = 2;
-
-//-----------------------------------------------------------------------------
-// equations
-//-----------------------------------------------------------------------------
-float CalculateShadowDepth(const in float4 shadowPos)
-{
-    // get magnitudes for each basis component
-    const float3 m = abs(shadowPos).xyz;
-    // get the length in the dominant axis
-    // (this correlates with shadow map face and derives comparison depth)
-    const float major = max(m.x, max(m.y, m.z));
-    // converting from distance in shadow light space to projected depth
-    return (c1 * major + c0) / major;
-}
-
-float Shadow(const in float4 shadowPos, uniform TextureCube map, uniform SamplerComparisonState smplr)
-{
-    return map.SampleCmpLevelZero(smplr, shadowPos.xyz, CalculateShadowDepth(shadowPos));
-}
-
-float Attenuate(uniform float attConst, uniform float attLin, uniform float attQuad, const in float distFragToL)
-{
-    return 1.0f / (attConst + attLin * distFragToL + attQuad * (distFragToL * distFragToL));
-}
-
-// Normal Distribution function --------------------------------------
-float D_GGX(float dotNH, float roughness)
-{
-    float alpha = roughness * roughness;
-    float alpha2 = alpha * alpha;
-    float denom = dotNH * dotNH * (alpha2 - 1.0) + 1.0;
-    return (alpha2) / (PI * denom * denom);
-}
-
-
-// Geometric Shadowing function --------------------------------------
-float G_SchlicksmithGGX(float dotNL, float dotNV, float roughness)
-{
-    float r = (roughness + 1.0);
-    float k = (r * r) / 8.0;
-    float GL = dotNL / (dotNL * (1.0 - k) + k);
-    float GV = dotNV / (dotNV * (1.0 - k) + k);
-    return GL * GV;
-}
-
 // Fresnel function ----------------------------------------------------
-float3 F_Schlick(float cosTheta, float3 F0)
+float3 conductor_fresnel(float3 bsdf, float dotVH, float3 F0)
 {
-    return F0 + (1.0 - F0) * pow(1.0 - cosTheta, 5.0);
-}
-float3 F_SchlickR(float cosTheta, float3 F0, float roughness)
-{
-    return F0 + (max((1.0 - roughness).xxx, F0) - F0) * pow(1.0 - cosTheta, 5.0);
+    return bsdf * (F0 + (1.0 - F0) * pow(1.0 - abs(dotVH), 5.0));
 }
 
 struct mvPointLight
@@ -202,162 +147,95 @@ float3 calculateNormal(VSOut input)
     return N;
 }
 
-float3 specularContribution(float3 albedo, float2 inUV, float3 L, float3 V, float3 N, float3 F0, float metallic, float roughness)
+float3 specular_brdf(float r2, float3 L, float3 V, float3 N)
 {
-	// Precalculate vectors and dot products
-    float3 H = normalize(V + L);
-    float dotNH = clamp(dot(N, H), 0.0, 1.0);
-    float dotNV = clamp(dot(N, V), 0.0, 1.0);
-    float dotNL = clamp(dot(N, L), 0.0, 1.0);
 
-	// Light color fixed
-    float3 lightColor = float3(1.0, 1.0, 1.0);
-
-    float3 color = float3(0.0, 0.0, 0.0);
-
-    if (dotNL > 0.0)
-    {
-		// D = Normal distribution (Distribution of the microfacets)
-        float D = D_GGX(dotNH, roughness);
-		// G = Geometric shadowing term (Microfacets shadowing)
-        float G = G_SchlicksmithGGX(dotNL, dotNV, roughness);
-		// F = Fresnel factor (Reflectance depending on angle of incidence)
-        float3 F = F_Schlick(dotNV, F0);
-        float3 spec = D * F * G / (4.0 * dotNL * dotNV + 0.001);
-        float3 kD = (float3(1.0, 1.0, 1.0) - F) * (1.0 - metallic);
-        color += (kD * albedo / PI + spec) * dotNL;
-    }
-
-    return color;
-}
-
-float3 BRDF(float3 L, float3 V, float3 N, float metallic, float roughness)
-{
 	// Precalculate vectors and dot products
     float3 H = normalize(V + L);
     float dotNV = clamp(dot(N, V), 0.0, 1.0);
     float dotNL = clamp(dot(N, L), 0.0, 1.0);
-    float dotLH = clamp(dot(L, H), 0.0, 1.0);
     float dotNH = clamp(dot(N, H), 0.0, 1.0);
-
-	// Light color fixed
-    float3 lightColor = float3(1.0, 1.0, 1.0);
-
-    float3 color = float3(0.0, 0.0, 0.0);
-
-    if (dotNL > 0.0)
-    {
-        float rroughness = max(0.05, roughness);
-		// D = Normal distribution (Distribution of the microfacets)
-        float D = D_GGX(dotNH, roughness);
-		// G = Geometric shadowing term (Microfacets shadowing)
-        float G = G_SchlicksmithGGX(dotNL, dotNV, rroughness);
-		// F = Fresnel factor (Reflectance depending on angle of incidence)
-        float3 F = F_Schlick(dotNV, metallic);
-
-        float3 spec = D * F * G / (4.0 * dotNL * dotNV);
-
-        color += spec * dotNL * lightColor;
-    }
-
-    return color;
-}
-
-float3 prefilteredReflection(float3 R, float roughness)
-{
-    const float MAX_REFLECTION_LOD = 9.0; // todo: param/const
-    float lod = roughness * MAX_REFLECTION_LOD;
-    float lodf = floor(lod);
-    float lodc = ceil(lod);
-    //float3 a = prefilteredMapTexture.SampleLevel(prefilteredMapSampler, R, lodf).rgb;
-    //float3 b = prefilteredMapTexture.SampleLevel(prefilteredMapSampler, R, lodc).rgb;
-    float3 a = Environment.SampleLevel(EnvironmentSampler, R, lodf).rgb;
-    float3 b = Environment.SampleLevel(EnvironmentSampler, R, lodc).rgb;
-    return lerp(a, b, lod - lodf);
-}
-
-float4 getIrradiance(float3 N)
-{
-    float3 up = float3(0.0, 1.0, 0.0);
-    float3 right = normalize(cross(up, N));
-    up = cross(N, right);
-
-    const float TWO_PI = PI * 2.0;
-    const float HALF_PI = PI * 0.5;
-
-    float3 color = float3(0.0, 0.0, 0.0);
-    float sampleDelta = 0.5;
-    float nrSamples = 0.0;
-    for (float phi = 0.0; phi < TWO_PI; phi += sampleDelta)
-    {
-        for (float theta = 0.0; theta < HALF_PI; theta += sampleDelta)
-        {
-            float3 tempVec = cos(phi) * right + sin(phi) * up;
-            float3 sampleVector = cos(theta) * N + sin(theta) * tempVec;
-            color += Environment.Sample(EnvironmentSampler, sampleVector).rgb * cos(theta) * sin(theta);
-            nrSamples++;
-        }
-    }
-    return float4(PI * color / float(nrSamples), 1.0);
-}
-
-float filterPCF(const in float2 spos, float depthCheck)
-{
-    float shadowLevel = 0.0f;
-    float texWidth;
-    float texHeight;
-    float scale = 1.5;
-    DirectionalShadowMap.GetDimensions(texWidth, texHeight);
-    float dx = scale * 1.0 / texWidth;
-    float dy = scale * 1.0 / texHeight;
+    float dotHL = clamp(dot(H, L), 0.0, 1.0);
+    float dotHV = clamp(dot(H, L), 0.0, 1.0);
     
-    int count = 0;
-    [loop]
-    for (int x = -info.pcfRange; x <= info.pcfRange; x++)
+    float a2 = r2 * r2;
+    float dotNH2 = dotNH * dotNH;
+    float dotNV2 = dotNV * dotNV;
+
+    float3 color = float3(0.0, 0.0, 0.0);
+
+    //if (dotNL > 0.0)
     {
-        [loop]
-        for (int y = -info.pcfRange; y <= info.pcfRange; y++)
-        {
-            shadowLevel += DirectionalShadowMap.SampleCmpLevelZero(DShadowSampler, float2(spos.x + dx*x, spos.y + dy*y), depthCheck);
-            count++;
-        }
+        float D = (a2 + dotNH) / (PI * (dotNH2 * (a2 - 1) + 1) * (dotNH2 * (a2 - 1) + 1));
+        
+        float k1 = dotNL + sqrt(a2 + (1 - a2) * dotNH2);
+        float k2 = dotNV + sqrt(a2 + (1 - a2) * dotNV2);
+        
+        float V = dotHL * dotHV / (k1 * k2);
+        
+        return float3(1.0, 1.0, 1.0) * (V * D);
     }
-    return shadowLevel / count;
+
+    return color;
 }
 
-float4 main(VSOut input) : SV_Target
+float4 diffuse_brdf(float4 color)
 {
-    float4 albedo = material.albedo;
+    return (1 / PI) * color;
+}
+
+float3 fresnel_mix(float ior, float dotVH, float3 base, float3 layer)
+{
+    float f0 = pow((1 - ior) / (1 + ior), 2);
+    float fr = f0 + (1 - f0) * pow(1 - abs(dotVH), 5);
+    return lerp(base, layer, fr);
+}
+
+float4 get_base_color(VSOut input)
+{
+    float4 base_color = material.albedo;
     
     if (material.useAlbedoMap && info.useAlbedo)
     {
-        albedo = AlbedoTexture.Sample(Sampler, input.UV).rgba;
-
-        // bail if highly translucent
-        clip(albedo.a < 0.1f ? -1 : 1);
-
-        albedo = pow(albedo, float4(2.2, 2.2, 2.2, 1.0));
-        
-        //// flip normal when backface
-        //if (dot(input.WorldNormal, input.WorldPos) >= 0.0f)
-        //{
-        //    input.WorldNormal = -input.WorldNormal;
-        //}
- 
+        base_color = AlbedoTexture.Sample(Sampler, input.UV).rgba;
+        base_color = pow(base_color, float4(2.2, 2.2, 2.2, 1.0)) * material.albedo;
     }
-    else if (material.useAlbedoMap)
-    {
-        float albedo_alpha = AlbedoTexture.Sample(Sampler, input.UV).a;
+    
+    return base_color;
+}
 
-        // bail if highly translucent
-        clip(albedo_alpha < 0.1f ? -1 : 1);
-        
-    }
+float3 get_f0(float uior)
+{
+    float value = pow((uior - 1.0) / (uior + 1.0), 2);
+    return float3(value, value, value);
+}
+
+
+float4 main(VSOut input) : SV_Target
+{
+    float4 base_color = get_base_color(input);
+    clip(base_color.a < 0.1f ? -1 : 1); // bail if highly translucent
+    
+    float ior = 1.5;
+    float3 f0 = float3(0.04, 0.04, 0.04);
+    
+    f0 = get_f0(ior);
+    
+    float reflectance = max(max(f0.r, f0.g), f0.b);
+    
+    float3 f90 = float3(1.0, 1.0, 1.0);
 
     float3 N = calculateNormal(input);
     float3 irradiance = info.ambientColor;
     float metallic = material.metalness;
     float roughness = material.roughness;
+    float3 emissive = material.emisiveFactor;
+    
+    // flip normal when backface
+    if (dot(N, input.WorldPos - info.camPos) > 0.0f)
+    {
+        N = -N;
+    }
     
     float3 V = normalize(info.camPos - input.WorldPos);
     float3 R = reflect(-V, N);
@@ -366,138 +244,47 @@ float4 main(VSOut input) : SV_Target
     {
         metallic = MetalRoughnessTexture.Sample(Sampler, input.UV).b;
     }
-    else if(!info.useMetalness)
+    else if (material.useMetalMap)
     {
-        metallic = 0.0f;
+        metallic = 0.0;
     }
     
     if (material.useRoughnessMap && info.useRoughness)
     {
         roughness = MetalRoughnessTexture.Sample(Sampler, input.UV).g;
     }
-    
-    float3 F0 = float3(0.04, 0.04, 0.04);
-    F0 = lerp(F0, albedo.rgb, metallic);
-    
-    //-----------------------------------------------------------------------------
-    // point light
-    //-----------------------------------------------------------------------------
-    input.oshadowWorldPos.z = -input.oshadowWorldPos.z;
-    float shadowLevel = Shadow(input.oshadowWorldPos, ShadowMap, OShadowSampler);
-    float3 L = normalize(PointLight.viewLightPos - input.WorldPos);
-    float3 point_brdf = BRDF(L, V, N, metallic, roughness);
-    float3 point_spec = specularContribution(albedo.rgb, input.UV, L, V, N, F0, metallic, roughness);
-    
-    if (shadowLevel != 0.0f && info.useOmniShadows)
+    else if (material.useRoughnessMap)
     {
-        point_spec *= shadowLevel;
-        point_brdf *= shadowLevel;     
+        roughness = 0.0;
     }
-    else if(info.useOmniShadows)
+    
+    if (material.useEmissiveMap && info.useEmissiveMap)
     {
-        point_brdf = float3(0.0, 0.0, 0.0);
-        point_spec = float3(0.0, 0.0, 0.0);
+        float3 emissivity = EmmissiveTexture.Sample(Sampler, input.UV).rgb;
+        emissivity = pow(emissivity, float3(2.2, 2.2, 2.2));
+        emissive = emissivity * material.emisiveFactor;
     }
-
+    else if (material.useEmissiveMap)
+    {
+        emissive = float3(0.0, 0.0, 0.0);
+    }
+    
     //-----------------------------------------------------------------------------
     // directional light
     //-----------------------------------------------------------------------------
-    L = -DirectionalLight.viewLightDir;
-    float3 direct_brdf = BRDF(L, V, N, metallic, roughness);
-    float3 direct_spec = specularContribution(albedo.rgb, input.UV, L, V, N, F0, metallic, roughness);
-    float2 projectTexCoord;
-    float lightDepthValue;
+    float3 L = -DirectionalLight.viewLightDir;
     
-    // Calculate the projected texture coordinates.
-    projectTexCoord.x = 0.5f * input.dshadowWorldPos.x / input.dshadowWorldPos.w + 0.5f;
-    projectTexCoord.y = -0.5f * input.dshadowWorldPos.y / input.dshadowWorldPos.w + 0.5f;
-        
-        // Determine if the projected coordinates are in the 0 to 1 range.  If so then this pixel is in the view of the light.
-    if ((saturate(projectTexCoord.x) == projectTexCoord.x) && (saturate(projectTexCoord.y) == projectTexCoord.y) && info.useShadows)
-    {
-        
-        // Calculate the depth of the light.
-        lightDepthValue = input.dshadowWorldPos.z / input.dshadowWorldPos.w;
-            
-        if(info.usePCF)
-        {
-            shadowLevel = filterPCF(projectTexCoord, lightDepthValue);
-        }
-        else
-        {
-            shadowLevel = DirectionalShadowMap.SampleCmpLevelZero(DShadowSampler, projectTexCoord, lightDepthValue);
-        }
-        
-        
-        if (shadowLevel != 0.0f) // not in shadow
-        {
-            direct_spec *= shadowLevel;
-            direct_brdf *= shadowLevel;
-            
-        }
-        else
-        {
-            direct_brdf = float3(0.0, 0.0, 0.0);
-            direct_spec = float3(0.0, 0.0, 0.0);
-        }
-            
-    }
+    float r2 = roughness * roughness;
+    float3 H = normalize(V + L);
+    float dotVH = dot(V, H);
     
-    if (info.useIrradiance)
-    {
-        irradiance = getIrradiance(-N);
-    }
-    else
-    {
-        //irradiance = shadowLevel * Environment.Sample(EnvironmentSampler, N).rgb;
-        irradiance = info.ambientColor;
-    }
+    float3 metal_brdf = specular_brdf(r2, L, V, N) * (base_color.rgb + (1 - base_color.rgb) * pow(1 - abs(dotVH), 5));
+    float3 dielectric_brdf = lerp(diffuse_brdf(base_color).rgb, specular_brdf(r2, L, V, N), 0.04 + (1 - 0.04) * pow(1 - abs(dotVH), 5));;
+    float3 material_color = lerp(dielectric_brdf, metal_brdf, metallic);
     
-    //float2 brdf = textureBRDFLUT.Sample(samplerBRDFLUT, float2(max(dot(N, V), 0.0), roughness)).rg;
-    float3 reflection = prefilteredReflection(R, roughness).rgb;
+    float3 brdf = material_color;
     
-    // Diffuse based on irradiance
-    float3 diffuse = irradiance * albedo.rgb;
-
-    float3 F = F_SchlickR(max(dot(N, V), 0.0), F0, roughness);
-    
-    // total brdf
-    float3 brdf = point_brdf + direct_brdf;
-    
-    // Specular reflectance
-    float3 specular = (F * brdf.x + brdf.y);
-    if(info.useReflection)
-        specular *= reflection;
-    
-    // Ambient part
-    float3 kD = 1.0 - F;
-    kD *= 1.0 - metallic;
-    float3 ambient = (kD * diffuse + specular);
-    if(material.useOcclusionMap && info.useOcclusionMap)
-    {
-        float occlusionValue = OcclusionTexture.Sample(Sampler, input.UV).r;
-        occlusionValue = 1.0 + material.occlusionStrength * (occlusionValue - 1.0);
-        ambient.r *= occlusionValue;
-        ambient.g *= occlusionValue;
-        ambient.b *= occlusionValue;
-    }
-    
-    float3 emissive_spec = float3(0.0, 0.0, 0.0);
-    if(material.useEmissiveMap && info.useEmissiveMap)
-    {
-        float3 emissivity = EmmissiveTexture.Sample(Sampler, input.UV).rgb;
-        emissive_spec = material.albedo.rgb * emissivity * material.emisiveFactor;
-    }
-    
-    float3 Lo = direct_spec + point_spec + emissive_spec;
-    float3 color = ambient + Lo;
-    
-    // Tone mapping
-    //color = Uncharted2Tonemap(color * uboParams.exposure);
-    //color = color * (1.0f / Uncharted2Tonemap((11.2f).xxx));
-    
-    // Gamma correct
-    color = pow(color, float3(0.4545, 0.4545, 0.4545));
-
-    return float4(color, 1.0);
+    float3 final_color = brdf + emissive;
+    final_color = pow(final_color, float3(0.4545.xxx));
+    return float4(final_color, base_color.a);
 }
