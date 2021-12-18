@@ -38,7 +38,7 @@ struct mvMaterialData
     b32 hasAlpha = false;
     b32 useOcclusionMap = false;
     f32 occlusionStrength = 1.0f;
-    char _pad0[4];
+    f32 alphaCutoff;
     //-------------------------- ( 16 bytes )
 
     //-------------------------- ( 4 * 16 = 64 bytes )

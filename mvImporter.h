@@ -86,6 +86,13 @@ typedef unsigned long long  mvU64;  // 64-bit unsigned integer (post C++11)
 // Flags, Enumerations, & Struct Definitions
 //-----------------------------------------------------------------------------
 
+enum mvGLTFAlphaMode
+{
+	MV_ALPHA_MODE_OPAQUE,
+	MV_ALPHA_MODE_MASK,
+	MV_ALPHA_MODE_BLEND
+};
+
 enum mvGLTFPrimMode
 {
 	MV_IMP_POINTS    = 0,
@@ -210,20 +217,21 @@ struct mvGLTFMesh
 
 struct mvGLTFMaterial
 {
-	std::string name;
-	mvS32       base_color_texture         = -1;
-	mvS32       metallic_roughness_texture = -1;
-	mvS32       normal_texture             = -1;
-	mvS32       occlusion_texture          = -1;
-	mvS32       emissive_texture           = -1;
-	mvF32       normal_texture_scale       = 1.0f;
-	mvF32       occlusion_texture_strength = 1.0f;
-	mvF32       metallic_factor            = 1.0f;
-	mvF32       roughness_factor           = 1.0f;
-	mvF32       base_color_factor[4]       = { 1.0f, 1.0f, 1.0f, 1.0f };
-	mvF32       emissive_factor[3]         = { 0.0f, 0.0f, 0.0f };
-	bool        double_sided               = false;
-	bool        alpha_mode                 = false;
+	std::string     name;
+	mvS32           base_color_texture         = -1;
+	mvS32           metallic_roughness_texture = -1;
+	mvS32           normal_texture             = -1;
+	mvS32           occlusion_texture          = -1;
+	mvS32           emissive_texture           = -1;
+	mvF32           normal_texture_scale       = 1.0f;
+	mvF32           occlusion_texture_strength = 1.0f;
+	mvF32           metallic_factor            = 1.0f;
+	mvF32           roughness_factor           = 1.0f;
+	mvF32           base_color_factor[4]       = { 1.0f, 1.0f, 1.0f, 1.0f };
+	mvF32           emissive_factor[3]         = { 0.0f, 0.0f, 0.0f };
+	mvF32           alphaCutoff                = 0.5;
+	bool            double_sided               = false;
+	mvGLTFAlphaMode alphaMode                  = MV_ALPHA_MODE_OPAQUE;
 };
 
 struct mvGLTFPerspective
@@ -1482,9 +1490,11 @@ namespace mvImp {
 			{
 				std::string alphaMode = jmaterial.getMember("alphaMode");
 				if (alphaMode == "OPAQUE")
-					material.alpha_mode = false;
+					material.alphaMode = MV_ALPHA_MODE_OPAQUE;
+				else if(alphaMode == "MASK")
+					material.alphaMode = MV_ALPHA_MODE_MASK;
 				else
-					material.alpha_mode = true;
+					material.alphaMode = MV_ALPHA_MODE_BLEND;
 			}
 
 			if (jmaterial.doesMemberExist("pbrMetallicRoughness"))
@@ -1550,6 +1560,9 @@ namespace mvImp {
 
 			if (jmaterial.doesMemberExist("doubleSided"))
 				material.double_sided = jmaterial.getMember("doubleSided")[0] == 't';
+
+			if (jmaterial.doesMemberExist("alphaCutoff"))
+				material.alphaCutoff = jmaterial.getMember("alphaCutoff");
 
 			size++;
 		}

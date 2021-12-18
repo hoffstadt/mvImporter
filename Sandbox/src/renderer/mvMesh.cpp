@@ -791,6 +791,7 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
                 materialData.hasAlpha = material.double_sided;
                 materialData.emisiveFactor = *(mvVec3*)material.emissive_factor;
                 materialData.occlusionStrength = material.occlusion_texture_strength;
+                materialData.alphaCutoff = material.alphaCutoff;
 
                 if (material.base_color_texture != -1)
                 {
@@ -866,6 +867,7 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
                     std::to_string(materialData.albedo.w) +
                     std::to_string(materialData.metalness) +
                     std::to_string(materialData.roughness) +
+                    std::to_string(materialData.alphaCutoff) +
                     std::to_string(materialData.emisiveFactor.x) +
                     std::to_string(materialData.emisiveFactor.y) +
                     std::to_string(materialData.emisiveFactor.z) +
@@ -893,6 +895,7 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
                 materialData.metalness = 0.0f;
                 materialData.roughness = 0.5f;
                 materialData.hasAlpha = true;
+                materialData.alphaCutoff = 0.5f;
                 std::string hash = std::string("PBR_PS.hlsl") +
                     std::string("PBR_VS.hlsl") +
                     std::to_string(materialData.albedo.x) +
@@ -901,6 +904,7 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
                     std::to_string(materialData.albedo.w) +
                     std::to_string(materialData.metalness) +
                     std::to_string(materialData.roughness) +
+                    std::to_string(materialData.alphaCutoff) +
                     std::to_string(materialData.emisiveFactor.x) +
                     std::to_string(materialData.emisiveFactor.y) +
                     std::to_string(materialData.emisiveFactor.z) +

@@ -150,7 +150,7 @@ struct mvAssetManager
 	b8*                 freecameras = nullptr;
 
 	// pipelines
-	u32                 maxPipelineCount = 100u;
+	u32                 maxPipelineCount = 1000u;
 	u32                 pipelineCount = 0u;
 	mvPipelineAsset*    pipelines = nullptr;
 };
