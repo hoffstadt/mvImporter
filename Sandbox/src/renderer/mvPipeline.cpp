@@ -6,7 +6,7 @@
 static std::wstring
 ToWide(const std::string& narrow)
 {
-    wchar_t wide[512];
+    wchar_t wide[1024];
     mbstowcs_s(nullptr, wide, narrow.c_str(), _TRUNCATE);
     return wide;
 }

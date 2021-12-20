@@ -11,6 +11,7 @@
 #include "mvTimer.h"
 #include "gltf_scene_info.h"
 
+
 // TODO: make most of these runtime options
 #define MODEL_CACHE_SIZE 5
 static f32         shadowWidth = 95.0f;
@@ -18,9 +19,11 @@ static int         initialWidth = 1850;
 static int         initialHeight = 900;
 static ImVec2      oldContentRegion = ImVec2(500, 500);
 
-int main()
-{
+#define _DEBUG
+#include <crtdbg.h>
 
+int main()
+{    
     mvCreateContext();
     GContext->IO.shaderDirectory = "../../Sandbox/shaders/";
     GContext->IO.resourceDirectory = "../../Resources/";
@@ -40,6 +43,16 @@ int main()
     mvAssetManager am{};
     mvInitializeAssetManager(&am);
     Renderer::mvSetupCommonAssets(am);
+
+    //// Get current flag
+    //int tmpFlag = _CrtSetDbgFlag(_CRTDBG_REPORT_FLAG);
+
+    //// Turn on corruption-checking bit
+    //tmpFlag |= _CRTDBG_CHECK_ALWAYS_DF;
+
+    //// Set flag to the new value
+    //_CrtSetDbgFlag(tmpFlag);
+
 
     // main camera
     mvCamera camera = create_perspective_camera({ -13.5f, 6.0f, 3.5f }, (f32)M_PI_4, 1.0f, 0.1f, 400.0f);

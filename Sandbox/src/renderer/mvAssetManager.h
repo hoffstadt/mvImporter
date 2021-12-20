@@ -132,7 +132,7 @@ struct mvAssetManager
 	b8*                 freemeshes = nullptr;
 					    
 	// nodes	        
-	u32                 maxNodeCount = 500u;
+	u32                 maxNodeCount = 1000u;
 	u32                 nodeCount = 0u;
 	mvNodeAsset*        nodes = nullptr;
 	b8*                 freenodes = nullptr;
