@@ -11,6 +11,33 @@ ToWide(const std::string& narrow)
     return wide;
 }
 
+mvComputeShader
+create_compute_shader(const std::string& path)
+{
+    mvComputeShader shader{};
+    shader.path = path;
+
+    mvComPtr<ID3DBlob> shaderCompileErrorsBlob;
+    HRESULT hResult = D3DCompileFromFile(ToWide(path).c_str(),
+        nullptr, D3D_COMPILE_STANDARD_FILE_INCLUDE, "main", "cs_5_0", 0, 0,
+        &shader.blob, shaderCompileErrorsBlob.GetAddressOf());
+
+    if (FAILED(hResult))
+    {
+        const char* errorString = NULL;
+        if (hResult == HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND))
+            errorString = "Could not compile shader; file not found";
+        else if (shaderCompileErrorsBlob)
+            errorString = (const char*)shaderCompileErrorsBlob->GetBufferPointer();
+
+        MessageBoxA(0, errorString, "Shader Compiler Error", MB_ICONERROR | MB_OK);
+    }
+
+    hResult = GContext->graphics.device->CreateComputeShader(shader.blob->GetBufferPointer(), shader.blob->GetBufferSize(), nullptr, &shader.shader);
+    assert(SUCCEEDED(hResult));
+    return shader;
+}
+
 mvPixelShader
 create_pixel_shader(const std::string& path)
 {

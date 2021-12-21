@@ -61,7 +61,8 @@ create_skybox(mvAssetManager& am)
     skybox.vertexBuffer = create_buffer(vertices.data(), vertices.size() * sizeof(f32), D3D11_BIND_VERTEX_BUFFER);
     skybox.indexBuffer = create_buffer(indices.data(), indices.size() * sizeof(u32), D3D11_BIND_INDEX_BUFFER);
     skybox.vertexLayout = create_vertex_layout({ mvVertexElement::Position3D });
-    skybox.cubeTexture = create_cube_texture("../../Resources/SkyBox");
+    //skybox.cubeTexture = create_cube_texture("../../Resources/SkyBox");
+    skybox.cubeTexture = create_cube_texture("../../data/glTF-Sample-Environments/field.hdr", false);
 
     D3D11_SAMPLER_DESC samplerDesc{};
     samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_BORDER;
