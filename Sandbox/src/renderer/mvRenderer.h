@@ -15,7 +15,7 @@ struct GlobalInfo
     //-------------------------- ( 16 bytes )
 
     b32  useOmniShadows = true;
-    b32  useSkybox = true;
+    b32  useSkybox = false;
     b32  useAlbedo = true;
     b32  useMetalness = true;
     //-------------------------- ( 2*16 = 32 bytes )

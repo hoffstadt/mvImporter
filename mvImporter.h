@@ -86,6 +86,13 @@ typedef unsigned long long  mvU64;  // 64-bit unsigned integer (post C++11)
 // Flags, Enumerations, & Struct Definitions
 //-----------------------------------------------------------------------------
 
+enum mvGLTFAlphaMode
+{
+	MV_ALPHA_MODE_OPAQUE,
+	MV_ALPHA_MODE_MASK,
+	MV_ALPHA_MODE_BLEND
+};
+
 enum mvGLTFPrimMode
 {
 	MV_IMP_POINTS    = 0,
@@ -148,8 +155,8 @@ struct mvGLTFAccessor
 	mvGLTFComponentType component_type = MV_IMP_FLOAT;
 	mvS32               byteOffset = 0;
 	mvS32               count = -1;
-	mvF32               maxes[4];
-	mvF32               mins[4];
+	mvF32               maxes[16];
+	mvF32               mins[16];
 };
 
 struct mvGLTFTexture
@@ -210,20 +217,21 @@ struct mvGLTFMesh
 
 struct mvGLTFMaterial
 {
-	std::string name;
-	mvS32       base_color_texture         = -1;
-	mvS32       metallic_roughness_texture = -1;
-	mvS32       normal_texture             = -1;
-	mvS32       occlusion_texture          = -1;
-	mvS32       emissive_texture           = -1;
-	mvF32       normal_texture_scale       = 1.0f;
-	mvF32       occlusion_texture_strength = 1.0f;
-	mvF32       metallic_factor            = 1.0f;
-	mvF32       roughness_factor           = 0.0f;
-	mvF32       base_color_factor[4]       = { 1.0f, 1.0f, 1.0f, 1.0f };
-	mvF32       emissive_factor[3]         = { 0.0f, 0.0f, 0.0f };
-	bool        double_sided               = false;
-	bool        alpha_mode                 = false;
+	std::string     name;
+	mvS32           base_color_texture         = -1;
+	mvS32           metallic_roughness_texture = -1;
+	mvS32           normal_texture             = -1;
+	mvS32           occlusion_texture          = -1;
+	mvS32           emissive_texture           = -1;
+	mvF32           normal_texture_scale       = 1.0f;
+	mvF32           occlusion_texture_strength = 1.0f;
+	mvF32           metallic_factor            = 1.0f;
+	mvF32           roughness_factor           = 1.0f;
+	mvF32           base_color_factor[4]       = { 1.0f, 1.0f, 1.0f, 1.0f };
+	mvF32           emissive_factor[3]         = { 0.0f, 0.0f, 0.0f };
+	mvF32           alphaCutoff                = 0.5;
+	bool            double_sided               = false;
+	mvGLTFAlphaMode alphaMode                  = MV_ALPHA_MODE_OPAQUE;
 };
 
 struct mvGLTFPerspective
@@ -737,7 +745,7 @@ RemoveWhiteSpace(char* rawData, char* spacesRemoved, size_t size)
 
 		if (currentPos >= size || newCursor >= size)
 		{
-			spacesRemoved[newCursor - 1] = 0;
+			spacesRemoved[newCursor] = 0;
 			break;
 		}
 
@@ -852,6 +860,7 @@ ParseJSON(char* rawData, int size)
 			mvJsonObject& parent = context.jsonObjects[parentId];
 			mvJsonMember member{};
 			member.name = (*tokens)[i].value;
+			//if(i+)
 			mvTokenType valueType = (*tokens)[i + 2].type;
 			if (valueType == MV_JSON_LEFT_BRACKET)
 			{
@@ -1482,9 +1491,11 @@ namespace mvImp {
 			{
 				std::string alphaMode = jmaterial.getMember("alphaMode");
 				if (alphaMode == "OPAQUE")
-					material.alpha_mode = false;
+					material.alphaMode = MV_ALPHA_MODE_OPAQUE;
+				else if(alphaMode == "MASK")
+					material.alphaMode = MV_ALPHA_MODE_MASK;
 				else
-					material.alpha_mode = true;
+					material.alphaMode = MV_ALPHA_MODE_BLEND;
 			}
 
 			if (jmaterial.doesMemberExist("pbrMetallicRoughness"))
@@ -1550,6 +1561,9 @@ namespace mvImp {
 
 			if (jmaterial.doesMemberExist("doubleSided"))
 				material.double_sided = jmaterial.getMember("doubleSided")[0] == 't';
+
+			if (jmaterial.doesMemberExist("alphaCutoff"))
+				material.alphaCutoff = jmaterial.getMember("alphaCutoff");
 
 			size++;
 		}
@@ -1721,7 +1735,7 @@ namespace mvImp {
 		for (int i = 0; i < count; i++)
 		{
 			mvJsonObject& jaccessor = j["accessors"][i];
-			mvGLTFAccessor& accessor = accessors[size];
+			mvGLTFAccessor& accessor = accessors[i];
 
 			if (jaccessor.doesMemberExist("name"))
 			{
@@ -1759,10 +1773,11 @@ namespace mvImp {
 
 			if (jaccessor.doesMemberExist("max"))
 			{
-				mvU32 max_count = jaccessor["max"].members.size();
-				for (mvU32 max_entry = 0u; max_entry < max_count; max_entry++)
+
+				mvU32 min_count = jaccessor["max"].members.size();
+				for (mvU32 min_entry = 0u; min_entry < min_count; min_entry++)
 				{
-					accessor.maxes[max_entry] = jaccessor["max"][max_entry];
+					accessor.maxes[min_entry] = jaccessor["max"][min_entry];
 				}
 			}
 

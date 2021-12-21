@@ -1,67 +1,4 @@
 
-static const float PI = 3.14159265359;
-
-// shadows
-static const float zf = 100.0f;
-static const float zn = 0.5f;
-static const float c1 = (zf + zn) / (zf - zn);
-static const float c0 = -(2 * zn * zf) / (zf - zn);
-static const int PCFRANGE = 2;
-
-//-----------------------------------------------------------------------------
-// equations
-//-----------------------------------------------------------------------------
-float CalculateShadowDepth(const in float4 shadowPos)
-{
-    // get magnitudes for each basis component
-    const float3 m = abs(shadowPos).xyz;
-    // get the length in the dominant axis
-    // (this correlates with shadow map face and derives comparison depth)
-    const float major = max(m.x, max(m.y, m.z));
-    // converting from distance in shadow light space to projected depth
-    return (c1 * major + c0) / major;
-}
-
-float Shadow(const in float4 shadowPos, uniform TextureCube map, uniform SamplerComparisonState smplr)
-{
-    return map.SampleCmpLevelZero(smplr, shadowPos.xyz, CalculateShadowDepth(shadowPos));
-}
-
-float Attenuate(uniform float attConst, uniform float attLin, uniform float attQuad, const in float distFragToL)
-{
-    return 1.0f / (attConst + attLin * distFragToL + attQuad * (distFragToL * distFragToL));
-}
-
-// Normal Distribution function --------------------------------------
-float D_GGX(float dotNH, float roughness)
-{
-    float alpha = roughness * roughness;
-    float alpha2 = alpha * alpha;
-    float denom = dotNH * dotNH * (alpha2 - 1.0) + 1.0;
-    return (alpha2) / (PI * denom * denom);
-}
-
-
-// Geometric Shadowing function --------------------------------------
-float G_SchlicksmithGGX(float dotNL, float dotNV, float roughness)
-{
-    float r = (roughness + 1.0);
-    float k = (r * r) / 8.0;
-    float GL = dotNL / (dotNL * (1.0 - k) + k);
-    float GV = dotNV / (dotNV * (1.0 - k) + k);
-    return GL * GV;
-}
-
-// Fresnel function ----------------------------------------------------
-float3 F_Schlick(float cosTheta, float3 F0)
-{
-    return F0 + (1.0 - F0) * pow(1.0 - cosTheta, 5.0);
-}
-float3 F_SchlickR(float cosTheta, float3 F0, float roughness)
-{
-    return F0 + (max((1.0 - roughness).xxx, F0) - F0) * pow(1.0 - cosTheta, 5.0);
-}
-
 struct mvPointLight
 {
     float3 viewLightPos;
@@ -103,6 +40,7 @@ struct mvMaterial
     bool hasAlpha;
     bool useOcclusionMap;
     float occlusionStrength;
+    float alphaCutoff;
     //-------------------------- ( 4 * 16 = 64 bytes )
 };
 
@@ -174,7 +112,7 @@ SamplerState           EnvironmentSampler : register(s3);
 cbuffer mvPointLightCBuf       : register(b0) { mvPointLight PointLight; };
 cbuffer mvMaterialCBuf         : register(b1) { mvMaterial material; };
 cbuffer mvDirectionalLightCBuf : register(b2) { mvDirectionalLight DirectionalLight; };
-cbuffer mvGlobalCBuf           : register(b3) { mvGlobalInfo info; };
+cbuffer mvGlobalCBuf           : register(b3) { mvGlobalInfo ginfo; };
 
 struct VSOut
 {   
@@ -182,123 +120,91 @@ struct VSOut
     float3 WorldPos         : POSITION0;
     float3 WorldNormal      : NORMAL0;
     float2 UV               : TEXCOORD0;
-    float4 dshadowWorldPos  : dshadowPosition; // light pos
-    float4 oshadowWorldPos  : oshadowPosition; // light pos
+    float4 dshadowWorldPos  : dshadowPosition; // directional light pos
+    float4 oshadowWorldPos  : oshadowPosition; // point light pos
     float3x3 TBN            : TangentBasis;
+    bool frontFace          : SV_IsFrontFace;
 };
 
-float3 calculateNormal(VSOut input)
-{
+#include <tonemapping.hlsli>
+#include <functions.hlsli>
+#include <brdf.hlsli>
+#include <punctual.hlsli>
+#include <ibl.hlsli>
+#include <material_info.hlsli>
 
-    float3 N = normalize(input.WorldNormal);
+NormalInfo getNormalInfo(VSOut input)
+{
     
-    if (material.useNormalMap && info.useNormalMap)
-    {
-        float3 tangentNormal = NormalTexture.Sample(Sampler, input.UV).xyz * 2.0 - 1.0;
-        tangentNormal.y = -tangentNormal.y;
-        return normalize(mul(input.TBN, tangentNormal));
-    }
+    float2 UV = input.UV;
+    float3 uv_dx = ddx(float3(UV, 0.0));
+    float3 uv_dy = ddy(float3(UV, 0.0));
+
+    float3 t_ = (uv_dy.y * ddx(input.Pos).xyz - uv_dx.y * ddy(input.Pos).xyz) /
+        (uv_dx.x * uv_dy.y - uv_dy.x * uv_dx.y);
+
+    float3 n, t, b, ng;
+
+    // Compute geometrical TBN:
+    // Trivial TBN computation, present as vertex attribute.
+    // Normalize eigenvectors as matrix is linearly interpolated.
+    float3x3 TBN = transpose(input.TBN);
+    t = normalize(TBN[0]);
+    b = normalize(TBN[1]);
+    ng = normalize(TBN[2]);
     
-    return N;
-}
-
-float3 specularContribution(float3 albedo, float2 inUV, float3 L, float3 V, float3 N, float3 F0, float metallic, float roughness)
-{
-	// Precalculate vectors and dot products
-    float3 H = normalize(V + L);
-    float dotNH = clamp(dot(N, H), 0.0, 1.0);
-    float dotNV = clamp(dot(N, V), 0.0, 1.0);
-    float dotNL = clamp(dot(N, L), 0.0, 1.0);
-
-	// Light color fixed
-    float3 lightColor = float3(1.0, 1.0, 1.0);
-
-    float3 color = float3(0.0, 0.0, 0.0);
-
-    if (dotNL > 0.0)
+    // For a back-facing surface, the tangential basis vectors are negated.
+    if (!input.frontFace)
     {
-		// D = Normal distribution (Distribution of the microfacets)
-        float D = D_GGX(dotNH, roughness);
-		// G = Geometric shadowing term (Microfacets shadowing)
-        float G = G_SchlicksmithGGX(dotNL, dotNV, roughness);
-		// F = Fresnel factor (Reflectance depending on angle of incidence)
-        float3 F = F_Schlick(dotNV, F0);
-        float3 spec = D * F * G / (4.0 * dotNL * dotNV + 0.001);
-        float3 kD = (float3(1.0, 1.0, 1.0) - F) * (1.0 - metallic);
-        color += (kD * albedo / PI + spec) * dotNL;
+        t *= -1.0;
+        b *= -1.0;
+        ng *= -1.0;
     }
 
-    return color;
-}
-
-float3 BRDF(float3 L, float3 V, float3 N, float metallic, float roughness)
-{
-	// Precalculate vectors and dot products
-    float3 H = normalize(V + L);
-    float dotNV = clamp(dot(N, V), 0.0, 1.0);
-    float dotNL = clamp(dot(N, L), 0.0, 1.0);
-    float dotLH = clamp(dot(L, H), 0.0, 1.0);
-    float dotNH = clamp(dot(N, H), 0.0, 1.0);
-
-	// Light color fixed
-    float3 lightColor = float3(1.0, 1.0, 1.0);
-
-    float3 color = float3(0.0, 0.0, 0.0);
-
-    if (dotNL > 0.0)
+    // Compute normals:
+    NormalInfo normalInfo;
+    normalInfo.ng = ng;
+    normalInfo.n = ng;
+    if (material.useNormalMap && ginfo.useNormalMap)
     {
-        float rroughness = max(0.05, roughness);
-		// D = Normal distribution (Distribution of the microfacets)
-        float D = D_GGX(dotNH, roughness);
-		// G = Geometric shadowing term (Microfacets shadowing)
-        float G = G_SchlicksmithGGX(dotNL, dotNV, rroughness);
-		// F = Fresnel factor (Reflectance depending on angle of incidence)
-        float3 F = F_Schlick(dotNV, metallic);
-
-        float3 spec = D * F * G / (4.0 * dotNL * dotNV);
-
-        color += spec * dotNL * lightColor;
+        
+        normalInfo.ntex = NormalTexture.Sample(Sampler, input.UV).xyz * 2.0 - 1.0;
+        normalInfo.ntex.y = -normalInfo.ntex.y;
+        //float u_NormalScale = -1.0;
+        //normalInfo.ntex *= float3(u_NormalScale, u_NormalScale, 1.0);
+        normalInfo.ntex = normalize(normalInfo.ntex);
+        normalInfo.n = normalize(mul(input.TBN, normalInfo.ntex));
+        //normalInfo.n = normalize(mul(float3x3(t, b, ng), normalInfo.ntex));
+        //return normalize(mul(input.TBN, tangentNormal));
+        
     }
 
-    return color;
+    normalInfo.t = t;
+    normalInfo.b = b;
+    return normalInfo;
 }
 
-float3 prefilteredReflection(float3 R, float roughness)
+// shadows
+static const float zf = 100.0f;
+static const float zn = 0.5f;
+static const float c1 = (zf + zn) / (zf - zn);
+static const float c0 = -(2 * zn * zf) / (zf - zn);
+static const int PCFRANGE = 2;
+
+float CalculateShadowDepth(const in float4 shadowPos)
 {
-    const float MAX_REFLECTION_LOD = 9.0; // todo: param/const
-    float lod = roughness * MAX_REFLECTION_LOD;
-    float lodf = floor(lod);
-    float lodc = ceil(lod);
-    //float3 a = prefilteredMapTexture.SampleLevel(prefilteredMapSampler, R, lodf).rgb;
-    //float3 b = prefilteredMapTexture.SampleLevel(prefilteredMapSampler, R, lodc).rgb;
-    float3 a = Environment.SampleLevel(EnvironmentSampler, R, lodf).rgb;
-    float3 b = Environment.SampleLevel(EnvironmentSampler, R, lodc).rgb;
-    return lerp(a, b, lod - lodf);
+    // get magnitudes for each basis component
+    const float3 m = abs(shadowPos).xyz;
+    // get the length in the dominant axis
+    // (this correlates with shadow map face and derives comparison depth)
+    const float major = max(m.x, max(m.y, m.z));
+    // converting from distance in shadow light space to projected depth
+    return (c1 * major + c0) / major;
 }
 
-float4 getIrradiance(float3 N)
+float Shadow(const in float4 shadowPos, uniform TextureCube map, uniform SamplerComparisonState smplr)
 {
-    float3 up = float3(0.0, 1.0, 0.0);
-    float3 right = normalize(cross(up, N));
-    up = cross(N, right);
-
-    const float TWO_PI = PI * 2.0;
-    const float HALF_PI = PI * 0.5;
-
-    float3 color = float3(0.0, 0.0, 0.0);
-    float sampleDelta = 0.5;
-    float nrSamples = 0.0;
-    for (float phi = 0.0; phi < TWO_PI; phi += sampleDelta)
-    {
-        for (float theta = 0.0; theta < HALF_PI; theta += sampleDelta)
-        {
-            float3 tempVec = cos(phi) * right + sin(phi) * up;
-            float3 sampleVector = cos(theta) * N + sin(theta) * tempVec;
-            color += Environment.Sample(EnvironmentSampler, sampleVector).rgb * cos(theta) * sin(theta);
-            nrSamples++;
-        }
-    }
-    return float4(PI * color / float(nrSamples), 1.0);
+    return map.SampleCmpLevelZero(smplr, shadowPos.xyz, CalculateShadowDepth(shadowPos));
 }
 
 float filterPCF(const in float2 spos, float depthCheck)
@@ -313,12 +219,12 @@ float filterPCF(const in float2 spos, float depthCheck)
     
     int count = 0;
     [loop]
-    for (int x = -info.pcfRange; x <= info.pcfRange; x++)
+    for (int x = -ginfo.pcfRange; x <= ginfo.pcfRange; x++)
     {
         [loop]
-        for (int y = -info.pcfRange; y <= info.pcfRange; y++)
+        for (int y = -ginfo.pcfRange; y <= ginfo.pcfRange; y++)
         {
-            shadowLevel += DirectionalShadowMap.SampleCmpLevelZero(DShadowSampler, float2(spos.x + dx*x, spos.y + dy*y), depthCheck);
+            shadowLevel += DirectionalShadowMap.SampleCmpLevelZero(DShadowSampler, float2(spos.x + dx * x, spos.y + dy * y), depthCheck);
             count++;
         }
     }
@@ -327,177 +233,305 @@ float filterPCF(const in float2 spos, float depthCheck)
 
 float4 main(VSOut input) : SV_Target
 {
-    float4 albedo = material.albedo;
+    float4 finalColor;
+    float4 baseColor = getBaseColor(input);
     
-    if (material.useAlbedoMap && info.useAlbedo)
+    if (baseColor.a < material.alphaCutoff)
     {
-        albedo = AlbedoTexture.Sample(Sampler, input.UV).rgba;
+        discard;
+    }
+    
+    clip(baseColor.a < 0.1f ? -1 : 1); // bail if highly translucent
+    
+    float3 v = normalize(ginfo.camPos - input.WorldPos);
+    NormalInfo normalInfo = getNormalInfo(input);
+    
+    float3 n = normalInfo.n;
+    float3 t = normalInfo.t;
+    float3 b = normalInfo.b;
 
-        // bail if highly translucent
-        clip(albedo.a < 0.1f ? -1 : 1);
+    float NdotV = clampedDot(n, v);
+    float TdotV = clampedDot(t, v);
+    float BdotV = clampedDot(b, v);
+    
+    MaterialInfo materialInfo;
+    materialInfo.baseColor = baseColor.rgb;
+    
+    // The default index of refraction of 1.5 yields a dielectric normal incidence reflectance of 0.04.
+    materialInfo.ior = 1.5;
+    materialInfo.f0 = float3(0.04.xxx);
+    materialInfo.specularWeight = 1.0;
+    
+#ifdef MATERIAL_IOR
+    materialInfo = getIorInfo(materialInfo);
+#endif
 
-        albedo = pow(albedo, float4(2.2, 2.2, 2.2, 1.0));
+#ifdef MATERIAL_SPECULARGLOSSINESS
+    materialInfo = getSpecularGlossinessInfo(materialInfo);
+#endif
+
+//#ifdef MATERIAL_METALLICROUGHNESS
+    materialInfo = getMetallicRoughnessInfo(input, materialInfo);
+//#endif
+
+#ifdef MATERIAL_SHEEN
+    materialInfo = getSheenInfo(materialInfo);
+#endif
+
+#ifdef MATERIAL_CLEARCOAT
+    materialInfo = getClearCoatInfo(materialInfo, normalInfo);
+#endif
+
+#ifdef MATERIAL_SPECULAR
+    materialInfo = getSpecularInfo(materialInfo);
+#endif
+
+#ifdef MATERIAL_TRANSMISSION
+    materialInfo = getTransmissionInfo(materialInfo);
+#endif
+
+#ifdef MATERIAL_VOLUME
+    materialInfo = getVolumeInfo(materialInfo);
+#endif
+    
+    materialInfo.perceptualRoughness = clamp(materialInfo.perceptualRoughness, 0.0, 1.0);
+    materialInfo.metallic = clamp(materialInfo.metallic, 0.0, 1.0);
+
+    // Roughness is authored as perceptual roughness; as is convention,
+    // convert to material roughness by squaring the perceptual roughness.
+    materialInfo.alphaRoughness = materialInfo.perceptualRoughness * materialInfo.perceptualRoughness;
+
+    // Compute reflectance.
+    float reflectance = max(max(materialInfo.f0.r, materialInfo.f0.g), materialInfo.f0.b);
+
+    // Anything less than 2% is physically impossible and is instead considered to be shadowing. Compare to "Real-Time-Rendering" 4th editon on page 325.
+    materialInfo.f90 = float3(1.0.xxx);
+
+    // LIGHTING
+    float3 f_specular = float3(0.0.xxx);
+    float3 f_diffuse = float3(0.0.xxx);
+    float3 f_emissive = float3(0.0.xxx);
+    float3 f_clearcoat = float3(0.0.xxx);
+    float3 f_sheen = float3(0.0.xxx);
+    float3 f_transmission = float3(0.0.xxx);
+
+    float albedoSheenScaling = 1.0;
+    
+    // Calculate lighting contribution from image based lighting source (IBL)
+#ifdef USE_IBL
+    f_specular += getIBLRadianceGGX(n, v, materialInfo.perceptualRoughness, materialInfo.f0, materialInfo.specularWeight);
+    f_diffuse += getIBLRadianceLambertian(n, v, materialInfo.perceptualRoughness, materialInfo.c_diff, materialInfo.f0, materialInfo.specularWeight);
+
+#ifdef MATERIAL_CLEARCOAT
+    f_clearcoat += getIBLRadianceGGX(materialInfo.clearcoatNormal, v, materialInfo.clearcoatRoughness, materialInfo.clearcoatF0, 1.0);
+#endif
+
+#ifdef MATERIAL_SHEEN
+    f_sheen += getIBLRadianceCharlie(n, v, materialInfo.sheenRoughnessFactor, materialInfo.sheenColorFactor);
+#endif
+#endif
+
+#if (defined(MATERIAL_TRANSMISSION) || defined(MATERIAL_VOLUME)) && (defined(USE_PUNCTUAL) || defined(USE_IBL))
+    f_transmission += materialInfo.transmissionFactor * getIBLVolumeRefraction(
+        n, v,
+        materialInfo.perceptualRoughness,
+        materialInfo.baseColor, materialInfo.f0, materialInfo.f90,
+        v_Position, u_ModelMatrix, u_ViewMatrix, u_ProjectionMatrix,
+        materialInfo.ior, materialInfo.thickness, materialInfo.attenuationColor, materialInfo.attenuationDistance);
+#endif
+
+    float ao = 1.0;
+    // Apply optional PBR terms for additional (optional) shading
+    if (material.useOcclusionMap && ginfo.useOcclusionMap)
+    {
+        ao = OcclusionTexture.Sample(Sampler, input.UV).r;
         
-        //// flip normal when backface
-        //if (dot(input.WorldNormal, input.WorldPos) >= 0.0f)
-        //{
-        //    input.WorldNormal = -input.WorldNormal;
-        //}
- 
-    }
-    else if (material.useAlbedoMap)
-    {
-        float albedo_alpha = AlbedoTexture.Sample(Sampler, input.UV).a;
-
-        // bail if highly translucent
-        clip(albedo_alpha < 0.1f ? -1 : 1);
-        
-    }
-
-    float3 N = calculateNormal(input);
-    float3 irradiance = info.ambientColor;
-    float metallic = material.metalness;
-    float roughness = material.roughness;
-    
-    float3 V = normalize(info.camPos - input.WorldPos);
-    float3 R = reflect(-V, N);
-    
-    if (material.useMetalMap && info.useMetalness)
-    {
-        metallic = MetalRoughnessTexture.Sample(Sampler, input.UV).b;
-    }
-    else if(!info.useMetalness)
-    {
-        metallic = 0.0f;
+        f_diffuse = lerp(f_diffuse, f_diffuse * ao, material.occlusionStrength);
+        // apply ambient occlusion to all lighting that is not punctual
+        f_specular = lerp(f_specular, f_specular * ao, material.occlusionStrength);
+        f_sheen = lerp(f_sheen, f_sheen * ao, material.occlusionStrength);
+        f_clearcoat = lerp(f_clearcoat, f_clearcoat * ao, material.occlusionStrength);
     }
     
-    if (material.useRoughnessMap && info.useRoughness)
-    {
-        roughness = MetalRoughnessTexture.Sample(Sampler, input.UV).g;
-    }
-    
-    float3 F0 = float3(0.04, 0.04, 0.04);
-    F0 = lerp(F0, albedo.rgb, metallic);
-    
-    //-----------------------------------------------------------------------------
-    // point light
-    //-----------------------------------------------------------------------------
-    input.oshadowWorldPos.z = -input.oshadowWorldPos.z;
-    float shadowLevel = Shadow(input.oshadowWorldPos, ShadowMap, OShadowSampler);
-    float3 L = normalize(PointLight.viewLightPos - input.WorldPos);
-    float3 point_brdf = BRDF(L, V, N, metallic, roughness);
-    float3 point_spec = specularContribution(albedo.rgb, input.UV, L, V, N, F0, metallic, roughness);
-    
-    if (shadowLevel != 0.0f && info.useOmniShadows)
-    {
-        point_spec *= shadowLevel;
-        point_brdf *= shadowLevel;     
-    }
-    else if(info.useOmniShadows)
-    {
-        point_brdf = float3(0.0, 0.0, 0.0);
-        point_spec = float3(0.0, 0.0, 0.0);
-    }
-
-    //-----------------------------------------------------------------------------
-    // directional light
-    //-----------------------------------------------------------------------------
-    L = -DirectionalLight.viewLightDir;
-    float3 direct_brdf = BRDF(L, V, N, metallic, roughness);
-    float3 direct_spec = specularContribution(albedo.rgb, input.UV, L, V, N, F0, metallic, roughness);
-    float2 projectTexCoord;
-    float lightDepthValue;
-    
-    // Calculate the projected texture coordinates.
-    projectTexCoord.x = 0.5f * input.dshadowWorldPos.x / input.dshadowWorldPos.w + 0.5f;
-    projectTexCoord.y = -0.5f * input.dshadowWorldPos.y / input.dshadowWorldPos.w + 0.5f;
-        
-        // Determine if the projected coordinates are in the 0 to 1 range.  If so then this pixel is in the view of the light.
-    if ((saturate(projectTexCoord.x) == projectTexCoord.x) && (saturate(projectTexCoord.y) == projectTexCoord.y) && info.useShadows)
     {
         
-        // Calculate the depth of the light.
-        lightDepthValue = input.dshadowWorldPos.z / input.dshadowWorldPos.w;
+        //-----------------------------------------------------------------------------
+        // point light
+        //-----------------------------------------------------------------------------
+        input.oshadowWorldPos.z = -input.oshadowWorldPos.z;
+        float shadowLevel = 1.0f;
+        float3 pointToLight = PointLight.viewLightPos - input.WorldPos;
+        if(ginfo.useOmniShadows)
+            shadowLevel = Shadow(input.oshadowWorldPos, ShadowMap, OShadowSampler);
+        
+        // BSTF
+        float3 l = normalize(pointToLight); // Direction from surface point to light
+        float3 h = normalize(l + v); // Direction of the vector between l and v, called halfway vector
+        float NdotL = clampedDot(n, l);
+        float NdotV = clampedDot(n, v);
+        float NdotH = clampedDot(n, h);
+        float LdotH = clampedDot(l, h);
+        float VdotH = clampedDot(v, h);
+        if (NdotL > 0.0 || NdotV > 0.0)
+        {
+
+        // Calculation of analytical light
+        // https://github.com/KhronosGroup/glTF/tree/master/specification/2.0#acknowledgments AppendixB
+        //float3 intensity = getLighIntensity(pointToLight);
+            float3 intensity = DirectionalLight.diffuseIntensity * DirectionalLight.diffuseColor;
+            f_diffuse += shadowLevel * intensity * NdotL * BRDF_lambertian(materialInfo.f0, materialInfo.f90, materialInfo.c_diff, materialInfo.specularWeight, VdotH);
+            f_specular += shadowLevel * intensity * NdotL * BRDF_specularGGX(materialInfo.f0, materialInfo.f90, materialInfo.alphaRoughness, materialInfo.specularWeight, VdotH, NdotL, NdotV, NdotH);
+
+#ifdef MATERIAL_SHEEN
+        f_sheen += shadowLevel *intensity * getPunctualRadianceSheen(materialInfo.sheenColorFactor, materialInfo.sheenRoughnessFactor, NdotL, NdotV, NdotH);
+        albedoSheenScaling = min(1.0 - max3(materialInfo.sheenColorFactor) * albedoSheenScalingLUT(NdotV, materialInfo.sheenRoughnessFactor),
+            1.0 - max3(materialInfo.sheenColorFactor) * albedoSheenScalingLUT(NdotL, materialInfo.sheenRoughnessFactor));
+#endif
+
+#ifdef MATERIAL_CLEARCOAT
+        f_clearcoat += shadowLevel * intensity * getPunctualRadianceClearCoat(materialInfo.clearcoatNormal, v, l, h, VdotH,
+            materialInfo.clearcoatF0, materialInfo.clearcoatF90, materialInfo.clearcoatRoughness);
+#endif
+
+        }
+
+        // BDTF
+#ifdef MATERIAL_TRANSMISSION
+        // If the light ray travels through the geometry, use the point it exits the geometry again.
+        // That will change the angle to the light source, if the material refracts the light ray.
+        vec3 transmissionRay = getVolumeTransmissionRay(n, v, materialInfo.thickness, materialInfo.ior, u_ModelMatrix);
+        pointToLight -= transmissionRay;
+        l = normalize(pointToLight);
+
+        vec3 intensity = getLighIntensity(light, pointToLight);
+        vec3 transmittedLight = intensity * getPunctualRadianceTransmission(n, v, l, materialInfo.alphaRoughness, materialInfo.f0, materialInfo.f90, materialInfo.baseColor, materialInfo.ior);
+
+#ifdef MATERIAL_VOLUME
+        transmittedLight = applyVolumeAttenuation(transmittedLight, length(transmissionRay), materialInfo.attenuationColor, materialInfo.attenuationDistance);
+#endif
+
+        f_transmission += materialInfo.transmissionFactor * transmittedLight;
+#endif
+    }
+     
+    {
+        
+        //-----------------------------------------------------------------------------
+        // directional light
+        //-----------------------------------------------------------------------------
+        float2 projectTexCoord;
+        float lightDepthValue;
+        float shadowLevel = 1.0f;
+        float3 pointToLight = -DirectionalLight.viewLightDir;
+        
+        // Calculate the projected texture coordinates.
+        projectTexCoord.x = 0.5f * input.dshadowWorldPos.x / input.dshadowWorldPos.w + 0.5f;
+        projectTexCoord.y = -0.5f * input.dshadowWorldPos.y / input.dshadowWorldPos.w + 0.5f;
+
+        // BSTF
+        float3 l = normalize(pointToLight);   // Direction from surface point to light
+        float3 h = normalize(l + v);          // Direction of the vector between l and v, called halfway vector
+        float NdotL = clampedDot(n, l);
+        float NdotV = clampedDot(n, v);
+        float NdotH = clampedDot(n, h);
+        float LdotH = clampedDot(l, h);
+        float VdotH = clampedDot(v, h);
+        if (NdotL > 0.0 || NdotV > 0.0)
+        {
             
-        if(info.usePCF)
-        {
-            shadowLevel = filterPCF(projectTexCoord, lightDepthValue);
-        }
-        else
-        {
-            shadowLevel = DirectionalShadowMap.SampleCmpLevelZero(DShadowSampler, projectTexCoord, lightDepthValue);
-        }
-        
-        
-        if (shadowLevel != 0.0f) // not in shadow
-        {
-            direct_spec *= shadowLevel;
-            direct_brdf *= shadowLevel;
+            // Calculate the depth of the light.
+            lightDepthValue = input.dshadowWorldPos.z / input.dshadowWorldPos.w;
             
-        }
-        else
-        {
-            direct_brdf = float3(0.0, 0.0, 0.0);
-            direct_spec = float3(0.0, 0.0, 0.0);
-        }
-            
-    }
-    
-    if (info.useIrradiance)
-    {
-        irradiance = getIrradiance(-N);
-    }
-    else
-    {
-        //irradiance = shadowLevel * Environment.Sample(EnvironmentSampler, N).rgb;
-        irradiance = info.ambientColor;
-    }
-    
-    //float2 brdf = textureBRDFLUT.Sample(samplerBRDFLUT, float2(max(dot(N, V), 0.0), roughness)).rg;
-    float3 reflection = prefilteredReflection(R, roughness).rgb;
-    
-    // Diffuse based on irradiance
-    float3 diffuse = irradiance * albedo.rgb;
+            // Determine if the projected coordinates are in the 0 to 1 range.  If so then this pixel is in the view of the light.
+            if ((saturate(projectTexCoord.x) == projectTexCoord.x) && (saturate(projectTexCoord.y) == projectTexCoord.y) && ginfo.useShadows)
+            {
+                
+                if (ginfo.usePCF)
+                {
+                    shadowLevel = filterPCF(projectTexCoord, lightDepthValue);
+                }
+                else
+                {
+                    shadowLevel = DirectionalShadowMap.SampleCmpLevelZero(DShadowSampler, projectTexCoord, lightDepthValue);
+                }
+            }
+                
+            // Calculation of analytical light
+            // https://github.com/KhronosGroup/glTF/tree/master/specification/2.0#acknowledgments AppendixB
+            //float3 intensity = getLighIntensity(pointToLight);
+            float3 intensity = DirectionalLight.diffuseIntensity * DirectionalLight.diffuseColor;
+            f_diffuse += shadowLevel * intensity * NdotL * BRDF_lambertian(materialInfo.f0, materialInfo.f90, materialInfo.c_diff, materialInfo.specularWeight, VdotH);
+            f_specular += shadowLevel * intensity * NdotL * BRDF_specularGGX(materialInfo.f0, materialInfo.f90, materialInfo.alphaRoughness, materialInfo.specularWeight, VdotH, NdotL, NdotV, NdotH);
 
-    float3 F = F_SchlickR(max(dot(N, V), 0.0), F0, roughness);
-    
-    // total brdf
-    float3 brdf = point_brdf + direct_brdf;
-    
-    // Specular reflectance
-    float3 specular = (F * brdf.x + brdf.y);
-    if(info.useReflection)
-        specular *= reflection;
-    
-    // Ambient part
-    float3 kD = 1.0 - F;
-    kD *= 1.0 - metallic;
-    float3 ambient = (kD * diffuse + specular);
-    if(material.useOcclusionMap && info.useOcclusionMap)
-    {
-        float occlusionValue = OcclusionTexture.Sample(Sampler, input.UV).r;
-        occlusionValue = 1.0 + material.occlusionStrength * (occlusionValue - 1.0);
-        ambient.r *= occlusionValue;
-        ambient.g *= occlusionValue;
-        ambient.b *= occlusionValue;
-    }
-    
-    float3 emissive_spec = float3(0.0, 0.0, 0.0);
-    if(material.useEmissiveMap && info.useEmissiveMap)
-    {
-        float3 emissivity = EmmissiveTexture.Sample(Sampler, input.UV).rgb;
-        emissive_spec = material.albedo.rgb * emissivity * material.emisiveFactor;
-    }
-    
-    float3 Lo = direct_spec + point_spec + emissive_spec;
-    float3 color = ambient + Lo;
-    
-    // Tone mapping
-    //color = Uncharted2Tonemap(color * uboParams.exposure);
-    //color = color * (1.0f / Uncharted2Tonemap((11.2f).xxx));
-    
-    // Gamma correct
-    color = pow(color, float3(0.4545, 0.4545, 0.4545));
+#ifdef MATERIAL_SHEEN
+            f_sheen += shadowLevel * intensity * getPunctualRadianceSheen(materialInfo.sheenColorFactor, materialInfo.sheenRoughnessFactor, NdotL, NdotV, NdotH);
+            albedoSheenScaling = min(1.0 - max3(materialInfo.sheenColorFactor) * albedoSheenScalingLUT(NdotV, materialInfo.sheenRoughnessFactor),
+                1.0 - max3(materialInfo.sheenColorFactor) * albedoSheenScalingLUT(NdotL, materialInfo.sheenRoughnessFactor));
+#endif
 
-    return float4(color, 1.0);
+#ifdef MATERIAL_CLEARCOAT
+            f_clearcoat += shadowLevel * intensity * getPunctualRadianceClearCoat(materialInfo.clearcoatNormal, v, l, h, VdotH,
+                materialInfo.clearcoatF0, materialInfo.clearcoatF90, materialInfo.clearcoatRoughness);
+#endif
+        }
+
+        // BDTF
+#ifdef MATERIAL_TRANSMISSION
+        // If the light ray travels through the geometry, use the point it exits the geometry again.
+        // That will change the angle to the light source, if the material refracts the light ray.
+        vec3 transmissionRay = getVolumeTransmissionRay(n, v, materialInfo.thickness, materialInfo.ior, u_ModelMatrix);
+        pointToLight -= transmissionRay;
+        l = normalize(pointToLight);
+
+        vec3 intensity = getLighIntensity(light, pointToLight);
+        vec3 transmittedLight = intensity * getPunctualRadianceTransmission(n, v, l, materialInfo.alphaRoughness, materialInfo.f0, materialInfo.f90, materialInfo.baseColor, materialInfo.ior);
+
+#ifdef MATERIAL_VOLUME
+        transmittedLight = applyVolumeAttenuation(transmittedLight, length(transmissionRay), materialInfo.attenuationColor, materialInfo.attenuationDistance);
+#endif
+
+        f_transmission += materialInfo.transmissionFactor * transmittedLight;
+#endif
+    }
+    
+    f_emissive = material.emisiveFactor;
+    if (material.useEmissiveMap && ginfo.useEmissiveMap)
+    {
+        f_emissive *= pow(abs(EmmissiveTexture.Sample(Sampler, input.UV).rgb), float3(2.2, 2.2, 2.2));
+    }
+    else if (material.useEmissiveMap)
+    {
+        f_emissive = float3(0.0, 0.0, 0.0);
+    }
+    float3 color = float3(0.0.xxx);
+    
+    // Layer blending
+    float clearcoatFactor = 0.0;
+    float3 clearcoatFresnel = float3(0.0.xxx);
+
+#ifdef MATERIAL_CLEARCOAT
+    clearcoatFactor = materialInfo.clearcoatFactor;
+    clearcoatFresnel = F_Schlick(materialInfo.clearcoatF0, materialInfo.clearcoatF90, clampedDot(materialInfo.clearcoatNormal, v));
+    f_clearcoat = f_clearcoat * clearcoatFactor;
+#endif
+
+#ifdef MATERIAL_TRANSMISSION
+    vec3 diffuse = mix(f_diffuse, f_transmission, materialInfo.transmissionFactor);
+#else
+    float3 diffuse = f_diffuse;
+#endif
+
+    color = f_emissive + diffuse + f_specular;
+    color = f_sheen + color * albedoSheenScaling;
+    color = color * (1.0 - clearcoatFactor * clearcoatFresnel) + f_clearcoat;
+    
+#ifdef LINEAR_OUTPUT
+    finalColor = float4(color.rgb, baseColor.a);
+#else
+    finalColor = float4(toneMap(color), baseColor.a);
+    //finalColor = float4(pow(color.rgb, float3(0.4545, 0.4545, 0.4545)), baseColor.a);
+#endif
+
+    return finalColor;
+    
 }

@@ -132,7 +132,7 @@ struct mvAssetManager
 	b8*                 freemeshes = nullptr;
 					    
 	// nodes	        
-	u32                 maxNodeCount = 500u;
+	u32                 maxNodeCount = 1000u;
 	u32                 nodeCount = 0u;
 	mvNodeAsset*        nodes = nullptr;
 	b8*                 freenodes = nullptr;
@@ -150,7 +150,7 @@ struct mvAssetManager
 	b8*                 freecameras = nullptr;
 
 	// pipelines
-	u32                 maxPipelineCount = 100u;
+	u32                 maxPipelineCount = 1000u;
 	u32                 pipelineCount = 0u;
 	mvPipelineAsset*    pipelines = nullptr;
 };

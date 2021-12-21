@@ -31,6 +31,7 @@ create_material(mvAssetManager& am, const std::string& vs, const std::string& ps
 		std::to_string(materialData.albedo.w) +
 		std::to_string(materialData.metalness) +
 		std::to_string(materialData.roughness) +
+		std::to_string(materialData.alphaCutoff) +
 		std::to_string(materialData.emisiveFactor.x) +
 		std::to_string(materialData.emisiveFactor.y) +
 		std::to_string(materialData.emisiveFactor.z) +
