@@ -4,8 +4,8 @@
 
 struct mvCamera;
 
-mvCamera create_ortho_camera      (mvVec3 pos, mvVec3 dir, f32 width, f32 height, f32 near, f32 far);
-mvCamera create_perspective_camera(mvVec3 pos, f32 fov, f32 aspect, f32 near, f32 far);
+mvCamera create_ortho_camera      (mvVec3 pos, mvVec3 dir, f32 width, f32 height, f32 nearZ, f32 farZ);
+mvCamera create_perspective_camera(mvVec3 pos, f32 fov, f32 aspect, f32 nearZ, f32 farZ);
 mvMat4   create_projection        (mvCamera& camera);                            
 mvMat4   create_ortho_view        (mvCamera& camera);
 mvMat4   create_fps_view          (mvCamera& camera);

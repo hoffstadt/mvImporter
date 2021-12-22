@@ -56,6 +56,7 @@ int main()
 
     // main camera
     mvCamera camera = create_perspective_camera({ -13.5f, 6.0f, 3.5f }, (f32)M_PI_4, 1.0f, 0.1f, 400.0f);
+    camera.yaw = (f32)M_PI;
 
     // lights
     mvPointLight pointlight = create_point_light(am);

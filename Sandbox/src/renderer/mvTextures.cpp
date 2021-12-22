@@ -338,38 +338,41 @@ create_cube_texture_separate(const std::string& path)
 static mvVec3 
 uvToXYZ(int face, mvVec2 uv)
 {
-	if (face == 0)
-		return mvVec3{ 1.f, uv.y, -uv.x };
+	if (face == 0) // right
+		return mvVec3{ 1.f, -uv.y, -uv.x };
 
-	else if (face == 1)
-		return mvVec3{-1.f, uv.y, uv.x};
+	else if (face == 1) // left
+		return mvVec3{-1.f, -uv.y, uv.x};
 
-	else if (face == 2)
-		return mvVec3{ +uv.x, -1.f, +uv.y };
+	else if (face == 2) // top
+		return mvVec3{ +uv.x, 1.f, +uv.y };
 
-	else if (face == 3)
-		return mvVec3{ +uv.x, 1.f, -uv.y };
+	else if (face == 3) // bottom
+		return mvVec3{ +uv.x, -1.f, -uv.y };
 
-	else if (face == 4)
-		return mvVec3{ +uv.x, uv.y, 1.f };
+	else if (face == 4) // front
+		return mvVec3{ +uv.x, -uv.y, 1.f };
 
 	else //if(face == 5)
-		return mvVec3{-uv.x, +uv.y, -1.f};
-}
+		return mvVec3{-uv.x, -uv.y, -1.f};
 
-static mvVec2
-dirToUV(mvVec3 dir)
-{
-	return mvVec2{0.5f + 0.5f * atan2(dir.z, dir.x) / (f32)M_PI, 1.f - acos(dir.y) / (f32)M_PI };
-}
+	//if (face == 0)
+	//	return mvVec3{ 1.f, uv.y, -uv.x };
 
-static i32
-pixelFromUV(mvVec2 uv, i32 width, i32 height)
-{
-	i32 column = uv.x * (f32)width;
-	i32 row = uv.y * (f32)height;
+	//else if (face == 1)
+	//	return mvVec3{ -1.f, uv.y, uv.x };
 
-	return column + row * width;
+	//else if (face == 2)
+	//	return mvVec3{ +uv.x, -1.f, +uv.y };
+
+	//else if (face == 3)
+	//	return mvVec3{ +uv.x, 1.f, -uv.y };
+
+	//else if (face == 4)
+	//	return mvVec3{ +uv.x, uv.y, 1.f };
+
+	//else //if(face == 5)
+	//	return mvVec3{ -uv.x, +uv.y, -1.f };
 }
 
 mvCubeTexture
@@ -407,40 +410,57 @@ create_cube_texture(const std::string& path, b8 separate)
 		// Load Image
 		i32 texWidth, texHeight, texNumChannels;
 		i32 texForceNumChannels = 4;
-		unsigned char* testTextureBytes = stbi_load(path.c_str(), &texWidth, &texHeight,
-			&texNumChannels, texForceNumChannels);
+		//unsigned char* testTextureBytes = stbi_load(path.c_str(), &texWidth, &texHeight, &texNumChannels, texForceNumChannels);
+		float* testTextureBytes = stbi_loadf(path.c_str(), &texWidth, &texHeight, &texNumChannels, texForceNumChannels);
 		assert(testTextureBytes);
 
-		mvVec2 inUV = { 0.5f, 2.0f };
+		i32 pixels = texWidth * texHeight * 4*4;
+
+		mvVec2 inUV = { 0.0f, 0.0f };
 		i32 currentPixel = 0;
 
-		i32 res = 2048;
-		f32 xinc = 1.5f / (f32)res;
-		f32 yinc = 1.5f / (f32)res;
+		i32 res = 4096;
+		f32 xinc = 1.0f / (f32)res;
+		f32 yinc = 1.0f / (f32)res;
 		for (int i = 0; i < 6; i++)
 			surfaces[i] = new mvVec4[res*res];
 
 		for (int row = 0; row < res; row++)
 		{
+			inUV.x = 0.0f;
 			for (int pixel = 0; pixel < res; pixel++)
 			{
+				//int face = 4;
 				for (int face = 0; face < 6; face++)
 				{
-					mvVec3 scan = uvToXYZ(face, inUV * 2.0f - mvVec2{ 1.0f, 1.0f });
+					mvVec3 scan = uvToXYZ(face, (inUV * 2.0f) - mvVec2{ 1.0f, 1.0f });
 
 					mvVec3 direction = normalize(scan);
 
-					mvVec2 src = dirToUV(direction);
+					// dirToUV
+					mvVec2 src = mvVec2{ 0.5f + 0.5f * atan2(direction.z, direction.x) / (f32)M_PI, 1.f - acos(direction.y) / (f32)M_PI };
 
-					i32 srcpixelIndex = pixelFromUV(src, texWidth, texHeight);
+					i32 columnindex = texWidth - floor(src.x * (f32)texWidth);
+					i32 rowindex = texHeight - floor(src.y * (f32)texHeight);
+
+
+					if (columnindex >= texWidth)
+						columnindex = texWidth - 1;
+					if (rowindex >= texHeight)
+						rowindex = texHeight - 1;
+
+					i32 srcpixelIndex = columnindex + rowindex * texWidth;
 
 					mvVec4 color{};
-					color.x = (f32)face/6;
-					color.y = (f32)row / res;
-					color.z = (f32)pixel / res;
+					//color.x = (f32)face/6;
+					//color.y = (f32)row / res;
+					//color.z = (f32)pixel / res;
 					//color.x = (f32)*(i8*)&testTextureBytes[srcpixelIndex*4]/255.0f;
 					//color.y = (f32)*(i8*)&testTextureBytes[srcpixelIndex*4+1]/255.0f;
 					//color.z = (f32)*(i8*)&testTextureBytes[srcpixelIndex*4+2]/255.0f;
+					color.x = *(f32*)&testTextureBytes[srcpixelIndex * 4];
+					color.y = *(f32*)&testTextureBytes[srcpixelIndex * 4 + 1];
+					color.z = *(f32*)&testTextureBytes[srcpixelIndex * 4 + 2];
 					color.w = 1.0f;
 
 					surfaces[face][currentPixel] = color;
@@ -471,7 +491,7 @@ create_cube_texture(const std::string& path, b8 separate)
 		for (int i = 0; i < 6; i++)
 		{
 			data[i].pSysMem = surfaces[i];
-			data[i].SysMemPitch = 4*res*4;
+			data[i].SysMemPitch = res*4*4;
 			data[i].SysMemSlicePitch = 0;
 		}
 		// create the texture resource
