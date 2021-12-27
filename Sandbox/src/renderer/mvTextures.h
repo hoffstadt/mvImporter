@@ -12,7 +12,7 @@ struct mvSampler;
 mvTexture     create_texture        (const std::string& path);
 mvTexture     create_texture        (std::vector<unsigned char> data);
 mvCubeTexture create_cube_texture   (const std::string& path);
-mvCubeTexture create_environment_map(const std::string& path, b8 useCompute);
+mvCubeTexture create_environment_map(const std::string& path);
 mvSampler     create_sampler     (D3D11_FILTER mode = D3D11_FILTER_ANISOTROPIC, D3D11_TEXTURE_ADDRESS_MODE addressing = D3D11_TEXTURE_ADDRESS_WRAP, b8 hwPcf = false);
 
 struct mvTexture

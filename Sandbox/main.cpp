@@ -126,7 +126,7 @@ int main()
             else
             {
                 globalInfo.useSkybox = true;
-                skybox.cubeTexture = create_environment_map(newMap, true);
+                skybox.cubeTexture = create_environment_map(newMap);
             }
 
             recreateSkybox = false;

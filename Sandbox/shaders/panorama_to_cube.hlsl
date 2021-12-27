@@ -1,12 +1,17 @@
 
 #define M_PI 3.1415926535897932384626433832795
-#define M_INV_PI (1.0 / M_PI)
 
 cbuffer MetaData : register(b0)
 {
     int resolution;
     int width;
     int height;
+    float roughness;
+
+    uint sampleCount;
+    uint currentMipLevel;
+    float loadBias;
+    uint distribution;
 };
 
 RWStructuredBuffer<float4> BufferIn : register(u0);

@@ -359,7 +359,7 @@ uvToXYZ(int face, mvVec2 uv)
 }
 
 mvCubeTexture
-create_environment_map(const std::string& path, b8 useCompute)
+create_environment_map(const std::string& path)
 {
 	mvCubeTexture texture{};
 
@@ -396,116 +396,71 @@ create_environment_map(const std::string& path, b8 useCompute)
 	for (int i = 0; i < 6; i++)
 		surfaces[i] = new mvVec4[res * res];
 
-	if (useCompute)
+	mvComputeShader shader = create_compute_shader(GContext->IO.shaderDirectory + "panorama_to_cube.hlsl");
+	mvBuffer inputBuffer = create_buffer(testTextureBytes, texWidth * texHeight * 4 * sizeof(float), (D3D11_BIND_FLAG)(D3D11_BIND_UNORDERED_ACCESS | D3D11_BIND_SHADER_RESOURCE), sizeof(float) * 4, D3D11_RESOURCE_MISC_BUFFER_STRUCTURED);
+	mvBuffer faces[6];
+	for (int i = 0; i < 6; i++)
+		faces[i] = create_buffer(surfaces[i], res * res * sizeof(float) * 4, (D3D11_BIND_FLAG)(D3D11_BIND_UNORDERED_ACCESS | D3D11_BIND_SHADER_RESOURCE), sizeof(float) * 4, D3D11_RESOURCE_MISC_BUFFER_STRUCTURED);
+
+	struct MetaData
 	{
-		mvComputeShader shader = create_compute_shader(GContext->IO.shaderDirectory + "panorama_to_cube.hlsl");
-		mvBuffer inputBuffer = create_buffer(testTextureBytes, texWidth * texHeight * 4 * sizeof(float), (D3D11_BIND_FLAG)(D3D11_BIND_UNORDERED_ACCESS | D3D11_BIND_SHADER_RESOURCE), sizeof(float) * 4, D3D11_RESOURCE_MISC_BUFFER_STRUCTURED);
-		mvBuffer faces[6];
-		for (int i = 0; i < 6; i++)
-			faces[i] = create_buffer(surfaces[i], res * res * sizeof(float) * 4, (D3D11_BIND_FLAG)(D3D11_BIND_UNORDERED_ACCESS | D3D11_BIND_SHADER_RESOURCE), sizeof(float) * 4, D3D11_RESOURCE_MISC_BUFFER_STRUCTURED);
+		i32 resolution;
+		u32 width;
+		u32 height;
+		f32 roughness;
 
-		struct MetaData
-		{
-			i32 resolution;
-			i32 width;
-			i32 height;
-			i32 padding;
-		};
+		u32 sampleCount;
+		u32 currentMipLevel;
+		f32 lodBias;
+		u32 distribution;
+	};
 
-		MetaData mdata{};
-		mdata.resolution = res;
-		mdata.width = texWidth;
-		mdata.height = texHeight;
+	MetaData mdata{};
+	mdata.resolution = res;
+	mdata.width = texWidth;
+	mdata.height = texHeight;
+	mdata.sampleCount = 1024;
+	//mdata.sampleCount = 1;
+	mdata.distribution = 1;
+	mdata.roughness = 0.0f;
+	mdata.currentMipLevel = 0;
+	mdata.lodBias = 1.0;
 
-		mvConstBuffer cbuffer = create_const_buffer(&mdata, sizeof(MetaData));
-		update_const_buffer(cbuffer, &mdata);
-		ID3D11DeviceContext* ctx = GContext->graphics.imDeviceContext.Get();
+	mvConstBuffer cbuffer = create_const_buffer(&mdata, sizeof(MetaData));
+	update_const_buffer(cbuffer, &mdata);
+	ID3D11DeviceContext* ctx = GContext->graphics.imDeviceContext.Get();
 
-		ctx->CSSetConstantBuffers(0u, 1u, &cbuffer.buffer);
-		ctx->CSSetUnorderedAccessViews(0u, 1u, &inputBuffer.unorderedAccessView, nullptr);
-		for (int i = 0; i < 6; i++)
-			ctx->CSSetUnorderedAccessViews(i + 1u, 1u, &faces[i].unorderedAccessView, nullptr);
+	ctx->CSSetConstantBuffers(0u, 1u, &cbuffer.buffer);
+	ctx->CSSetUnorderedAccessViews(0u, 1u, &inputBuffer.unorderedAccessView, nullptr);
+	for (int i = 0; i < 6; i++)
+		ctx->CSSetUnorderedAccessViews(i + 1u, 1u, &faces[i].unorderedAccessView, nullptr);
 
-		ctx->CSSetShader(shader.shader, nullptr, 0);
-		ctx->Dispatch(res / 16, res / 16, 2u);
+	ctx->CSSetShader(shader.shader, nullptr, 0);
+	ctx->Dispatch(res / 16, res / 16, 2u);
 
-		for (int i = 0; i < 6; i++)
-		{
-			ID3D11Buffer* stagingBuffer;
-
-			D3D11_BUFFER_DESC cbd;
-			faces[i].buffer->GetDesc(&cbd);
-			cbd.BindFlags = 0;
-			cbd.MiscFlags = 0;
-			cbd.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
-			cbd.Usage = D3D11_USAGE_STAGING;
-
-
-			HRESULT hResult = GContext->graphics.device->CreateBuffer(&cbd, nullptr, &stagingBuffer);
-			assert(SUCCEEDED(hResult));
-
-			GContext->graphics.imDeviceContext->CopyResource(stagingBuffer, faces[i].buffer);
-
-			D3D11_MAPPED_SUBRESOURCE MappedResource;
-			GContext->graphics.imDeviceContext->Map(stagingBuffer, 0, D3D11_MAP_READ, 0, &MappedResource);
-
-			memcpy(surfaces[i], MappedResource.pData, res * res * sizeof(float) * 4);
-
-			stagingBuffer->Release();
-		}
-
-		inputBuffer.buffer->Release();
-		inputBuffer.unorderedAccessView->Release();
-		cbuffer.buffer->Release();
-		for (int i = 0; i < 6; i++)
-		{
-			faces[i].buffer->Release();
-			faces[i].unorderedAccessView->Release();
-		}
-		shader.shader->Release();
-	}
-	else
+	for (int i = 0; i < 6; i++)
 	{
+		ID3D11Buffer* stagingBuffer;
+
+		D3D11_BUFFER_DESC cbd;
+		faces[i].buffer->GetDesc(&cbd);
+		cbd.BindFlags = 0;
+		cbd.MiscFlags = 0;
+		cbd.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
+		cbd.Usage = D3D11_USAGE_STAGING;
 
 
-		for (int row = 0; row < res; row++)
-		{
-			inUV.x = 0.0f;
-			for (int pixel = 0; pixel < res; pixel++)
-			{
-				for (int face = 0; face < 6; face++)
-				{
-					mvVec3 scan = uvToXYZ(face, (inUV * 2.0f) - mvVec2{ 1.0f, 1.0f });
+		HRESULT hResult = GContext->graphics.device->CreateBuffer(&cbd, nullptr, &stagingBuffer);
+		assert(SUCCEEDED(hResult));
 
-					mvVec3 direction = normalize(scan);
+		GContext->graphics.imDeviceContext->CopyResource(stagingBuffer, faces[i].buffer);
 
-					// dirToUV
-					mvVec2 src = mvVec2{ 0.5f + 0.5f * atan2(direction.z, direction.x) / (f32)M_PI, 1.f - acos(direction.y) / (f32)M_PI };
+		D3D11_MAPPED_SUBRESOURCE MappedResource;
+		GContext->graphics.imDeviceContext->Map(stagingBuffer, 0, D3D11_MAP_READ, 0, &MappedResource);
 
-					i32 columnindex = texWidth - floor(src.x * (f32)texWidth);
-					i32 rowindex = texHeight - floor(src.y * (f32)texHeight);
+		memcpy(surfaces[i], MappedResource.pData, res * res * sizeof(float) * 4);
 
-
-					if (columnindex >= texWidth)
-						columnindex = texWidth - 1;
-					if (rowindex >= texHeight)
-						rowindex = texHeight - 1;
-
-					i32 srcpixelIndex = columnindex + rowindex * texWidth;
-
-					mvVec4 color{};
-					color.x = *(f32*)&testTextureBytes[srcpixelIndex * 4];
-					color.y = *(f32*)&testTextureBytes[srcpixelIndex * 4 + 1];
-					color.z = *(f32*)&testTextureBytes[srcpixelIndex * 4 + 2];
-					color.w = 1.0f;
-
-					surfaces[face][currentPixel] = color;
-				}
-				currentPixel++;
-				inUV.x += xinc;
-			}
-			inUV.y += yinc;
-		}
+		stagingBuffer->Release();
 	}
 
 
@@ -532,8 +487,8 @@ create_environment_map(const std::string& path, b8 useCompute)
 		data[i].SysMemSlicePitch = 0;
 	}
 	// create the texture resource
-	mvComPtr<ID3D11Texture2D> pTexture;
-	GContext->graphics.device->CreateTexture2D(&textureDesc, data, &pTexture);
+	mvComPtr<ID3D11Texture2D> pTempTexture;
+	GContext->graphics.device->CreateTexture2D(&textureDesc, data, &pTempTexture);
 
 	// create the resource view on the texture
 	D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
@@ -541,7 +496,73 @@ create_environment_map(const std::string& path, b8 useCompute)
 	srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURECUBE;
 	srvDesc.Texture2D.MostDetailedMip = 0;
 	srvDesc.Texture2D.MipLevels = 1;
+
+	ID3D11ShaderResourceView* tempView;
+	GContext->graphics.device->CreateShaderResourceView(pTempTexture.Get(), &srvDesc, &tempView);
+
+	// filtering
+	mvComputeShader filtershader = create_compute_shader(GContext->IO.shaderDirectory + "filter_environment.hlsl");
+	D3D11_SAMPLER_DESC samplerDesc{};
+	samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_BORDER;
+	samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_BORDER;
+	samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_BORDER;
+	samplerDesc.BorderColor[0] = 0.0f;
+	samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
+	samplerDesc.MaxAnisotropy = D3D11_REQ_MAXANISOTROPY;
+	ID3D11SamplerState* sampler;
+	GContext->graphics.device->CreateSamplerState(&samplerDesc, &sampler);
+
+	ctx->CSSetConstantBuffers(0u, 1u, &cbuffer.buffer);
+	ctx->CSSetUnorderedAccessViews(0u, 1u, &inputBuffer.unorderedAccessView, nullptr);
+	for (int i = 0; i < 6; i++)
+		ctx->CSSetUnorderedAccessViews(i + 1u, 1u, &faces[i].unorderedAccessView, nullptr);
+	ctx->CSSetShaderResources(0u, 1, &tempView);
+	ctx->CSSetSamplers(0u, 1, &sampler);
+	ctx->CSSetShader(filtershader.shader, nullptr, 0);
+	ctx->Dispatch(res / 16, res / 16, 2u);
+
+	for (int i = 0; i < 6; i++)
+	{
+		ID3D11Buffer* stagingBuffer;
+
+		D3D11_BUFFER_DESC cbd;
+		faces[i].buffer->GetDesc(&cbd);
+		cbd.BindFlags = 0;
+		cbd.MiscFlags = 0;
+		cbd.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
+		cbd.Usage = D3D11_USAGE_STAGING;
+
+
+		HRESULT hResult = GContext->graphics.device->CreateBuffer(&cbd, nullptr, &stagingBuffer);
+		assert(SUCCEEDED(hResult));
+
+		GContext->graphics.imDeviceContext->CopyResource(stagingBuffer, faces[i].buffer);
+
+		D3D11_MAPPED_SUBRESOURCE MappedResource;
+		GContext->graphics.imDeviceContext->Map(stagingBuffer, 0, D3D11_MAP_READ, 0, &MappedResource);
+
+		memcpy(surfaces[i], MappedResource.pData, res * res * sizeof(float) * 4);
+
+		stagingBuffer->Release();
+	}
+
+	mvComPtr<ID3D11Texture2D> pTexture;
+	GContext->graphics.device->CreateTexture2D(&textureDesc, data, &pTexture);
 	GContext->graphics.device->CreateShaderResourceView(pTexture.Get(), &srvDesc, &texture.textureView);
+
+	inputBuffer.buffer->Release();
+	inputBuffer.unorderedAccessView->Release();
+	cbuffer.buffer->Release();
+	tempView->Release();
+	sampler->Release();
+	
+	for (int i = 0; i < 6; i++)
+	{
+		faces[i].buffer->Release();
+		faces[i].unorderedAccessView->Release();
+	}
+	shader.shader->Release();
+	filtershader.shader->Release();
 
 	for (int i = 0; i < 6; i++)
 		delete[] surfaces[i];
