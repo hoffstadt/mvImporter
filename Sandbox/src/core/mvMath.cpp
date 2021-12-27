@@ -365,6 +365,16 @@ scale(mvMat4 m, mvVec3 v)
 	return result;
 }
 
+mvVec2
+normalize(mvVec2 v)
+{
+	f32 length = sqrt(v[0] * v[0] + v[1] * v[1]);
+	mvVec2 result{};
+	result.x = v.x / length;
+	result.y = v.y / length;
+	return result;
+}
+
 mvVec3 
 normalize(mvVec3 v)
 {

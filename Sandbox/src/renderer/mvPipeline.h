@@ -5,12 +5,14 @@
 
 struct mvPixelShader;
 struct mvVertexShader;
+struct mvComputeShader;
 struct mvPipelineInfo;
 struct mvPipeline;
 
-mvPipeline     finalize_pipeline   (mvPipelineInfo& info);
-mvPixelShader  create_pixel_shader (const std::string& path);
-mvVertexShader create_vertex_shader(const std::string& path, mvVertexLayout& layout);
+mvPipeline      finalize_pipeline    (mvPipelineInfo& info);
+mvPixelShader   create_pixel_shader  (const std::string& path);
+mvVertexShader  create_vertex_shader (const std::string& path, mvVertexLayout& layout);
+mvComputeShader create_compute_shader(const std::string& path);
 
 struct mvPixelShader
 {
@@ -25,6 +27,13 @@ struct mvVertexShader
     ID3D11InputLayout*  inputLayout;
     ID3DBlob*           blob;
     std::string         path;
+};
+
+struct mvComputeShader
+{
+    ID3D11ComputeShader* shader;
+    ID3DBlob*            blob;
+    std::string          path;
 };
 
 struct mvPipelineInfo

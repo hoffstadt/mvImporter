@@ -74,6 +74,7 @@ mvVec4 operator*(mvMat4 left, mvVec4 right);
 mvMat4 operator*(mvMat4 left, mvMat4 right);
 mvMat4 operator*(mvMat4 left, f32 right);
 
+mvVec2 normalize(mvVec2 v);
 mvVec3 normalize(mvVec3 v);
 mvVec3 cross    (mvVec3 v1, mvVec3 v2);
 f32    dot      (mvVec3 v1, mvVec3 v2);

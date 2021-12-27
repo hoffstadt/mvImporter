@@ -16,7 +16,7 @@ wrap_angle(T theta) noexcept
 }
 
 mvCamera 
-create_ortho_camera(mvVec3 pos, mvVec3 dir, f32 width, f32 height, f32 near, f32 far)
+create_ortho_camera(mvVec3 pos, mvVec3 dir, f32 width, f32 height, f32 nearZ, f32 farZ)
 {
     mvCamera camera{};
     camera.type = MV_CAMERA_ORTHOGRAPHIC;
@@ -24,22 +24,22 @@ create_ortho_camera(mvVec3 pos, mvVec3 dir, f32 width, f32 height, f32 near, f32
     camera.dir = dir;
     camera.width = width;
     camera.height = height;
-    camera.nearZ = near;
-    camera.farZ = far;
+    camera.nearZ = nearZ;
+    camera.farZ = farZ;
 
     return camera;
 }
 
 mvCamera
-create_perspective_camera(mvVec3 pos, f32 fov, f32 aspect, f32 near, f32 far)
+create_perspective_camera(mvVec3 pos, f32 fov, f32 aspect, f32 nearZ, f32 farZ)
 {
     mvCamera camera{};
     camera.type = MV_CAMERA_PERSPECTIVE;
     camera.pos = pos;
     camera.aspectRatio = aspect;
     camera.fieldOfView = fov;
-    camera.nearZ = near;
-    camera.farZ = far;
+    camera.nearZ = nearZ;
+    camera.farZ = farZ;
     camera.front = { 0.0f, 0.0f, 1.0f };
 
     return camera;

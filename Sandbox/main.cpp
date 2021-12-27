@@ -19,9 +19,6 @@ static int         initialWidth = 1850;
 static int         initialHeight = 900;
 static ImVec2      oldContentRegion = ImVec2(500, 500);
 
-#define _DEBUG
-#include <crtdbg.h>
-
 int main()
 {    
     mvCreateContext();
@@ -44,18 +41,9 @@ int main()
     mvInitializeAssetManager(&am);
     Renderer::mvSetupCommonAssets(am);
 
-    //// Get current flag
-    //int tmpFlag = _CrtSetDbgFlag(_CRTDBG_REPORT_FLAG);
-
-    //// Turn on corruption-checking bit
-    //tmpFlag |= _CRTDBG_CHECK_ALWAYS_DF;
-
-    //// Set flag to the new value
-    //_CrtSetDbgFlag(tmpFlag);
-
-
     // main camera
     mvCamera camera = create_perspective_camera({ -13.5f, 6.0f, 3.5f }, (f32)M_PI_4, 1.0f, 0.1f, 400.0f);
+    camera.yaw = (f32)M_PI;
 
     // lights
     mvPointLight pointlight = create_point_light(am);
@@ -74,11 +62,13 @@ int main()
     register_asset(&am, "global_constant_buffer", globalInfoBuffer);
 
     mvTimer timer;
+    mvTimer timer2;
     int cacheModel[MODEL_CACHE_SIZE] = { -1, -1, -1 };
     mvAssetID cacheScenes[MODEL_CACHE_SIZE] = { -1, -1, -1 };
     int cacheIndex = 0;
     int activeScene = -1;
     int modelIndex = 0;
+    int envMapIndex = 0;
     while (true)
     {
         const auto dt = timer.mark() * 1.0f;
@@ -116,6 +106,30 @@ int main()
         {
             omniShadowMap.recreate();
             recreateOShadowMapRS = false;
+        }
+
+
+        static bool recreateSkybox = false;
+        if (recreateSkybox)
+        {
+            std::string newMap = "../../data/glTF-Sample-Environments/" + std::string(env_maps[envMapIndex]) + ".hdr";
+            if (skybox.cubeTexture.textureView)
+            {
+                skybox.cubeTexture.textureView->Release();
+                skybox.cubeTexture.textureView = nullptr;
+            }
+
+            if (envMapIndex == 0)
+            {
+                globalInfo.useSkybox = false;
+            }
+            else
+            {
+                globalInfo.useSkybox = true;
+                skybox.cubeTexture = create_environment_map(newMap, true);
+            }
+
+            recreateSkybox = false;
         }
 
         static bool changeScene = false;
@@ -325,7 +339,6 @@ int main()
             ImGui::DragFloat("Scale", &scale0, 0.1f, 0.0f);
             ImGui::DragFloat3("Translate", &translate0.x, 1.0f, -200.0f, 200.0f);
             ImGui::ColorEdit3("Ambient Color", &globalInfo.ambientColor.x);
-            ImGui::Checkbox("Use Skybox", (bool*)&globalInfo.useSkybox);
 
             ImGui::Dummy(ImVec2(50.0f, 25.0f));
             ImGui::Text("%s", "Directional Shadows:");
@@ -386,6 +399,12 @@ int main()
             // right panel
             //-----------------------------------------------------------------------------
             ImGui::TableSetColumnIndex(2);
+
+            if (ImGui::ListBox("Environment##separate", &envMapIndex, env_maps, 11, 11))
+            {
+                recreateSkybox = true;
+            }
+
             ImGui::Dummy(ImVec2(50.0f, 25.0f));
             ImGui::Indent(14.0f);
 
@@ -393,6 +412,8 @@ int main()
             {
                 changeScene = true;
             }
+
+
 
             ImGui::Dummy(ImVec2(50.0f, 25.0f));
             ImGui::Text("%s", "Directional Light:");
@@ -461,6 +482,8 @@ int main()
     offscreen.cleanup();
     directionalShadowMap.cleanup();
     omniShadowMap.cleanup();
+    if(skybox.cubeTexture.textureView)
+        skybox.cubeTexture.textureView->Release();
 
     // Cleanup
     mvCleanupAssetManager(&am);

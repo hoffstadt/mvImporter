@@ -61,19 +61,19 @@ create_skybox(mvAssetManager& am)
     skybox.vertexBuffer = create_buffer(vertices.data(), vertices.size() * sizeof(f32), D3D11_BIND_VERTEX_BUFFER);
     skybox.indexBuffer = create_buffer(indices.data(), indices.size() * sizeof(u32), D3D11_BIND_INDEX_BUFFER);
     skybox.vertexLayout = create_vertex_layout({ mvVertexElement::Position3D });
-    skybox.cubeTexture = create_cube_texture("../../Resources/SkyBox");
 
     D3D11_SAMPLER_DESC samplerDesc{};
     samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_BORDER;
     samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_BORDER;
     samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_BORDER;
     samplerDesc.BorderColor[0] = 0.0f;
+    //samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
     samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
     samplerDesc.MaxAnisotropy = D3D11_REQ_MAXANISOTROPY;
     GContext->graphics.device->CreateSamplerState(&samplerDesc, &skybox.cubeSampler);
 
     register_asset(&am, "skybox_pipeline", skybox.pipeline);
-    register_asset(&am, "skybox_texture", skybox.cubeTexture);
+    //register_asset(&am, "skybox_texture", skybox.cubeTexture);
     register_asset(&am, "skybox_sampler", mvSampler{ skybox.cubeSampler });
     register_asset(&am, "skybox_ibuffer", skybox.indexBuffer);
     register_asset(&am, "skybox_vbuffer", skybox.vertexBuffer);
