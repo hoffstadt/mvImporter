@@ -7,8 +7,10 @@
 
 struct mvBuffer
 {
-	u32           size;
-	ID3D11Buffer* buffer;
+	u32                        size;
+	ID3D11Buffer*              buffer;
+	ID3D11ShaderResourceView*  shaderResourceView = nullptr;
+	ID3D11UnorderedAccessView* unorderedAccessView = nullptr;
 };
 
 struct mvConstBuffer
@@ -17,6 +19,6 @@ struct mvConstBuffer
 	ID3D11Buffer* buffer;
 };
 
-mvBuffer      create_buffer      (void* data, u32 size, D3D11_BIND_FLAG flags);
+mvBuffer      create_buffer      (void* data, u32 size, D3D11_BIND_FLAG flags, u32 stride = 0u, u32 miscFlags = 0u);
 mvConstBuffer create_const_buffer(void* data, u32 size);
 void          update_const_buffer(mvConstBuffer& buffer, void* data);

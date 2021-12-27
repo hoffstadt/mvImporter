@@ -61,8 +61,6 @@ create_skybox(mvAssetManager& am)
     skybox.vertexBuffer = create_buffer(vertices.data(), vertices.size() * sizeof(f32), D3D11_BIND_VERTEX_BUFFER);
     skybox.indexBuffer = create_buffer(indices.data(), indices.size() * sizeof(u32), D3D11_BIND_INDEX_BUFFER);
     skybox.vertexLayout = create_vertex_layout({ mvVertexElement::Position3D });
-    //skybox.cubeTexture = create_cube_texture("../../Resources/SkyBox");
-    skybox.cubeTexture = create_cube_texture("../../data/glTF-Sample-Environments/footprint_court.hdr", false);
 
     D3D11_SAMPLER_DESC samplerDesc{};
     samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_BORDER;
@@ -75,7 +73,7 @@ create_skybox(mvAssetManager& am)
     GContext->graphics.device->CreateSamplerState(&samplerDesc, &skybox.cubeSampler);
 
     register_asset(&am, "skybox_pipeline", skybox.pipeline);
-    register_asset(&am, "skybox_texture", skybox.cubeTexture);
+    //register_asset(&am, "skybox_texture", skybox.cubeTexture);
     register_asset(&am, "skybox_sampler", mvSampler{ skybox.cubeSampler });
     register_asset(&am, "skybox_ibuffer", skybox.indexBuffer);
     register_asset(&am, "skybox_vbuffer", skybox.vertexBuffer);

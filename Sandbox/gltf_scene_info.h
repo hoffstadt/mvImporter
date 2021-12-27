@@ -216,3 +216,17 @@ static const char* gltf_names[] = {
 #undef X
 #undef Y
 #undef Z
+
+static const char* env_maps[] = {
+    "none",
+    "chromatic",
+    "directional",
+    "doge2",
+    "ennis",
+    "field",
+    "footprint_court",
+    "helipad",
+    "neutral",
+    "papermill",
+    "pisa",
+};

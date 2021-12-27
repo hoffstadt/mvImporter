@@ -4,6 +4,7 @@
 #include <filesystem>
 #include <cmath>
 #include "mvPipeline.h"
+#include "mvBuffers.h"
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
@@ -146,8 +147,8 @@ create_texture(const std::string& path)
     return texture;
 }
 
-static mvCubeTexture
-create_cube_texture_separate(const std::string& path)
+mvCubeTexture
+create_cube_texture(const std::string& path)
 {
 	mvCubeTexture texture{};
 
@@ -355,82 +356,123 @@ uvToXYZ(int face, mvVec2 uv)
 
 	else //if(face == 5)
 		return mvVec3{-uv.x, -uv.y, -1.f};
-
-	//if (face == 0)
-	//	return mvVec3{ 1.f, uv.y, -uv.x };
-
-	//else if (face == 1)
-	//	return mvVec3{ -1.f, uv.y, uv.x };
-
-	//else if (face == 2)
-	//	return mvVec3{ +uv.x, -1.f, +uv.y };
-
-	//else if (face == 3)
-	//	return mvVec3{ +uv.x, 1.f, -uv.y };
-
-	//else if (face == 4)
-	//	return mvVec3{ +uv.x, uv.y, 1.f };
-
-	//else //if(face == 5)
-	//	return mvVec3{ -uv.x, +uv.y, -1.f };
 }
 
 mvCubeTexture
-create_cube_texture(const std::string& path, b8 separate)
+create_environment_map(const std::string& path, b8 useCompute)
 {
-	if (separate)
-		return create_cube_texture_separate(path);
-
-	b8 hardwareAccelerated = false;
 	mvCubeTexture texture{};
-	//mvTexture temptexture = create_texture(path);
 
 	mvVec4* surfaces[6];
 
-	if (hardwareAccelerated)
+	f32 gamma = 1.0f;
+	f32 gamma_scale = 1.0f;
+
+	if (stbi_is_hdr(path.c_str()))
 	{
-		//mvComputeShader shader = create_compute_shader(GContext->IO.shaderDirectory + "panorama_to_cube.hlsl");
+		stbi_hdr_to_ldr_gamma(gamma);
+		stbi_hdr_to_ldr_scale(gamma_scale);
 	}
 	else
 	{
-		f32 gamma = 1.0f;
-		f32 gamma_scale = 1.0f;
+		stbi_ldr_to_hdr_gamma(gamma);
+		stbi_ldr_to_hdr_scale(gamma_scale);
+	}
 
-		if (stbi_is_hdr(path.c_str()))
-		{
-			stbi_hdr_to_ldr_gamma(gamma);
-			stbi_hdr_to_ldr_scale(gamma_scale);
-		}
-		else
-		{
-			stbi_ldr_to_hdr_gamma(gamma);
-			stbi_ldr_to_hdr_scale(gamma_scale);
-		}
+	// Load Image
+	i32 texWidth, texHeight, texNumChannels;
+	i32 texForceNumChannels = 4;
+	float* testTextureBytes = stbi_loadf(path.c_str(), &texWidth, &texHeight, &texNumChannels, texForceNumChannels);
+	assert(testTextureBytes);
 
-		// Load Image
-		i32 texWidth, texHeight, texNumChannels;
-		i32 texForceNumChannels = 4;
-		//unsigned char* testTextureBytes = stbi_load(path.c_str(), &texWidth, &texHeight, &texNumChannels, texForceNumChannels);
-		float* testTextureBytes = stbi_loadf(path.c_str(), &texWidth, &texHeight, &texNumChannels, texForceNumChannels);
-		assert(testTextureBytes);
+	i32 pixels = texWidth * texHeight * 4 * 4;
 
-		i32 pixels = texWidth * texHeight * 4*4;
+	mvVec2 inUV = { 0.0f, 0.0f };
+	i32 currentPixel = 0;
 
-		mvVec2 inUV = { 0.0f, 0.0f };
-		i32 currentPixel = 0;
+	i32 res = 2048;
+	f32 xinc = 1.0f / (f32)res;
+	f32 yinc = 1.0f / (f32)res;
+	for (int i = 0; i < 6; i++)
+		surfaces[i] = new mvVec4[res * res];
 
-		i32 res = 4096;
-		f32 xinc = 1.0f / (f32)res;
-		f32 yinc = 1.0f / (f32)res;
+	if (useCompute)
+	{
+		mvComputeShader shader = create_compute_shader(GContext->IO.shaderDirectory + "panorama_to_cube.hlsl");
+		mvBuffer inputBuffer = create_buffer(testTextureBytes, texWidth * texHeight * 4 * sizeof(float), (D3D11_BIND_FLAG)(D3D11_BIND_UNORDERED_ACCESS | D3D11_BIND_SHADER_RESOURCE), sizeof(float) * 4, D3D11_RESOURCE_MISC_BUFFER_STRUCTURED);
+		mvBuffer faces[6];
 		for (int i = 0; i < 6; i++)
-			surfaces[i] = new mvVec4[res*res];
+			faces[i] = create_buffer(surfaces[i], res * res * sizeof(float) * 4, (D3D11_BIND_FLAG)(D3D11_BIND_UNORDERED_ACCESS | D3D11_BIND_SHADER_RESOURCE), sizeof(float) * 4, D3D11_RESOURCE_MISC_BUFFER_STRUCTURED);
+
+		struct MetaData
+		{
+			i32 resolution;
+			i32 width;
+			i32 height;
+			i32 padding;
+		};
+
+		MetaData mdata{};
+		mdata.resolution = res;
+		mdata.width = texWidth;
+		mdata.height = texHeight;
+
+		mvConstBuffer cbuffer = create_const_buffer(&mdata, sizeof(MetaData));
+		update_const_buffer(cbuffer, &mdata);
+		ID3D11DeviceContext* ctx = GContext->graphics.imDeviceContext.Get();
+
+		ctx->CSSetConstantBuffers(0u, 1u, &cbuffer.buffer);
+		ctx->CSSetUnorderedAccessViews(0u, 1u, &inputBuffer.unorderedAccessView, nullptr);
+		for (int i = 0; i < 6; i++)
+			ctx->CSSetUnorderedAccessViews(i + 1u, 1u, &faces[i].unorderedAccessView, nullptr);
+
+		ctx->CSSetShader(shader.shader, nullptr, 0);
+		ctx->Dispatch(res / 16, res / 16, 2u);
+
+		for (int i = 0; i < 6; i++)
+		{
+			ID3D11Buffer* stagingBuffer;
+
+			D3D11_BUFFER_DESC cbd;
+			faces[i].buffer->GetDesc(&cbd);
+			cbd.BindFlags = 0;
+			cbd.MiscFlags = 0;
+			cbd.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
+			cbd.Usage = D3D11_USAGE_STAGING;
+
+
+			HRESULT hResult = GContext->graphics.device->CreateBuffer(&cbd, nullptr, &stagingBuffer);
+			assert(SUCCEEDED(hResult));
+
+			GContext->graphics.imDeviceContext->CopyResource(stagingBuffer, faces[i].buffer);
+
+			D3D11_MAPPED_SUBRESOURCE MappedResource;
+			GContext->graphics.imDeviceContext->Map(stagingBuffer, 0, D3D11_MAP_READ, 0, &MappedResource);
+
+			memcpy(surfaces[i], MappedResource.pData, res * res * sizeof(float) * 4);
+
+			stagingBuffer->Release();
+		}
+
+		inputBuffer.buffer->Release();
+		inputBuffer.unorderedAccessView->Release();
+		cbuffer.buffer->Release();
+		for (int i = 0; i < 6; i++)
+		{
+			faces[i].buffer->Release();
+			faces[i].unorderedAccessView->Release();
+		}
+		shader.shader->Release();
+	}
+	else
+	{
+
 
 		for (int row = 0; row < res; row++)
 		{
 			inUV.x = 0.0f;
 			for (int pixel = 0; pixel < res; pixel++)
 			{
-				//int face = 4;
 				for (int face = 0; face < 6; face++)
 				{
 					mvVec3 scan = uvToXYZ(face, (inUV * 2.0f) - mvVec2{ 1.0f, 1.0f });
@@ -452,12 +494,6 @@ create_cube_texture(const std::string& path, b8 separate)
 					i32 srcpixelIndex = columnindex + rowindex * texWidth;
 
 					mvVec4 color{};
-					//color.x = (f32)face/6;
-					//color.y = (f32)row / res;
-					//color.z = (f32)pixel / res;
-					//color.x = (f32)*(i8*)&testTextureBytes[srcpixelIndex*4]/255.0f;
-					//color.y = (f32)*(i8*)&testTextureBytes[srcpixelIndex*4+1]/255.0f;
-					//color.z = (f32)*(i8*)&testTextureBytes[srcpixelIndex*4+2]/255.0f;
 					color.x = *(f32*)&testTextureBytes[srcpixelIndex * 4];
 					color.y = *(f32*)&testTextureBytes[srcpixelIndex * 4 + 1];
 					color.z = *(f32*)&testTextureBytes[srcpixelIndex * 4 + 2];
@@ -470,44 +506,46 @@ create_cube_texture(const std::string& path, b8 separate)
 			}
 			inUV.y += yinc;
 		}
-
-
-		// texture descriptor
-		D3D11_TEXTURE2D_DESC textureDesc = {};
-		textureDesc.Width = res;
-		textureDesc.Height = res;
-		textureDesc.MipLevels = 1;
-		textureDesc.ArraySize = 6;
-		//textureDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-		textureDesc.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
-		textureDesc.SampleDesc.Count = 1;
-		textureDesc.SampleDesc.Quality = 0;
-		textureDesc.Usage = D3D11_USAGE_DEFAULT;
-		textureDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
-		textureDesc.CPUAccessFlags = 0;
-		textureDesc.MiscFlags = D3D11_RESOURCE_MISC_TEXTURECUBE;
-		// subresource data
-		D3D11_SUBRESOURCE_DATA data[6];
-		for (int i = 0; i < 6; i++)
-		{
-			data[i].pSysMem = surfaces[i];
-			data[i].SysMemPitch = res*4*4;
-			data[i].SysMemSlicePitch = 0;
-		}
-		// create the texture resource
-		mvComPtr<ID3D11Texture2D> pTexture;
-		GContext->graphics.device->CreateTexture2D(&textureDesc, data, &pTexture);
-
-		// create the resource view on the texture
-		D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-		srvDesc.Format = textureDesc.Format;
-		srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURECUBE;
-		srvDesc.Texture2D.MostDetailedMip = 0;
-		srvDesc.Texture2D.MipLevels = 1;
-		GContext->graphics.device->CreateShaderResourceView(pTexture.Get(), &srvDesc, &texture.textureView);
-
-		return texture;
 	}
+
+
+	// texture descriptor
+	D3D11_TEXTURE2D_DESC textureDesc = {};
+	textureDesc.Width = res;
+	textureDesc.Height = res;
+	textureDesc.MipLevels = 1;
+	textureDesc.ArraySize = 6;
+	textureDesc.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+	textureDesc.SampleDesc.Count = 1;
+	textureDesc.SampleDesc.Quality = 0;
+	textureDesc.Usage = D3D11_USAGE_DEFAULT;
+	textureDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+	textureDesc.CPUAccessFlags = 0;
+	textureDesc.MiscFlags = D3D11_RESOURCE_MISC_TEXTURECUBE;
+
+	// subresource data
+	D3D11_SUBRESOURCE_DATA data[6];
+	for (int i = 0; i < 6; i++)
+	{
+		data[i].pSysMem = surfaces[i];
+		data[i].SysMemPitch = res * 4 * 4;
+		data[i].SysMemSlicePitch = 0;
+	}
+	// create the texture resource
+	mvComPtr<ID3D11Texture2D> pTexture;
+	GContext->graphics.device->CreateTexture2D(&textureDesc, data, &pTexture);
+
+	// create the resource view on the texture
+	D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+	srvDesc.Format = textureDesc.Format;
+	srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURECUBE;
+	srvDesc.Texture2D.MostDetailedMip = 0;
+	srvDesc.Texture2D.MipLevels = 1;
+	GContext->graphics.device->CreateShaderResourceView(pTexture.Get(), &srvDesc, &texture.textureView);
+
+	for (int i = 0; i < 6; i++)
+		delete[] surfaces[i];
+	return texture;
 
 }
 
