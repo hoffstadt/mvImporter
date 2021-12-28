@@ -84,6 +84,7 @@ struct mvGlobalInfo
     bool useNormalMap;
     bool usePCF;
     int pcfRange;
+    bool usePunctualLights;
 };
 
 //-----------------------------------------------------------------------------
@@ -96,7 +97,9 @@ Texture2D   EmmissiveTexture     : register(t3);
 Texture2D   OcclusionTexture     : register(t4);
 Texture2D   DirectionalShadowMap : register(t5);
 TextureCube ShadowMap            : register(t6);
-TextureCube Environment          : register(t7);
+TextureCube IrradianceMap        : register(t7);
+TextureCube SpecularMap          : register(t8);
+Texture2D   u_GGXLUT             : register(t9);
 
 //-----------------------------------------------------------------------------
 // samplers
@@ -231,6 +234,66 @@ float filterPCF(const in float2 spos, float depthCheck)
     return shadowLevel / count;
 }
 
+float3 getDiffuseLight(float3 n)
+{
+    float3 color = IrradianceMap.Sample(EnvironmentSampler, n).rgb;
+    color = pow(color, float3(0.4545.xxx));
+    return color;
+}
+
+float4 getSpecularSample(float3 reflection, float lod)
+{
+    float4 color = SpecularMap.SampleLevel(EnvironmentSampler, reflection, lod);
+    color = pow(color, float4(0.4545.xxxx));
+    return color;
+}
+
+float3 getIBLRadianceLambertian(float3 n, float3 v, float roughness, float3 diffuseColor, float3 F0, float specularWeight)
+{
+    float NdotV = clampedDot(n, v);
+    float2 brdfSamplePoint = clamp(float2(NdotV, roughness), float2(0.0, 0.0), float2(1.0, 1.0));
+    float2 f_ab = u_GGXLUT.Sample(Sampler, brdfSamplePoint).rg;
+    //f_ab = pow(f_ab, float2(0.4545.xx));
+    float3 irradiance = getDiffuseLight(n);
+
+    // see https://bruop.github.io/ibl/#single_scattering_results at Single Scattering Results
+    // Roughness dependent fresnel, from Fdez-Aguera
+
+    float3 Fr = max(float3((1.0 - roughness).xxx), F0) - F0;
+    float3 k_S = F0 + Fr * pow(1.0 - NdotV, 5.0);
+    float3 FssEss = specularWeight * k_S * f_ab.x + f_ab.y; // <--- GGX / specular light contribution (scale it down if the specularWeight is low)
+
+    // Multiple scattering, from Fdez-Aguera
+    float Ems = (1.0 - (f_ab.x + f_ab.y));
+    float3 F_avg = specularWeight * (F0 + (1.0 - F0) / 21.0);
+    float3 FmsEms = Ems * FssEss * F_avg / (1.0 - F_avg * Ems);
+    float3 k_D = diffuseColor * (1.0 - FssEss + FmsEms); // we use +FmsEms as indicated by the formula in the blog post (might be a typo in the implementation)
+
+    return (FmsEms + k_D) * irradiance;
+}
+
+float3 getIBLRadianceGGX(float3 n, float3 v, float roughness, float3 F0, float specularWeight)
+{
+    float NdotV = clampedDot(n, v);
+    float lod = roughness * float(10 - 1); // mip count is 10
+    float3 reflection = normalize(reflect(-v, n));
+
+    float2 brdfSamplePoint = clamp(float2(NdotV, roughness), float2(0.0, 0.0), float2(1.0, 1.0));
+    float2 f_ab = u_GGXLUT.Sample(Sampler, brdfSamplePoint).rg;
+    //f_ab = pow(f_ab, float2(0.4545.xx));
+    float4 specularSample = getSpecularSample(reflection, lod);
+
+    float3 specularLight = specularSample.rgb;
+
+    // see https://bruop.github.io/ibl/#single_scattering_results at Single Scattering Results
+    // Roughness dependent fresnel, from Fdez-Aguera
+    float3 Fr = max(float3((1.0 - roughness).xxx), F0) - F0;
+    float3 k_S = F0 + Fr * pow(1.0 - NdotV, 5.0);
+    float3 FssEss = k_S * f_ab.x + f_ab.y;
+
+    return specularWeight * specularLight * FssEss;
+}
+
 float4 main(VSOut input) : SV_Target
 {
     float4 finalColor;
@@ -317,6 +380,11 @@ float4 main(VSOut input) : SV_Target
 
     float albedoSheenScaling = 1.0;
     
+    if(ginfo.useIrradiance)
+        f_diffuse += getIBLRadianceLambertian(n, v, materialInfo.perceptualRoughness, materialInfo.c_diff, materialInfo.f0, materialInfo.specularWeight);
+    if (ginfo.useReflection)
+        f_specular += getIBLRadianceGGX(n, v, materialInfo.perceptualRoughness, materialInfo.f0, materialInfo.specularWeight);
+    
     // Calculate lighting contribution from image based lighting source (IBL)
 #ifdef USE_IBL
     f_specular += getIBLRadianceGGX(n, v, materialInfo.perceptualRoughness, materialInfo.f0, materialInfo.specularWeight);
@@ -353,6 +421,7 @@ float4 main(VSOut input) : SV_Target
         f_clearcoat = lerp(f_clearcoat, f_clearcoat * ao, material.occlusionStrength);
     }
     
+    if(ginfo.usePunctualLights)
     {
         
         //-----------------------------------------------------------------------------
@@ -414,6 +483,7 @@ float4 main(VSOut input) : SV_Target
 #endif
     }
      
+    if (ginfo.usePunctualLights)
     {
         
         //-----------------------------------------------------------------------------

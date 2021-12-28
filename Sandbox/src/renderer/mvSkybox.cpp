@@ -71,6 +71,8 @@ create_skybox(mvAssetManager& am)
     //samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
     samplerDesc.Filter = D3D11_FILTER_ANISOTROPIC;
     samplerDesc.MaxAnisotropy = D3D11_REQ_MAXANISOTROPY;
+    samplerDesc.MinLOD = 0.0f;
+    samplerDesc.MaxLOD = 11.0f;
     GContext->graphics.device->CreateSamplerState(&samplerDesc, &skybox.cubeSampler);
 
     register_asset(&am, "skybox_pipeline", skybox.pipeline);

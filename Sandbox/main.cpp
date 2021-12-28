@@ -115,14 +115,34 @@ int main()
             std::string newMap = "../../data/glTF-Sample-Environments/" + std::string(env_maps[envMapIndex]) + ".hdr";
             if (skybox.cubeTexture.textureView)
             {
+                skybox.cubeTexture.texture->Release();
                 skybox.cubeTexture.textureView->Release();
                 skybox.cubeTexture.textureView = nullptr;
+                skybox.cubeTexture.texture = nullptr;
             }
 
             if (skybox.filtedCubeTexture.textureView)
             {
+                skybox.filtedCubeTexture.texture->Release();
                 skybox.filtedCubeTexture.textureView->Release();
                 skybox.filtedCubeTexture.textureView = nullptr;
+                skybox.filtedCubeTexture.texture = nullptr;
+            }
+
+            if (skybox.specfiltedCubeTexture.textureView)
+            {
+                skybox.specfiltedCubeTexture.texture->Release();
+                skybox.specfiltedCubeTexture.textureView->Release();
+                skybox.specfiltedCubeTexture.textureView = nullptr;
+                skybox.specfiltedCubeTexture.texture = nullptr;
+            }
+
+            if (skybox.lut.textureView)
+            {
+                skybox.lut.texture->Release();
+                skybox.lut.textureView->Release();
+                skybox.lut.textureView = nullptr;
+                skybox.lut.texture = nullptr;
             }
 
             if (envMapIndex == 0)
@@ -133,7 +153,10 @@ int main()
             {
                 globalInfo.useSkybox = true;
                 skybox.cubeTexture = create_cube_map(newMap);
-                skybox.filtedCubeTexture = create_environment_map(newMap, skybox.cubeTexture);
+                skybox.filtedCubeTexture = create_irradiance_map(skybox.cubeTexture, 512, 1024, 0.0f);
+                mvPBRTextures pbrtextures = create_specular_map(skybox.cubeTexture, 1024, 1024, 1.0f);
+                skybox.specfiltedCubeTexture = pbrtextures.specular;
+                skybox.lut = pbrtextures.lut;
             }
 
             recreateSkybox = false;
@@ -290,7 +313,9 @@ int main()
         // textures
         ctx->PSSetShaderResources(5u, 1, &directionalShadowMap.resourceView);
         ctx->PSSetShaderResources(6u, 1, &omniShadowMap.resourceView);
-        ctx->PSSetShaderResources(7u, 1, blur ? &skybox.filtedCubeTexture.textureView : &skybox.cubeTexture.textureView);
+        ctx->PSSetShaderResources(7u, 1, &skybox.filtedCubeTexture.textureView);
+        ctx->PSSetShaderResources(8u, 1, &skybox.specfiltedCubeTexture.textureView);
+        ctx->PSSetShaderResources(9u, 1, skybox.lut.textureView.GetAddressOf());
 
         Renderer::render_mesh_solid(am, pointlight.mesh, translate(identity_mat4(), pointlight.camera.pos), viewMatrix, projMatrix);
 
@@ -387,6 +412,7 @@ int main()
             ImGui::Checkbox("Use Reflection", (bool*)&globalInfo.useReflection);
             ImGui::Checkbox("Use Emissive", (bool*)&globalInfo.useEmissiveMap);
             ImGui::Checkbox("Use Occlusion", (bool*)&globalInfo.useOcclusionMap);
+            ImGui::Checkbox("Use Punctual Lights", (bool*)&globalInfo.usePunctualLights);
 
             //-----------------------------------------------------------------------------
             // center panel
@@ -495,11 +521,30 @@ int main()
     offscreen.cleanup();
     directionalShadowMap.cleanup();
     omniShadowMap.cleanup();
-    if(skybox.cubeTexture.textureView)
+
+    if (skybox.cubeTexture.textureView)
+    {
+        skybox.cubeTexture.texture->Release();
         skybox.cubeTexture.textureView->Release();
+        skybox.cubeTexture.textureView = nullptr;
+        skybox.cubeTexture.texture = nullptr;
+    }
 
     if (skybox.filtedCubeTexture.textureView)
+    {
+        skybox.filtedCubeTexture.texture->Release();
         skybox.filtedCubeTexture.textureView->Release();
+        skybox.filtedCubeTexture.textureView = nullptr;
+        skybox.filtedCubeTexture.texture = nullptr;
+    }
+
+    if (skybox.specfiltedCubeTexture.textureView)
+    {
+        skybox.specfiltedCubeTexture.texture->Release();
+        skybox.specfiltedCubeTexture.textureView->Release();
+        skybox.specfiltedCubeTexture.textureView = nullptr;
+        skybox.specfiltedCubeTexture.texture = nullptr;
+    }
 
     // Cleanup
     mvCleanupAssetManager(&am);

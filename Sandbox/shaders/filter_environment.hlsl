@@ -1,19 +1,13 @@
 
 #define M_PI 3.1415926535897932384626433832795
 
-// enum
-const uint cLambertian = 0;
-const uint cGGX = 1;
-const uint cCharlie = 2;
-
 cbuffer MetaData : register(b0)
 {
     int resolution;
     int width;
-    int height;
     float roughness;
-
     uint sampleCount;
+    
     uint currentMipLevel;
     float lodBias;
     uint distribution;
@@ -28,6 +22,7 @@ RWStructuredBuffer<float4> FaceOut_2 : register(u2);
 RWStructuredBuffer<float4> FaceOut_3 : register(u3);
 RWStructuredBuffer<float4> FaceOut_4 : register(u4);
 RWStructuredBuffer<float4> FaceOut_5 : register(u5);
+RWStructuredBuffer<float4> outLUT    : register(u6);
 
 // Hammersley Points on the Hemisphere
 // CC BY 3.0 (Holger Dammertz)
@@ -87,81 +82,81 @@ struct MicrofacetDistributionSample
     float phi;
 };
 
-//float D_GGX(float NdotH, float roughness)
-//{
-//    float a = NdotH * roughness;
-//    float k = roughness / (1.0 - NdotH * NdotH + a * a);
-//    return k * k * (1.0 / M_PI);
-//}
+float D_GGX(float NdotH, float roughness)
+{
+    float a = NdotH * roughness;
+    float k = roughness / (1.0 - NdotH * NdotH + a * a);
+    return k * k * (1.0 / M_PI);
+}
 
-//// GGX microfacet distribution
-//// https://www.cs.cornell.edu/~srm/publications/EGSR07-btdf.html
-//// This implementation is based on https://bruop.github.io/ibl/,
-////  https://www.tobias-franke.eu/log/2014/03/30/notes_on_importance_sampling.html
-//// and https://developer.nvidia.com/gpugems/GPUGems3/gpugems3_ch20.html
-//MicrofacetDistributionSample GGX(float2 xi, float roughness)
-//{
-//    MicrofacetDistributionSample ggx;
+// GGX microfacet distribution
+// https://www.cs.cornell.edu/~srm/publications/EGSR07-btdf.html
+// This implementation is based on https://bruop.github.io/ibl/,
+//  https://www.tobias-franke.eu/log/2014/03/30/notes_on_importance_sampling.html
+// and https://developer.nvidia.com/gpugems/GPUGems3/gpugems3_ch20.html
+MicrofacetDistributionSample GGX(float2 xi, float roughness)
+{
+    MicrofacetDistributionSample ggx;
 
-//    // evaluate sampling equations
-//    float alpha = roughness * roughness;
-//    ggx.cosTheta = saturate(sqrt((1.0 - xi.y) / (1.0 + (alpha * alpha - 1.0) * xi.y)));
-//    ggx.sinTheta = sqrt(1.0 - ggx.cosTheta * ggx.cosTheta);
-//    ggx.phi = 2.0 * M_PI * xi.x;
+    // evaluate sampling equations
+    float alpha = roughness * roughness;
+    ggx.cosTheta = saturate(sqrt((1.0 - xi.y) / (1.0 + (alpha * alpha - 1.0) * xi.y)));
+    ggx.sinTheta = sqrt(1.0 - ggx.cosTheta * ggx.cosTheta);
+    ggx.phi = 2.0 * M_PI * xi.x;
 
-//    // evaluate GGX pdf (for half vector)
-//    ggx.pdf = D_GGX(ggx.cosTheta, alpha);
+    // evaluate GGX pdf (for half vector)
+    ggx.pdf = D_GGX(ggx.cosTheta, alpha);
 
-//    // Apply the Jacobian to obtain a pdf that is parameterized by l
-//    // see https://bruop.github.io/ibl/
-//    // Typically you'd have the following:
-//    // float pdf = D_GGX(NoH, roughness) * NoH / (4.0 * VoH);
-//    // but since V = N => VoH == NoH
-//    ggx.pdf /= 4.0;
+    // Apply the Jacobian to obtain a pdf that is parameterized by l
+    // see https://bruop.github.io/ibl/
+    // Typically you'd have the following:
+    // float pdf = D_GGX(NoH, roughness) * NoH / (4.0 * VoH);
+    // but since V = N => VoH == NoH
+    ggx.pdf /= 4.0;
 
-//    return ggx;
-//}
+    return ggx;
+}
 
-//// NDF
-//float D_Ashikhmin(float NdotH, float roughness)
-//{
-//    float alpha = roughness * roughness;
-//    // Ashikhmin 2007, "Distribution-based BRDFs"
-//    float a2 = alpha * alpha;
-//    float cos2h = NdotH * NdotH;
-//    float sin2h = 1.0 - cos2h;
-//    float sin4h = sin2h * sin2h;
-//    float cot2 = -cos2h / (a2 * sin2h);
-//    return 1.0 / (M_PI * (4.0 * a2 + 1.0) * sin4h) * (4.0 * exp(cot2) + sin4h);
-//}
+// NDF
+float D_Ashikhmin(float NdotH, float roughness)
+{
+    float alpha = roughness * roughness;
+    // Ashikhmin 2007, "Distribution-based BRDFs"
+    float a2 = alpha * alpha;
+    float cos2h = NdotH * NdotH;
+    float sin2h = 1.0 - cos2h;
+    float sin4h = sin2h * sin2h;
+    float cot2 = -cos2h / (a2 * sin2h);
+    return 1.0 / (M_PI * (4.0 * a2 + 1.0) * sin4h) * (4.0 * exp(cot2) + sin4h);
+}
 
-//// NDF
-//float D_Charlie(float sheenRoughness, float NdotH)
-//{
-//    sheenRoughness = max(sheenRoughness, 0.000001); //clamp (0,1]
-//    float invR = 1.0 / sheenRoughness;
-//    float cos2h = NdotH * NdotH;
-//    float sin2h = 1.0 - cos2h;
-//    return (2.0 + invR) * pow(sin2h, invR * 0.5) / (2.0 * M_PI);
-//}
+// NDF
+float D_Charlie(float sheenRoughness, float NdotH)
+{
+    sheenRoughness = max(sheenRoughness, 0.000001); //clamp (0,1]
+    float invR = 1.0 / sheenRoughness;
+    float cos2h = NdotH * NdotH;
+    float sin2h = 1.0 - cos2h;
+    return (2.0 + invR) * pow(sin2h, invR * 0.5) / (2.0 * M_PI);
+}
 
-//MicrofacetDistributionSample Charlie(float2 xi, float roughness)
-//{
-//    MicrofacetDistributionSample charlie;
+MicrofacetDistributionSample Charlie(float2 xi, float roughness)
+{
+    MicrofacetDistributionSample charlie;
 
-//    float alpha = roughness * roughness;
-//    charlie.sinTheta = pow(xi.y, alpha / (2.0 * alpha + 1.0));
-//    charlie.cosTheta = sqrt(1.0 - charlie.sinTheta * charlie.sinTheta);
-//    charlie.phi = 2.0 * M_PI * xi.x;
+    float alpha = roughness * roughness;
+    charlie.sinTheta = pow(xi.y, alpha / (2.0 * alpha + 1.0));
+    charlie.cosTheta = sqrt(1.0 - charlie.sinTheta * charlie.sinTheta);
+    charlie.phi = 2.0 * M_PI * xi.x;
 
-//    // evaluate Charlie pdf (for half vector)
-//    charlie.pdf = D_Charlie(alpha, charlie.cosTheta);
+    // evaluate Charlie pdf (for half vector)
+    charlie.pdf = D_Charlie(alpha, charlie.cosTheta);
 
-//    // Apply the Jacobian to obtain a pdf that is parameterized by l
-//    charlie.pdf /= 4.0;
+    // Apply the Jacobian to obtain a pdf that is parameterized by l
+    charlie.pdf /= 4.0;
 
-//    return charlie;
-//}
+    return charlie;
+}
 
 MicrofacetDistributionSample Lambertian(float2 xi, float roughness)
 {
@@ -188,20 +183,20 @@ float4 getImportanceSample(int sampleIndex, float3 N, float roughness)
 
     // generate the points on the hemisphere with a fitting mapping for
     // the distribution (e.g. lambertian uses a cosine importance)
-    if (distribution == cLambertian)
+    if (distribution == 0)
     {
         importanceSample = Lambertian(xi, roughness);
     }
-    //else if (distribution == cGGX)
-    //{
-    //    // Trowbridge-Reitz / GGX microfacet model (Walter et al)
-    //    // https://www.cs.cornell.edu/~srm/publications/EGSR07-btdf.html
-    //    importanceSample = GGX(xi, roughness);
-    //}
-    //else if (distribution == cCharlie)
-    //{
-    //    importanceSample = Charlie(xi, roughness);
-    //}
+    else if (distribution == 1)
+    {
+        // Trowbridge-Reitz / GGX microfacet model (Walter et al)
+        // https://www.cs.cornell.edu/~srm/publications/EGSR07-btdf.html
+        importanceSample = GGX(xi, roughness);
+    }
+    else if (distribution == 2)
+    {
+        importanceSample = Charlie(xi, roughness);
+    }
 
     // transform the hemisphere sample to the normal coordinate frame
     // i.e. rotate the hemisphere to the normal direction
@@ -249,9 +244,12 @@ float3 filterColor(float3 N)
     //return tex.SampleLevel(sam, N, 3.0).rgb;
     float3 color = float3(0.f.xxx);
     float weight = 0.0f;
-
+    
+    //bool flag = false;
+    
     for (int i = 0; i < int(sampleCount); i++)
     {
+
         float4 importanceSample = getImportanceSample(i, N, roughness);
 
         float3 H = importanceSample.xyz;
@@ -263,7 +261,7 @@ float3 filterColor(float3 N)
         // apply the bias to the lod
         lod += lodBias;
 
-        if (distribution == cLambertian)
+        if (distribution == 0)
         {
             //H.x = -H.x;
             //H.z = -H.z;
@@ -279,37 +277,120 @@ float3 filterColor(float3 N)
 
             color += lambertian;
         }
-        //else if (distribution == cGGX || distribution == cCharlie)
-        //{
-        //    // Note: reflect takes incident vector.
-        //    float3 V = N;
-        //    float3 L = normalize(reflect(-V, H));
-        //    float NdotL = dot(N, L);
+        else
+        {
+            // Note: reflect takes incident vector.
+            float3 V = N;
+            float3 L = normalize(reflect(-V, H));
+            float NdotL = dot(N, L);       
 
-        //    if (NdotL > 0.0)
-        //    {
-        //        if (roughness == 0.0)
-        //        {
-        //            // without this the roughness=0 lod is too high
-        //            lod = lodBias;
-        //        }
-        //        float3 sampleColor = tex.SampleLevel(sam, L, lod).rgb;
-        //        color += sampleColor * NdotL;
-        //        weight += NdotL;
-        //    }
-        //}
+            if (NdotL > 0.0)
+            {
+                if (roughness == 0.0)
+                {
+                    // without this the roughness=0 lod is too high
+                    lod = lodBias;
+                }
+                float3 sampleColor = tex.SampleLevel(sam, L, lod).rgb;
+                sampleColor = pow(sampleColor, float3(0.4545.xxx));
+                color += sampleColor * NdotL;
+                weight += NdotL;
+            }
+            
+        }
     }
 
     if (weight != 0.0f)
     {
-        color /= weight;
+        color /= float3(weight.xxx);
     }
     else
     {
         color /= float3(sampleCount.xxx);
     }
-    
+
     return color.rgb;
+}
+
+// From the filament docs. Geometric Shadowing function
+// https://google.github.io/filament/Filament.html#toc4.4.2
+float V_SmithGGXCorrelated(float NoV, float NoL, float inroughness)
+{
+    float a2 = inroughness * inroughness;
+    float GGXV = NoL * sqrt(NoV * NoV * (1.0 - a2) + a2);
+    float GGXL = NoV * sqrt(NoL * NoL * (1.0 - a2) + a2);
+    return 0.5 / (GGXV + GGXL);
+}
+
+// https://github.com/google/filament/blob/master/shaders/src/brdf.fs#L136
+float V_Ashikhmin(float NdotL, float NdotV)
+{
+    return clamp(1.0 / (4.0 * (NdotL + NdotV - NdotL * NdotV)), 0.0, 1.0);
+}
+
+// Compute LUT for GGX distribution.
+// See https://blog.selfshadow.com/publications/s2013-shading-course/karis/s2013_pbs_epic_notes_v2.pdf
+float3 LUT(float NdotV, float inroughness)
+{
+    // Compute spherical view vector: (sin(phi), 0, cos(phi))
+    float3 V = float3(sqrt(1.0 - NdotV * NdotV), 0.0, NdotV);
+
+    // The macro surface normal just points up.
+    float3 N = float3(0.0, 0.0, 1.0);
+
+    // To make the LUT independant from the material's F0, which is part of the Fresnel term
+    // when substituted by Schlick's approximation, we factor it out of the integral,
+    // yielding to the form: F0 * I1 + I2
+    // I1 and I2 are slighlty different in the Fresnel term, but both only depend on
+    // NoL and roughness, so they are both numerically integrated and written into two channels.
+    float A = 0.0;
+    float B = 0.0;
+    float C = 0.0;
+
+    for (int i = 0; i < int(sampleCount); ++i)
+    {
+        // Importance sampling, depending on the distribution.
+        float4 importanceSample = getImportanceSample(i, N, inroughness);
+        float3 H = importanceSample.xyz;
+        // float pdf = importanceSample.w;
+        float3 L = normalize(reflect(-V, H));
+
+        float NdotL = saturate(L.z);
+        float NdotH = saturate(H.z);
+        float VdotH = saturate(dot(V, H));
+        if (NdotL > 0.0)
+        {
+            if (distribution == 1)
+            {
+                // LUT for GGX distribution.
+
+                // Taken from: https://bruop.github.io/ibl
+                // Shadertoy: https://www.shadertoy.com/view/3lXXDB
+                // Terms besides V are from the GGX PDF we're dividing by.
+                float V_pdf = V_SmithGGXCorrelated(NdotV, NdotL, inroughness) * VdotH * NdotL / NdotH;
+                float Fc = pow(1.0 - VdotH, 5.0);
+                A += (1.0 - Fc) * V_pdf;
+                B += Fc * V_pdf;
+                C += 0.0;
+            }
+
+            if (distribution == 2)
+            {
+                // LUT for Charlie distribution.
+                float sheenDistribution = D_Charlie(inroughness, NdotH);
+                float sheenVisibility = V_Ashikhmin(NdotL, NdotV);
+
+                A += 0.0;
+                B += 0.0;
+                C += sheenVisibility * sheenDistribution * NdotL * VdotH;
+            }
+        }
+    }
+
+    // The PDF is simply pdf(v, h) -> NDF * <nh>.
+    // To parametrize the PDF over l, use the Jacobian transform, yielding to: pdf(v, l) -> NDF * <nh> / 4<vh>
+    // Since the BRDF divide through the PDF to be normalized, the 4 can be pulled out of the integral.
+    return float3(4.0 * A, 4.0 * B, 4.0 * 2.0 * M_PI * C) / float3(sampleCount.xxx);
 }
 
 float3 uvToXYZ(int face, float2 uv)
@@ -370,14 +451,52 @@ void main(uint3 groupID : SV_GroupID, uint3 threadID : SV_GroupThreadID)
     float2 newUV = inUV * float(1 << (currentMipLevel));
 	 
     newUV = newUV * 2.0 - 1.0;
-	
-    
+	 
     float3 scan = uvToXYZ(face, newUV);
     float3 direction = normalize(scan);
-    //direction.y = -direction.y;
+   
+    //if(distribution == 0)
+    //{
+    //    float3 irradiance = float3(0.0.xxx);
+
+    //    float3 up = float3(0.0, 1.0, 0.0);
+    //    float3 right = normalize(cross(up, direction));
+    //    up = normalize(cross(direction, right));
+
+    //    //float sampleDelta = 0.025;
+    //    float sampleDelta = 0.1;
+    //    float nrSamples = 0.0;
+    //    for (float phi = 0.0; phi < 2.0 * M_PI; phi += sampleDelta)
+    //    {
+    //        for (float theta = 0.0; theta < 0.5 * M_PI; theta += sampleDelta)
+    //        {
+    //        // spherical to cartesian (in tangent space)
+    //            float3 tangentSample = float3(sin(theta) * cos(phi), sin(theta) * sin(phi), cos(theta));
+    //        // tangent space to world
+    //            float3 sampleVec = tangentSample.x * right + tangentSample.y * up + tangentSample.z * direction;
+            
+    //            float3 lambertian = pow(tex.SampleLevel(sam, sampleVec, 0).rgb, float3(0.4545.xxx));
+
+    //            irradiance += lambertian * cos(theta) * sin(theta);
+    //            nrSamples++;
+    //        }
+    //    }
+    //    irradiance = M_PI * irradiance * (1.0 / float(nrSamples));
+    //    writeFace(currentPixel, face, irradiance);
+    //}
+    //else
+    {
+        writeFace(currentPixel, face, filterColor(direction));
+    }
     
-    writeFace(currentPixel, face, filterColor(direction));
-    //float3 colorIn = tex.SampleLevel(sam, direction, 0).rgb;
-    //writeFace(currentPixel, face, colorIn);
-  
+    // Write LUT:
+	// x-coordinate: NdotV
+	// y-coordinate: roughness
+    if (currentMipLevel == 0)
+    {
+        const int currentLUTPixel = xcoord + ycoord * 512;
+        float3 color = LUT(inUV.x, 1.0f - inUV.y);
+        color = pow(color, float3(2.2.xxx));
+        outLUT[currentLUTPixel] = float4(color, 1.0f);
+    }
 }

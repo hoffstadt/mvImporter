@@ -36,7 +36,7 @@ struct GlobalInfo
     b32 useNormalMap = true;
     b32 usePCF = false;
     i32 pcfRange = 1;
-    char _pad0[4];
+    b32 usePunctualLights = true;
 };
 
 namespace Renderer
