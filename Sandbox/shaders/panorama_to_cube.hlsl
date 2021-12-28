@@ -6,12 +6,6 @@ cbuffer MetaData : register(b0)
     int resolution;
     int width;
     int height;
-    float roughness;
-
-    uint sampleCount;
-    uint currentMipLevel;
-    float loadBias;
-    uint distribution;
 };
 
 RWStructuredBuffer<float4> BufferIn : register(u0);
@@ -81,7 +75,6 @@ void main(uint3 groupID : SV_GroupID, uint3 threadID : SV_GroupThreadID)
     const float2 inUV = float2(xcoord * xinc, ycoord * yinc);
     const int currentPixel = xcoord + ycoord * resolution;
     
-    
     float3 scan = uvToXYZ(face, inUV * 2.0 - 1.0);	
     float3 direction = normalize(scan);
     float2 src = dirToUV(direction);
@@ -93,5 +86,6 @@ void main(uint3 groupID : SV_GroupID, uint3 threadID : SV_GroupThreadID)
         
     float3 color = float3(BufferIn[srcpixelIndex].r, BufferIn[srcpixelIndex].g, BufferIn[srcpixelIndex].b);
 	
+    //color = pow(color, float3(0.4545.xxx));
     writeFace(currentPixel, face, color);
 }

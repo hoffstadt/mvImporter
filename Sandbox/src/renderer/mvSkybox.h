@@ -19,5 +19,6 @@ struct mvSkybox
     mvBuffer            indexBuffer;
     mvVertexLayout      vertexLayout;
     mvCubeTexture       cubeTexture;
+    mvCubeTexture       filtedCubeTexture;
     mvPipeline          pipeline;
 };

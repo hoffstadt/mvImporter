@@ -62,13 +62,13 @@ int main()
     register_asset(&am, "global_constant_buffer", globalInfoBuffer);
 
     mvTimer timer;
-    mvTimer timer2;
     int cacheModel[MODEL_CACHE_SIZE] = { -1, -1, -1 };
     mvAssetID cacheScenes[MODEL_CACHE_SIZE] = { -1, -1, -1 };
     int cacheIndex = 0;
     int activeScene = -1;
     int modelIndex = 0;
     int envMapIndex = 0;
+    bool blur = false;
     while (true)
     {
         const auto dt = timer.mark() * 1.0f;
@@ -119,6 +119,12 @@ int main()
                 skybox.cubeTexture.textureView = nullptr;
             }
 
+            if (skybox.filtedCubeTexture.textureView)
+            {
+                skybox.filtedCubeTexture.textureView->Release();
+                skybox.filtedCubeTexture.textureView = nullptr;
+            }
+
             if (envMapIndex == 0)
             {
                 globalInfo.useSkybox = false;
@@ -126,7 +132,8 @@ int main()
             else
             {
                 globalInfo.useSkybox = true;
-                skybox.cubeTexture = create_environment_map(newMap);
+                skybox.cubeTexture = create_cube_map(newMap);
+                skybox.filtedCubeTexture = create_environment_map(newMap, skybox.cubeTexture);
             }
 
             recreateSkybox = false;
@@ -283,14 +290,19 @@ int main()
         // textures
         ctx->PSSetShaderResources(5u, 1, &directionalShadowMap.resourceView);
         ctx->PSSetShaderResources(6u, 1, &omniShadowMap.resourceView);
-        ctx->PSSetShaderResources(7u, 1, &skybox.cubeTexture.textureView);
+        ctx->PSSetShaderResources(7u, 1, blur ? &skybox.filtedCubeTexture.textureView : &skybox.cubeTexture.textureView);
 
         Renderer::render_mesh_solid(am, pointlight.mesh, translate(identity_mat4(), pointlight.camera.pos), viewMatrix, projMatrix);
 
         if (activeScene > -1)
             Renderer::render_scene(am, am.scenes[activeScene].asset, viewMatrix, projMatrix, stransform0, ttransform0);
 
-        if (globalInfo.useSkybox) render_skybox(skybox, viewMatrix, projMatrix);
+        if (globalInfo.useSkybox)
+        {
+            ctx->PSSetSamplers(0, 1, &skybox.cubeSampler);
+            ctx->PSSetShaderResources(0, 1, blur ? &skybox.filtedCubeTexture.textureView : &skybox.cubeTexture.textureView);
+            render_skybox(skybox, viewMatrix, projMatrix);
+        }
 
         //-----------------------------------------------------------------------------
         // main pass
@@ -400,6 +412,7 @@ int main()
             //-----------------------------------------------------------------------------
             ImGui::TableSetColumnIndex(2);
 
+            ImGui::Checkbox("Blur##skybox", &blur);
             if (ImGui::ListBox("Environment##separate", &envMapIndex, env_maps, 11, 11))
             {
                 recreateSkybox = true;
@@ -484,6 +497,9 @@ int main()
     omniShadowMap.cleanup();
     if(skybox.cubeTexture.textureView)
         skybox.cubeTexture.textureView->Release();
+
+    if (skybox.filtedCubeTexture.textureView)
+        skybox.filtedCubeTexture.textureView->Release();
 
     // Cleanup
     mvCleanupAssetManager(&am);

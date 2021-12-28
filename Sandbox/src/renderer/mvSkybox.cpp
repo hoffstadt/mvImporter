@@ -68,7 +68,8 @@ create_skybox(mvAssetManager& am)
     samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_BORDER;
     samplerDesc.BorderColor[0] = 0.0f;
     //samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
-    samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+    //samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+    samplerDesc.Filter = D3D11_FILTER_ANISOTROPIC;
     samplerDesc.MaxAnisotropy = D3D11_REQ_MAXANISOTROPY;
     GContext->graphics.device->CreateSamplerState(&samplerDesc, &skybox.cubeSampler);
 
@@ -89,8 +90,7 @@ render_skybox(mvSkybox& skybox, mvMat4 cam, mvMat4 proj)
 
     // pipeline
     set_pipeline_state(skybox.pipeline);
-    ctx->PSSetSamplers(0, 1, &skybox.cubeSampler);
-    ctx->PSSetShaderResources(0, 1, &skybox.cubeTexture.textureView);
+
 
     mvTransforms transforms{};
     transforms.model = identity_mat4() * scale(identity_mat4(), mvVec3{ 1.0f, 1.0f, -1.0f });
