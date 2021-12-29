@@ -1,5 +1,7 @@
 #include "mvMaterials.h"
 #include "mvAssetManager.h"
+#include <assert.h>
+#include "mvSandbox.h"
 
 mvMaterial
 create_material(mvAssetManager& am, const std::string& vs, const std::string& ps, mvMaterialData& materialData)
@@ -51,7 +53,18 @@ create_material(mvAssetManager& am, const std::string& vs, const std::string& ps
 		material.pipeline = register_asset(&am, hash, finalize_pipeline(pipelineInfo));
 	}
 
-	material.colorSampler = create_sampler(D3D11_FILTER_MIN_MAG_MIP_LINEAR);
+	// Create Sampler State
+	D3D11_SAMPLER_DESC samplerDesc{};
+	samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
+	samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
+	samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
+	samplerDesc.BorderColor[0] = 0.0f;
+	samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+	samplerDesc.MaxAnisotropy = D3D11_REQ_MAXANISOTROPY;
+	//samplerDesc.ComparisonFunc = D3D11_COMPARISON_LESS; // if hwPCF
+
+	HRESULT hResult = GContext->graphics.device->CreateSamplerState(&samplerDesc, &material.colorSampler);
+	assert(SUCCEEDED(hResult));
 	material.data = materialData;
 	material.buffer = create_const_buffer(&material.data, sizeof(mvMaterialData));
 

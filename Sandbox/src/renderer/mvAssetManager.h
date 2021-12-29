@@ -36,7 +36,7 @@ mvAssetID register_asset(mvAssetManager* manager, const std::string& tag, mvMate
 mvAssetID register_asset(mvAssetManager* manager, const std::string& tag, mvNode asset);
 mvAssetID register_asset(mvAssetManager* manager, const std::string& tag, mvTexture asset);
 mvAssetID register_asset(mvAssetManager* manager, const std::string& tag, mvCubeTexture asset);
-mvAssetID register_asset(mvAssetManager* manager, const std::string& tag, mvSampler asset);
+mvAssetID register_asset(mvAssetManager* manager, const std::string& tag, ID3D11SamplerState* asset);
 mvAssetID register_asset(mvAssetManager* manager, const std::string& tag, mvCamera asset);
 mvAssetID register_asset(mvAssetManager* manager, const std::string& tag, mvPipeline asset);
 mvAssetID register_asset(mvAssetManager* manager, const std::string& tag, ID3D11RenderTargetView* asset);
@@ -74,7 +74,7 @@ mvBuffer*               mvGetRawBufferAsset  (mvAssetManager* manager, const std
 mvConstBuffer*          mvGetRawCBufferAsset  (mvAssetManager* manager, const std::string& tag);
 mvMaterial*             mvGetRawMaterialAsset(mvAssetManager* manager, const std::string& tag);
 mvNode*                 mvGetRawNodeAsset    (mvAssetManager* manager, const std::string& tag);
-mvSampler*              mvGetRawSamplerAsset (mvAssetManager* manager, const std::string& tag);
+ID3D11SamplerState*     mvGetRawSamplerAsset (mvAssetManager* manager, const std::string& tag);
 mvCamera*               mvGetRawCameraAsset  (mvAssetManager* manager, const std::string& tag);
 ID3D11RenderTargetView* mvGetRawTargetViewAsset  (mvAssetManager* manager, const std::string& tag);
 ID3D11DepthStencilView* mvGetRawDepthViewAsset  (mvAssetManager* manager, const std::string& tag);
@@ -217,8 +217,8 @@ struct mvCubeTextureAsset
 
 struct mvSamplerAsset
 {
-	std::string hash;
-	mvSampler   asset;
+	std::string         hash;
+	ID3D11SamplerState* asset;
 };
 
 struct mvMaterialAsset

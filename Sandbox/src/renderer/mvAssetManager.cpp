@@ -62,7 +62,14 @@ mvCleanupAssetManager(mvAssetManager* manager)
 	for (int i = 0; i < manager->maxMaterialCount; i++)
 	{
 		if (!manager->freematerials[i])
+		{
 			manager->materials[i].asset.buffer.buffer->Release();
+			if (manager->materials[i].asset.colorSampler)
+			{
+				manager->materials[i].asset.colorSampler->Release();
+				manager->materials[i].asset.colorSampler = nullptr;
+			}
+		}
 	}
 
 	for (int i = 0; i < manager->cubeTextureCount; i++)
@@ -72,7 +79,7 @@ mvCleanupAssetManager(mvAssetManager* manager)
 
 	for (int i = 0; i < manager->samplerCount; i++)
 	{
-		manager->samplers[i].asset.state->Release();
+		manager->samplers[i].asset->Release();
 	}
 
 	for (int i = 0; i < manager->targetViewCount; i++)
@@ -107,6 +114,21 @@ mvCleanupAssetManager(mvAssetManager* manager)
 		}
 	}
 
+	for (int i = 0; i < manager->textureCount; i++)
+	{
+		if (manager->textures[i].asset.texture)
+		{
+			manager->textures[i].asset.texture->Release();
+		}
+
+		if (manager->textures[i].asset.textureView)
+		{
+			manager->textures[i].asset.textureView->Release();
+		}
+	}
+
+
+
 	// assets
 	delete[] manager->buffers;
 	delete[] manager->textures;
@@ -135,6 +157,7 @@ mvCleanupAssetManager(mvAssetManager* manager)
 //-----------------------------------------------------------------------------
 // render target views
 //-----------------------------------------------------------------------------
+
 mvAssetID
 register_asset(mvAssetManager* manager, const std::string& tag, ID3D11RenderTargetView* asset)
 {
@@ -207,6 +230,7 @@ mvGetRawDepthViewAsset(mvAssetManager* manager, const std::string& tag)
 //-----------------------------------------------------------------------------
 // pipelines
 //-----------------------------------------------------------------------------
+
 mvAssetID
 register_asset(mvAssetManager* manager, const std::string& tag, mvPipeline asset)
 {
@@ -243,6 +267,7 @@ mvGetRawPipelineAsset(mvAssetManager* manager, const std::string& tag)
 //-----------------------------------------------------------------------------
 // scenes
 //-----------------------------------------------------------------------------
+
 mvAssetID
 register_asset(mvAssetManager* manager, const std::string& tag, mvScene asset)
 {
@@ -409,6 +434,11 @@ unregister_texture_asset(mvAssetManager* manager, mvAssetID asset)
 		manager->freetextures[asset] = true;
 		manager->textureCount--;
 		manager->textures[asset].hash.clear();
+		if (manager->textures[asset].asset.texture)
+		{
+			manager->textures[asset].asset.texture->Release();
+			manager->textures[asset].asset.textureView->Release();
+		}
 		return true;
 	}
 	return false;
@@ -627,6 +657,11 @@ unregister_material_asset(mvAssetManager* manager, mvAssetID asset)
 		manager->materialCount--;
 		manager->materials[asset].hash.clear();
 		manager->materials[asset].asset.buffer.buffer->Release();
+		if (manager->materials[asset].asset.colorSampler)
+		{
+			manager->materials[asset].asset.colorSampler->Release();
+			manager->materials[asset].asset.colorSampler = nullptr;
+		}
 		return true;
 	}
 	return false;
@@ -773,7 +808,7 @@ unregister_camera_asset(mvAssetManager* manager, mvAssetID asset)
 //-----------------------------------------------------------------------------
 
 mvAssetID
-register_asset(mvAssetManager* manager, const std::string& tag, mvSampler asset)
+register_asset(mvAssetManager* manager, const std::string& tag, ID3D11SamplerState* asset)
 {
 	manager->samplers[manager->samplerCount].asset = asset;
 	manager->samplers[manager->samplerCount].hash = tag;
@@ -793,13 +828,13 @@ mvGetSamplerAssetID(mvAssetManager* manager, const std::string& tag)
 	return -1;
 }
 
-mvSampler*
+ID3D11SamplerState*
 mvGetRawSamplerAsset(mvAssetManager* manager, const std::string& tag)
 {
 	for (s32 i = 0; i < manager->samplerCount; i++)
 	{
 		if (manager->samplers[i].hash == tag)
-			return &manager->samplers[i].asset;
+			return manager->samplers[i].asset;
 	}
 
 	return nullptr;

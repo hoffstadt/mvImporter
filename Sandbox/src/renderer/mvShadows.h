@@ -129,7 +129,7 @@ struct mvDirectionalShadowPass
         info.projection = getProjectionMatrix();
 
         register_asset(&am, "shadowmap_depthview", depthView);
-        register_asset(&am, "shadowmap_sampler", mvSampler{ sampler });
+        register_asset(&am, "shadowmap_sampler", sampler);
         register_asset(&am, "shadowmap_buffer", buffer);
 
     }
@@ -279,7 +279,7 @@ struct mvOmniShadowPass
 
         buffer = create_const_buffer(&info, sizeof(OmniShadowTransformInfo));
 
-        register_asset(&am, "oshadowmap_sampler", mvSampler{sampler});
+        register_asset(&am, "oshadowmap_sampler", sampler);
         register_asset(&am, "oshadowmap_buffer", buffer);
         for (int i = 0; i < 6; i++)
             register_asset(&am, "oshadowmap_depthview" + std::to_string(i), depthView[i]);

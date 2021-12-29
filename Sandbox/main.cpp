@@ -3,7 +3,7 @@
 #include <imgui_impl_win32.h>
 #include <imgui_impl_dx11.h>
 #include "mvLights.h"
-#include "mvSkybox.h"
+#include "mvEnvironment.h"
 #include "mvShadows.h"
 #include "mvOffscreenPass.h"
 #include "mvRenderer.h"
@@ -11,9 +11,9 @@
 #include "mvTimer.h"
 #include "gltf_scene_info.h"
 
-
 // TODO: make most of these runtime options
 #define MODEL_CACHE_SIZE 5
+#define ENV_CACHE_SIZE 3
 static f32         shadowWidth = 95.0f;
 static int         initialWidth = 1850;
 static int         initialHeight = 900;
@@ -53,7 +53,6 @@ int main()
     mvOffscreenPass offscreen = mvOffscreenPass(500.0f, 500.0f);
     mvDirectionalShadowPass directionalShadowMap = mvDirectionalShadowPass(am, 4096, shadowWidth);
     mvOmniShadowPass omniShadowMap = mvOmniShadowPass(am, 2048);
-    mvSkybox skybox = create_skybox(am);
     
     omniShadowMap.info.view = create_lookat_view(pointlight.camera);
 
@@ -62,12 +61,16 @@ int main()
     register_asset(&am, "global_constant_buffer", globalInfoBuffer);
 
     mvTimer timer;
+    mvEnvironment cachedEnvironments[ENV_CACHE_SIZE];
+    int cachedEnvironmentsID[ENV_CACHE_SIZE];
     int cacheModel[MODEL_CACHE_SIZE] = { -1, -1, -1 };
     mvAssetID cacheScenes[MODEL_CACHE_SIZE] = { -1, -1, -1 };
     int cacheIndex = 0;
     int activeScene = -1;
     int modelIndex = 0;
-    int envMapIndex = 0;
+    int activeEnv = -1;
+    int envMapIndex = 8;
+    int envCacheIndex = 0;
     bool blur = false;
     while (true)
     {
@@ -109,42 +112,9 @@ int main()
         }
 
 
-        static bool recreateSkybox = false;
-        if (recreateSkybox)
-        {
-            std::string newMap = "../../data/glTF-Sample-Environments/" + std::string(env_maps[envMapIndex]) + ".hdr";
-            if (skybox.cubeTexture.textureView)
-            {
-                skybox.cubeTexture.texture->Release();
-                skybox.cubeTexture.textureView->Release();
-                skybox.cubeTexture.textureView = nullptr;
-                skybox.cubeTexture.texture = nullptr;
-            }
-
-            if (skybox.filtedCubeTexture.textureView)
-            {
-                skybox.filtedCubeTexture.texture->Release();
-                skybox.filtedCubeTexture.textureView->Release();
-                skybox.filtedCubeTexture.textureView = nullptr;
-                skybox.filtedCubeTexture.texture = nullptr;
-            }
-
-            if (skybox.specfiltedCubeTexture.textureView)
-            {
-                skybox.specfiltedCubeTexture.texture->Release();
-                skybox.specfiltedCubeTexture.textureView->Release();
-                skybox.specfiltedCubeTexture.textureView = nullptr;
-                skybox.specfiltedCubeTexture.texture = nullptr;
-            }
-
-            if (skybox.lut.textureView)
-            {
-                //skybox.lut.texture->Release();
-                //skybox.lut.textureView->Release();
-                skybox.lut.textureView = nullptr;
-                skybox.lut.texture = nullptr;
-            }
-
+        static bool recreateEnvironment = true;
+        if (recreateEnvironment)
+        {            
             if (envMapIndex == 0)
             {
                 globalInfo.useSkybox = false;
@@ -152,14 +122,31 @@ int main()
             else
             {
                 globalInfo.useSkybox = true;
-                skybox.cubeTexture = create_cube_map(newMap);
-                skybox.filtedCubeTexture = create_irradiance_map(skybox.cubeTexture, 1024, 1024, 0.0f);
-                mvPBRTextures pbrtextures = create_specular_map(skybox.cubeTexture, 1024, 1024, 1.0f);
-                skybox.specfiltedCubeTexture = pbrtextures.specular;
-                skybox.lut = pbrtextures.lut;
+
+                b8 cacheFound = false;
+                for (int i = 0; i < ENV_CACHE_SIZE; i++)
+                {
+                    if (cachedEnvironmentsID[i] == envMapIndex)
+                    {
+                        activeEnv = i;
+                        cacheFound = true;
+                        break;
+                    }
+                }
+
+                if (!cacheFound)
+                {
+                    std::string newMap = "../../data/glTF-Sample-Environments/" + std::string(env_maps[envMapIndex]) + ".hdr";
+                    cleanup_environment(cachedEnvironments[envCacheIndex]);
+                    cachedEnvironments[envCacheIndex] = create_environment(newMap, 1024, 1024, 1.0f, 7);
+                    cachedEnvironmentsID[envCacheIndex] = envMapIndex;
+                    activeEnv = envCacheIndex;
+                    envCacheIndex++;
+                    if (envCacheIndex == ENV_CACHE_SIZE) envCacheIndex = 0;
+                }
             }
 
-            recreateSkybox = false;
+            recreateEnvironment = false;
         }
 
         static bool changeScene = false;
@@ -278,7 +265,7 @@ int main()
         }
 
         //-----------------------------------------------------------------------------
-        // offscreen pass
+        // main pass
         //-----------------------------------------------------------------------------
         ctx->OMSetRenderTargets(1, &offscreen.targetView, offscreen.depthView);
         ctx->RSSetViewports(1u, &offscreen.viewport);
@@ -308,29 +295,40 @@ int main()
         // samplers
         ctx->PSSetSamplers(1u, 1, &directionalShadowMap.sampler);
         ctx->PSSetSamplers(2u, 1, &omniShadowMap.sampler);
-        ctx->PSSetSamplers(3u, 1, &skybox.envSampler);
+
+        if (activeEnv > -1)
+        {
+            ctx->PSSetSamplers(3u, 1, &cachedEnvironments[activeEnv].sampler);
+            ctx->PSSetSamplers(4u, 1, &cachedEnvironments[activeEnv].brdfSampler);
+        }
 
         // textures
         ctx->PSSetShaderResources(5u, 1, &directionalShadowMap.resourceView);
         ctx->PSSetShaderResources(6u, 1, &omniShadowMap.resourceView);
-        ctx->PSSetShaderResources(7u, 1, &skybox.filtedCubeTexture.textureView);
-        ctx->PSSetShaderResources(8u, 1, &skybox.specfiltedCubeTexture.textureView);
-        ctx->PSSetShaderResources(9u, 1, skybox.lut.textureView.GetAddressOf());
+
+        if (activeEnv > -1)
+        {
+            ctx->PSSetShaderResources(7u, 1, &cachedEnvironments[activeEnv].irradianceMap.textureView);
+            ctx->PSSetShaderResources(8u, 1, &cachedEnvironments[activeEnv].specularMap.textureView);
+        }
+
+        if (activeEnv > -1)
+        {
+            ctx->PSSetShaderResources(9u, 1, &cachedEnvironments[activeEnv].brdfLUT.textureView);
+        }
 
         Renderer::render_mesh_solid(am, pointlight.mesh, translate(identity_mat4(), pointlight.camera.pos), viewMatrix, projMatrix);
 
         if (activeScene > -1)
             Renderer::render_scene(am, am.scenes[activeScene].asset, viewMatrix, projMatrix, stransform0, ttransform0);
 
-        if (globalInfo.useSkybox)
+        if (globalInfo.useSkybox && activeEnv > -1)
         {
-            ctx->PSSetSamplers(0, 1, &skybox.cubeSampler);
-            ctx->PSSetShaderResources(0, 1, blur ? &skybox.filtedCubeTexture.textureView : &skybox.cubeTexture.textureView);
-            render_skybox(skybox, viewMatrix, projMatrix);
+            Renderer::render_skybox(am, blur ? cachedEnvironments[activeEnv].specularMap : cachedEnvironments[activeEnv].skyMap, cachedEnvironments[activeEnv].sampler, viewMatrix, projMatrix);
         }
 
         //-----------------------------------------------------------------------------
-        // main pass
+        // ui pass
         //-----------------------------------------------------------------------------
         ctx->OMSetRenderTargets(1, GContext->graphics.target.GetAddressOf(), *GContext->graphics.targetDepth.GetAddressOf());
         ctx->RSSetViewports(1u, &GContext->graphics.viewport);
@@ -439,9 +437,9 @@ int main()
             ImGui::TableSetColumnIndex(2);
 
             ImGui::Checkbox("Blur##skybox", &blur);
-            if (ImGui::ListBox("Environment##separate", &envMapIndex, env_maps, 11, 11))
+            if (ImGui::ListBox("Environment##separate", &envMapIndex, env_maps, 14, 14))
             {
-                recreateSkybox = true;
+                recreateEnvironment = true;
             }
 
             ImGui::Dummy(ImVec2(50.0f, 25.0f));
@@ -520,37 +518,8 @@ int main()
     directionalShadowMap.cleanup();
     omniShadowMap.cleanup();
 
-    if (skybox.cubeTexture.textureView)
-    {
-        skybox.cubeTexture.texture->Release();
-        skybox.cubeTexture.textureView->Release();
-        skybox.cubeTexture.textureView = nullptr;
-        skybox.cubeTexture.texture = nullptr;
-    }
-
-    if (skybox.filtedCubeTexture.textureView)
-    {
-        skybox.filtedCubeTexture.texture->Release();
-        skybox.filtedCubeTexture.textureView->Release();
-        skybox.filtedCubeTexture.textureView = nullptr;
-        skybox.filtedCubeTexture.texture = nullptr;
-    }
-
-    if (skybox.specfiltedCubeTexture.textureView)
-    {
-        skybox.specfiltedCubeTexture.texture->Release();
-        skybox.specfiltedCubeTexture.textureView->Release();
-        skybox.specfiltedCubeTexture.textureView = nullptr;
-        skybox.specfiltedCubeTexture.texture = nullptr;
-    }
-
-    if (skybox.lut.textureView)
-    {
-        //skybox.lut.texture->Release();
-        //skybox.lut.textureView->Release();
-        skybox.lut.textureView = nullptr;
-        skybox.lut.texture = nullptr;
-    }
+    for(int i = 0; i < ENV_CACHE_SIZE; i++)
+        cleanup_environment(cachedEnvironments[i]);
 
     // Cleanup
     mvCleanupAssetManager(&am);

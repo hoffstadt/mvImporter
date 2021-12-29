@@ -190,6 +190,84 @@ mvSetupCommonAssets(mvAssetManager& am)
 
         register_asset(&am, "solid", pipeline);
     }
+
+    {
+
+        mvPipeline pipeline{};
+        pipeline.topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+
+        const float side = 1.0f / 2.0f;
+        auto vertices = std::vector<f32>{
+            -side, -side, -side,
+             side, -side, -side,
+            -side,  side, -side,
+             side,  side, -side,
+            -side, -side,  side,
+             side, -side,  side,
+            -side,  side,  side,
+             side,  side,  side
+        };
+
+        static auto indices = std::vector<u32>{
+            0, 2, 1, 2, 3, 1,
+            1, 3, 5, 3, 7, 5,
+            2, 6, 3, 3, 6, 7,
+            4, 5, 7, 4, 7, 6,
+            0, 4, 2, 2, 4, 6,
+            0, 1, 4, 1, 5, 4
+        };
+
+        mvBuffer vertexBuffer = create_buffer(vertices.data(), vertices.size() * sizeof(f32), D3D11_BIND_VERTEX_BUFFER);
+        mvBuffer indexBuffer = create_buffer(indices.data(), indices.size() * sizeof(u32), D3D11_BIND_INDEX_BUFFER);
+        mvVertexLayout vertexLayout = create_vertex_layout({ mvVertexElement::Position3D });
+
+        mvPixelShader pixelShader = create_pixel_shader(GContext->IO.shaderDirectory + "Skybox_PS.hlsl");
+        pipeline.pixelShader = pixelShader.shader;
+        pipeline.pixelBlob = pixelShader.blob;
+
+        mvVertexShader vertexShader = create_vertex_shader(GContext->IO.shaderDirectory + "Skybox_VS.hlsl", vertexLayout);
+        pipeline.vertexShader = vertexShader.shader;
+        pipeline.vertexBlob = vertexShader.blob;
+        pipeline.inputLayout = vertexShader.inputLayout;
+
+        // depth stencil state
+        D3D11_DEPTH_STENCIL_DESC dsDesc = CD3D11_DEPTH_STENCIL_DESC{ CD3D11_DEFAULT{} };
+        dsDesc.DepthEnable = true;
+        dsDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
+        dsDesc.DepthFunc = D3D11_COMPARISON_LESS_EQUAL;
+        GContext->graphics.device->CreateDepthStencilState(&dsDesc, &pipeline.depthStencilState);
+
+        // rasterizer state
+        D3D11_RASTERIZER_DESC skyboxRasterDesc = CD3D11_RASTERIZER_DESC(CD3D11_DEFAULT{});
+        skyboxRasterDesc.CullMode = D3D11_CULL_NONE;
+        skyboxRasterDesc.FrontCounterClockwise = TRUE;
+        GContext->graphics.device->CreateRasterizerState(&skyboxRasterDesc, &pipeline.rasterizationState);
+
+        // blend state
+        D3D11_BLEND_DESC blendDesc = CD3D11_BLEND_DESC{ CD3D11_DEFAULT{} };
+        auto& brt = blendDesc.RenderTarget[0];
+        brt.BlendEnable = TRUE;
+        brt.SrcBlend = D3D11_BLEND_SRC_ALPHA;
+        brt.DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
+        GContext->graphics.device->CreateBlendState(&blendDesc, &pipeline.blendState);
+
+        // sampler
+        D3D11_SAMPLER_DESC samplerDesc{};
+        samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_BORDER;
+        samplerDesc.AddressV = samplerDesc.AddressU;
+        samplerDesc.AddressW = samplerDesc.AddressU;
+        samplerDesc.BorderColor[0] = 0.0f;
+        samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+        samplerDesc.MaxAnisotropy = D3D11_REQ_MAXANISOTROPY;
+
+        ID3D11SamplerState* sampler = nullptr;
+        GContext->graphics.device->CreateSamplerState(&samplerDesc, &sampler);
+
+        register_asset(&am, "skybox_pipeline", pipeline);
+        register_asset(&am, "skybox_sampler", sampler);
+        register_asset(&am, "skybox_ibuffer", indexBuffer);
+        register_asset(&am, "skybox_vbuffer", vertexBuffer);
+    }
 }
 
 void
@@ -224,15 +302,15 @@ render_mesh(mvAssetManager& am, mvMesh& mesh, mvMat4 transform, mvMat4 cam, mvMa
 
         // pipeline
         set_pipeline_state(pipeline);
-        device->PSSetSamplers(0, 1, material->colorSampler.state.GetAddressOf());
+        device->PSSetSamplers(0, 1, &material->colorSampler);
 
         // maps
         ID3D11ShaderResourceView* const pSRV[1] = { NULL };
-        device->PSSetShaderResources(0, 1, albedoMap ? albedoMap->textureView.GetAddressOf() : pSRV);
-        device->PSSetShaderResources(1, 1, normMap ? normMap->textureView.GetAddressOf() : pSRV);
-        device->PSSetShaderResources(2, 1, metalRoughMap ? metalRoughMap->textureView.GetAddressOf() : pSRV);
-        device->PSSetShaderResources(3, 1, emissiveMap ? emissiveMap->textureView.GetAddressOf() : pSRV);
-        device->PSSetShaderResources(4, 1, occlussionMap ? occlussionMap->textureView.GetAddressOf() : pSRV);
+        device->PSSetShaderResources(0, 1, albedoMap ? &albedoMap->textureView : pSRV);
+        device->PSSetShaderResources(1, 1, normMap ? &normMap->textureView : pSRV);
+        device->PSSetShaderResources(2, 1, metalRoughMap ? &metalRoughMap->textureView : pSRV);
+        device->PSSetShaderResources(3, 1, emissiveMap ? &emissiveMap->textureView : pSRV);
+        device->PSSetShaderResources(4, 1, occlussionMap ? &occlussionMap->textureView : pSRV);
 
         update_const_buffer(material->buffer, &material->data);
         device->PSSetConstantBuffers(1u, 1u, &material->buffer.buffer);
@@ -355,11 +433,11 @@ render_mesh_shadow(mvAssetManager& am, mvMesh& mesh, mvMat4 transform, mvMat4 ca
         device->HSSetShader(nullptr, nullptr, 0);
         device->DSSetShader(nullptr, nullptr, 0);
         device->GSSetShader(nullptr, nullptr, 0);
-        device->PSSetSamplers(0, 1, material->colorSampler.state.GetAddressOf());
+        device->PSSetSamplers(0, 1, &material->colorSampler);
 
         // material
         ID3D11ShaderResourceView* const pSRV[1] = { NULL };
-        device->PSSetShaderResources(0, 1, albedoMap ? albedoMap->textureView.GetAddressOf() : pSRV);
+        device->PSSetShaderResources(0, 1, albedoMap ? &albedoMap->textureView : pSRV);
 
         update_const_buffer(material->buffer, &material->data);
         GContext->graphics.imDeviceContext->PSSetConstantBuffers(1u, 1u, &material->buffer.buffer);
@@ -453,6 +531,43 @@ render_scene_shadows(mvAssetManager& am, mvScene& scene, mvMat4 cam, mvMat4 proj
             mvRenderNodeShadows(am, am.nodes[rootNode.children[j]].asset, trans *rootNode.matrix * scale, cam, proj);
         }
     }
+}
+
+void 
+render_skybox(mvAssetManager& am, mvCubeTexture& cubemap, ID3D11SamplerState* sampler, mvMat4 cam, mvMat4 proj)
+{
+
+    static mvAssetID pipelineID = mvGetPipelineAssetID(&am, "skybox_pipeline");
+    static mvAssetID indexBufferID = mvGetBufferAssetID(&am, "skybox_ibuffer", nullptr, 0u, D3D11_BIND_INDEX_BUFFER);
+    static mvAssetID vertexBufferID = mvGetBufferAssetID(&am, "skybox_vbuffer", nullptr, 0u, D3D11_BIND_VERTEX_BUFFER);
+    static mvVertexLayout vertexLayout = create_vertex_layout({ mvVertexElement::Position3D });
+
+    auto ctx = GContext->graphics.imDeviceContext;
+
+    ctx->PSSetSamplers(0, 1, &sampler);
+    ctx->PSSetShaderResources(0, 1, &cubemap.textureView);
+
+    // pipeline
+    set_pipeline_state(am.pipelines[pipelineID].asset);
+
+    mvTransforms transforms{};
+    transforms.model = identity_mat4() * scale(identity_mat4(), mvVec3{ 1.0f, 1.0f, -1.0f });
+    transforms.modelView = cam * transforms.model;
+    transforms.modelViewProjection = proj * cam * transforms.model;
+
+    D3D11_MAPPED_SUBRESOURCE mappedSubresource;
+    ctx->Map(GContext->graphics.tranformCBuf.Get(), 0u, D3D11_MAP_WRITE_DISCARD, 0u, &mappedSubresource);
+    memcpy(mappedSubresource.pData, &transforms, sizeof(mvTransforms));
+    ctx->Unmap(GContext->graphics.tranformCBuf.Get(), 0u);
+
+    // mesh
+    static const UINT offset = 0u;
+    ctx->VSSetConstantBuffers(0u, 1u, GContext->graphics.tranformCBuf.GetAddressOf());
+    ctx->IASetIndexBuffer(am.buffers[indexBufferID].asset.buffer, DXGI_FORMAT_R32_UINT, 0u);
+    ctx->IASetVertexBuffers(0u, 1u, &am.buffers[vertexBufferID].asset.buffer, &vertexLayout.size, &offset);
+
+    // draw
+    ctx->DrawIndexed(am.buffers[indexBufferID].asset.size / sizeof(u32), 0u, 0u);
 }
 
 }

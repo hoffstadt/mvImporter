@@ -1,5 +1,6 @@
 
 #define M_PI 3.1415926535897932384626433832795
+#define M_THREAD_SIZE 16
 
 cbuffer MetaData : register(b0)
 {
@@ -436,12 +437,12 @@ void writeFace(int pixel, int face, float3 colorIn)
         FaceOut_5[pixel] = color;
 } 
 
-[numthreads(16, 16, 3)]
+[numthreads(M_THREAD_SIZE, M_THREAD_SIZE, 3)]
 void main(uint3 groupID : SV_GroupID, uint3 threadID : SV_GroupThreadID)
 {
  
-    const float xcoord = groupID.x * 16 + threadID.x;
-    const float ycoord = groupID.y * 16 + threadID.y;
+    const float xcoord = groupID.x * M_THREAD_SIZE + threadID.x;
+    const float ycoord = groupID.y * M_THREAD_SIZE + threadID.y;
     const int face = groupID.z * 3 + threadID.z;
     const float xinc = 1.0f / (float) resolution;
     const float yinc = 1.0f / (float) resolution;

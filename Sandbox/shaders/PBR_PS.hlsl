@@ -110,6 +110,7 @@ SamplerState           Sampler            : register(s0);
 SamplerComparisonState DShadowSampler     : register(s1);
 SamplerComparisonState OShadowSampler     : register(s2);
 SamplerState           EnvironmentSampler : register(s3);
+SamplerState           BRDFSampler        : register(s4);
 
 //-----------------------------------------------------------------------------
 // constant buffers
@@ -240,7 +241,7 @@ float3 getDiffuseLight(float3 n)
 {
     n.x = -n.x;
     //n.z = -n.z;
-    float3 color = IrradianceMap.Sample(Sampler, n).rgb;
+    float3 color = IrradianceMap.Sample(EnvironmentSampler, n).rgb;
     color = pow(abs(color), float3(0.4545.xxx));
     return color;
 }
@@ -249,7 +250,7 @@ float4 getSpecularSample(float3 reflection, float lod)
 {
     reflection.x = -reflection.x;
     //reflection.z = -reflection.z;
-    float4 color = SpecularMap.SampleLevel(Sampler, reflection, lod);
+    float4 color = SpecularMap.SampleLevel(EnvironmentSampler, reflection, lod);
     //color = pow(abs(color), float4(0.4545.xxxx));
     return color;
 }
@@ -258,7 +259,7 @@ float3 getIBLRadianceLambertian(float3 n, float3 v, float roughness, float3 diff
 {
     float NdotV = clampedDot(n, v);
     float2 brdfSamplePoint = clamp(float2(NdotV, roughness), float2(0.0, 0.0), float2(1.0, 1.0));
-    float2 f_ab = u_GGXLUT.Sample(EnvironmentSampler, brdfSamplePoint).rg;
+    float2 f_ab = u_GGXLUT.Sample(BRDFSampler, brdfSamplePoint).rg;
     //f_ab = pow(f_ab, float2(0.4545.xx));
     float3 irradiance = getDiffuseLight(n);
 
@@ -285,7 +286,7 @@ float3 getIBLRadianceGGX(float3 n, float3 v, float roughness, float3 F0, float s
     float3 reflection = normalize(reflect(-v, n));
 
     float2 brdfSamplePoint = clamp(float2(NdotV, roughness), float2(0.0, 0.0), float2(1.0, 1.0));
-    float2 f_ab = u_GGXLUT.Sample(EnvironmentSampler, brdfSamplePoint).rg;
+    float2 f_ab = u_GGXLUT.Sample(BRDFSampler, brdfSamplePoint).rg;
     //f_ab = pow(f_ab, float2(0.4545.xx));
     float4 specularSample = getSpecularSample(reflection, lod);
 
