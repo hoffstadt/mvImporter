@@ -106,11 +106,17 @@ Texture2D   u_GGXLUT             : register(t9);
 //-----------------------------------------------------------------------------
 // samplers
 //-----------------------------------------------------------------------------
-SamplerState           Sampler            : register(s0);
-SamplerComparisonState DShadowSampler     : register(s1);
-SamplerComparisonState OShadowSampler     : register(s2);
-SamplerState           EnvironmentSampler : register(s3);
-SamplerState           BRDFSampler        : register(s4);
+SamplerState           AlbedoTextureSampler         : register(s0);
+SamplerState           NormalTextureSampler         : register(s1);
+SamplerState           MetalRoughnessTextureSampler : register(s2);
+SamplerState           EmmissiveTextureSampler      : register(s3);
+SamplerState           OcclusionTextureSampler      : register(s4);
+SamplerComparisonState DirectionalShadowMapSampler  : register(s5);
+SamplerComparisonState ShadowMapSampler             : register(s6);
+SamplerState           IrradianceMapSampler         : register(s7);
+SamplerState           SpecularMapSampler           : register(s8);
+SamplerState           u_GGXLUTSampler              : register(s9);
+
 
 //-----------------------------------------------------------------------------
 // constant buffers
@@ -174,7 +180,7 @@ NormalInfo getNormalInfo(VSOut input)
     if (material.useNormalMap && ginfo.useNormalMap)
     {
         
-        normalInfo.ntex = NormalTexture.Sample(Sampler, input.UV).xyz * 2.0 - 1.0;
+        normalInfo.ntex = NormalTexture.Sample(NormalTextureSampler, input.UV).xyz * 2.0 - 1.0;
         normalInfo.ntex.y = -normalInfo.ntex.y;
         //float u_NormalScale = -1.0;
         //normalInfo.ntex *= float3(u_NormalScale, u_NormalScale, 1.0);
@@ -230,7 +236,7 @@ float filterPCF(const in float2 spos, float depthCheck)
         [loop]
         for (int y = -ginfo.pcfRange; y <= ginfo.pcfRange; y++)
         {
-            shadowLevel += DirectionalShadowMap.SampleCmpLevelZero(DShadowSampler, float2(spos.x + dx * x, spos.y + dy * y), depthCheck);
+            shadowLevel += DirectionalShadowMap.SampleCmpLevelZero(DirectionalShadowMapSampler, float2(spos.x + dx * x, spos.y + dy * y), depthCheck);
             count++;
         }
     }
@@ -241,7 +247,7 @@ float3 getDiffuseLight(float3 n)
 {
     n.x = -n.x;
     //n.z = -n.z;
-    float3 color = IrradianceMap.Sample(EnvironmentSampler, n).rgb;
+    float3 color = IrradianceMap.Sample(IrradianceMapSampler, n).rgb;
     color = pow(abs(color), float3(0.4545.xxx));
     return color;
 }
@@ -250,7 +256,7 @@ float4 getSpecularSample(float3 reflection, float lod)
 {
     reflection.x = -reflection.x;
     //reflection.z = -reflection.z;
-    float4 color = SpecularMap.SampleLevel(EnvironmentSampler, reflection, lod);
+    float4 color = SpecularMap.SampleLevel(SpecularMapSampler, reflection, lod);
     //color = pow(abs(color), float4(0.4545.xxxx));
     return color;
 }
@@ -259,7 +265,7 @@ float3 getIBLRadianceLambertian(float3 n, float3 v, float roughness, float3 diff
 {
     float NdotV = clampedDot(n, v);
     float2 brdfSamplePoint = clamp(float2(NdotV, roughness), float2(0.0, 0.0), float2(1.0, 1.0));
-    float2 f_ab = u_GGXLUT.Sample(BRDFSampler, brdfSamplePoint).rg;
+    float2 f_ab = u_GGXLUT.Sample(u_GGXLUTSampler, brdfSamplePoint).rg;
     //f_ab = pow(f_ab, float2(0.4545.xx));
     float3 irradiance = getDiffuseLight(n);
 
@@ -286,7 +292,7 @@ float3 getIBLRadianceGGX(float3 n, float3 v, float roughness, float3 F0, float s
     float3 reflection = normalize(reflect(-v, n));
 
     float2 brdfSamplePoint = clamp(float2(NdotV, roughness), float2(0.0, 0.0), float2(1.0, 1.0));
-    float2 f_ab = u_GGXLUT.Sample(BRDFSampler, brdfSamplePoint).rg;
+    float2 f_ab = u_GGXLUT.Sample(u_GGXLUTSampler, brdfSamplePoint).rg;
     //f_ab = pow(f_ab, float2(0.4545.xx));
     float4 specularSample = getSpecularSample(reflection, lod);
 
@@ -419,7 +425,7 @@ float4 main(VSOut input) : SV_Target
     // Apply optional PBR terms for additional (optional) shading
     if (material.useOcclusionMap && ginfo.useOcclusionMap)
     {
-        ao = OcclusionTexture.Sample(Sampler, input.UV).r;
+        ao = OcclusionTexture.Sample(OcclusionTextureSampler, input.UV).r;
         
         f_diffuse = lerp(f_diffuse, f_diffuse * ao, material.occlusionStrength);
         // apply ambient occlusion to all lighting that is not punctual
@@ -438,7 +444,7 @@ float4 main(VSOut input) : SV_Target
         float shadowLevel = 1.0f;
         float3 pointToLight = PointLight.viewLightPos - input.WorldPos;
         if(ginfo.useOmniShadows)
-            shadowLevel = Shadow(input.oshadowWorldPos, ShadowMap, OShadowSampler);
+            shadowLevel = Shadow(input.oshadowWorldPos, ShadowMap, ShadowMapSampler);
         
         // BSTF
         float3 l = normalize(pointToLight); // Direction from surface point to light
@@ -529,7 +535,7 @@ float4 main(VSOut input) : SV_Target
                 }
                 else
                 {
-                    shadowLevel = DirectionalShadowMap.SampleCmpLevelZero(DShadowSampler, projectTexCoord, lightDepthValue);
+                    shadowLevel = DirectionalShadowMap.SampleCmpLevelZero(DirectionalShadowMapSampler, projectTexCoord, lightDepthValue);
                 }
             }
                 
@@ -574,7 +580,7 @@ float4 main(VSOut input) : SV_Target
     f_emissive = material.emisiveFactor;
     if (material.useEmissiveMap && ginfo.useEmissiveMap)
     {
-        f_emissive *= pow(abs(EmmissiveTexture.Sample(Sampler, input.UV).rgb), float3(2.2, 2.2, 2.2));
+        f_emissive *= pow(abs(EmmissiveTexture.Sample(EmmissiveTextureSampler, input.UV).rgb), float3(2.2, 2.2, 2.2));
     }
     else if (material.useEmissiveMap)
     {

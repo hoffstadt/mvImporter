@@ -7,7 +7,6 @@
 
 struct mvTexture;
 struct mvCubeTexture;
-struct mvPBRTextures;
 
 mvTexture     create_texture     (const std::string& path);
 mvTexture     create_texture     (std::vector<unsigned char> data);
@@ -18,17 +17,13 @@ struct mvTexture
     ID3D11Texture2D*          texture     = nullptr;
     ID3D11ShaderResourceView* textureView = nullptr;
     b8                        alpha       = false;
+    ID3D11SamplerState*       sampler     = nullptr;
 };
 
 struct mvCubeTexture
 {
     ID3D11Texture2D*          texture     = nullptr;
     ID3D11ShaderResourceView* textureView = nullptr;
-};
-
-struct mvPBRTextures
-{
-    mvCubeTexture specular;
-    mvTexture lut;
+    //ID3D11SamplerState*       sampler     = nullptr;
 };
 

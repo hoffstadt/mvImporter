@@ -64,11 +64,6 @@ mvCleanupAssetManager(mvAssetManager* manager)
 		if (!manager->freematerials[i])
 		{
 			manager->materials[i].asset.buffer.buffer->Release();
-			if (manager->materials[i].asset.colorSampler)
-			{
-				manager->materials[i].asset.colorSampler->Release();
-				manager->materials[i].asset.colorSampler = nullptr;
-			}
 		}
 	}
 
@@ -119,6 +114,12 @@ mvCleanupAssetManager(mvAssetManager* manager)
 		if (manager->textures[i].asset.texture)
 		{
 			manager->textures[i].asset.texture->Release();
+
+			if (manager->textures[i].asset.sampler)
+			{
+				manager->textures[i].asset.sampler->Release();
+				manager->textures[i].asset.sampler = nullptr;
+			}
 		}
 
 		if (manager->textures[i].asset.textureView)
@@ -438,6 +439,12 @@ unregister_texture_asset(mvAssetManager* manager, mvAssetID asset)
 		{
 			manager->textures[asset].asset.texture->Release();
 			manager->textures[asset].asset.textureView->Release();
+
+			if (manager->textures[asset].asset.sampler)
+			{
+				manager->textures[asset].asset.sampler->Release();
+				manager->textures[asset].asset.sampler = nullptr;
+			}
 		}
 		return true;
 	}
@@ -657,11 +664,6 @@ unregister_material_asset(mvAssetManager* manager, mvAssetID asset)
 		manager->materialCount--;
 		manager->materials[asset].hash.clear();
 		manager->materials[asset].asset.buffer.buffer->Release();
-		if (manager->materials[asset].asset.colorSampler)
-		{
-			manager->materials[asset].asset.colorSampler->Release();
-			manager->materials[asset].asset.colorSampler = nullptr;
-		}
 		return true;
 	}
 	return false;

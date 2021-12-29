@@ -302,7 +302,12 @@ render_mesh(mvAssetManager& am, mvMesh& mesh, mvMat4 transform, mvMat4 cam, mvMa
 
         // pipeline
         set_pipeline_state(pipeline);
-        device->PSSetSamplers(0, 1, &material->colorSampler);
+        static ID3D11SamplerState* emptySamplers = nullptr;
+        device->PSSetSamplers(0, 1, albedoMap ? &albedoMap->sampler : &emptySamplers);
+        device->PSSetSamplers(1, 1, normMap ? &normMap->sampler : &emptySamplers);
+        device->PSSetSamplers(2, 1, metalRoughMap ? &metalRoughMap->sampler : &emptySamplers);
+        device->PSSetSamplers(3, 1, metalRoughMap ? &metalRoughMap->sampler : &emptySamplers);
+        device->PSSetSamplers(4, 1, occlussionMap ? &occlussionMap->sampler : &emptySamplers);
 
         // maps
         ID3D11ShaderResourceView* const pSRV[1] = { NULL };
@@ -433,7 +438,8 @@ render_mesh_shadow(mvAssetManager& am, mvMesh& mesh, mvMat4 transform, mvMat4 ca
         device->HSSetShader(nullptr, nullptr, 0);
         device->DSSetShader(nullptr, nullptr, 0);
         device->GSSetShader(nullptr, nullptr, 0);
-        device->PSSetSamplers(0, 1, &material->colorSampler);
+        static ID3D11SamplerState* emptySamplers = nullptr;
+        device->PSSetSamplers(0, 1, albedoMap ? &albedoMap->sampler : &emptySamplers);
 
         // material
         ID3D11ShaderResourceView* const pSRV[1] = { NULL };

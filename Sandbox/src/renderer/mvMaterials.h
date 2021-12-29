@@ -48,6 +48,5 @@ struct mvMaterial
 {
     mvConstBuffer       buffer;
     mvMaterialData      data;
-    mvAssetID           pipeline;
-    ID3D11SamplerState* colorSampler;
+    mvAssetID           pipeline;  
 };

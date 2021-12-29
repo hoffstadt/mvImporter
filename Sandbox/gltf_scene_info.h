@@ -220,7 +220,7 @@ static const char* gltf_names[] = {
 static const char* env_maps[] = {
     "none",
     "Cannon_Exterior",
-    "Cannon_Studio",
+    "Colorful_Studio",
     "chromatic",
     "directional",
     "doge2",

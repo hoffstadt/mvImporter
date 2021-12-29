@@ -71,7 +71,7 @@ int main()
     int activeEnv = -1;
     int envMapIndex = 8;
     int envCacheIndex = 0;
-    bool blur = false;
+    bool blur = true;
     while (true)
     {
         const auto dt = timer.mark() * 1.0f;
@@ -293,13 +293,14 @@ int main()
         ctx->PSSetConstantBuffers(3u, 1u, &globalInfoBuffer.buffer);
 
         // samplers
-        ctx->PSSetSamplers(1u, 1, &directionalShadowMap.sampler);
-        ctx->PSSetSamplers(2u, 1, &omniShadowMap.sampler);
+        ctx->PSSetSamplers(5u, 1, &directionalShadowMap.sampler);
+        ctx->PSSetSamplers(6u, 1, &omniShadowMap.sampler);
 
         if (activeEnv > -1)
         {
-            ctx->PSSetSamplers(3u, 1, &cachedEnvironments[activeEnv].sampler);
-            ctx->PSSetSamplers(4u, 1, &cachedEnvironments[activeEnv].brdfSampler);
+            ctx->PSSetSamplers(7u, 1, &cachedEnvironments[activeEnv].sampler);
+            ctx->PSSetSamplers(8u, 1, &cachedEnvironments[activeEnv].sampler);
+            ctx->PSSetSamplers(9u, 1, &cachedEnvironments[activeEnv].brdfSampler);
         }
 
         // textures
