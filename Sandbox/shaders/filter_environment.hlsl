@@ -420,7 +420,7 @@ void writeFace(int pixel, int face, float3 colorIn)
 {
     float4 color = float4(colorIn.rgb, 1.0f);
     
-    //color = pow(abs(color), float4(2.2.xxx, 1.0f));
+    color = pow(abs(color), float4(2.2.xxx, 1.0f));
 
     if (face == 0)
         FaceOut_0[pixel] = color;

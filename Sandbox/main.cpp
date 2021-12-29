@@ -154,7 +154,7 @@ int main()
                 globalInfo.useSkybox = true;
                 skybox.cubeTexture = create_cube_map(newMap);
                 skybox.filtedCubeTexture = create_irradiance_map(skybox.cubeTexture, 1024, 1024, 0.0f);
-                mvPBRTextures pbrtextures = create_specular_map(skybox.cubeTexture, 2048, 1024, 0.2f);
+                mvPBRTextures pbrtextures = create_specular_map(skybox.cubeTexture, 2048, 1024, 1.0f);
                 skybox.specfiltedCubeTexture = pbrtextures.specular;
                 skybox.lut = pbrtextures.lut;
             }

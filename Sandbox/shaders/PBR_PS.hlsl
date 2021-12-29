@@ -241,7 +241,7 @@ float3 getDiffuseLight(float3 n)
     n.x = -n.x;
     n.z = -n.z;
     float3 color = IrradianceMap.Sample(Sampler, n).rgb;
-    //color = pow(abs(color), float3(0.4545.xxx));
+    color = pow(abs(color), float3(0.4545.xxx));
     return color;
 }
 
@@ -258,7 +258,7 @@ float3 getIBLRadianceLambertian(float3 n, float3 v, float roughness, float3 diff
 {
     float NdotV = clampedDot(n, v);
     float2 brdfSamplePoint = clamp(float2(NdotV, roughness), float2(0.0, 0.0), float2(1.0, 1.0));
-    float2 f_ab = u_GGXLUT.Sample(Sampler, brdfSamplePoint).rg;
+    float2 f_ab = u_GGXLUT.Sample(EnvironmentSampler, brdfSamplePoint).rg;
     //f_ab = pow(f_ab, float2(0.4545.xx));
     float3 irradiance = getDiffuseLight(n);
 
@@ -285,7 +285,7 @@ float3 getIBLRadianceGGX(float3 n, float3 v, float roughness, float3 F0, float s
     float3 reflection = normalize(reflect(-v, n));
 
     float2 brdfSamplePoint = clamp(float2(NdotV, roughness), float2(0.0, 0.0), float2(1.0, 1.0));
-    float2 f_ab = u_GGXLUT.Sample(Sampler, brdfSamplePoint).rg;
+    float2 f_ab = u_GGXLUT.Sample(EnvironmentSampler, brdfSamplePoint).rg;
     //f_ab = pow(f_ab, float2(0.4545.xx));
     float4 specularSample = getSpecularSample(reflection, lod);
 
