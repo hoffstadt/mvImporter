@@ -139,8 +139,8 @@ int main()
 
             if (skybox.lut.textureView)
             {
-                skybox.lut.texture->Release();
-                skybox.lut.textureView->Release();
+                //skybox.lut.texture->Release();
+                //skybox.lut.textureView->Release();
                 skybox.lut.textureView = nullptr;
                 skybox.lut.texture = nullptr;
             }
@@ -154,7 +154,7 @@ int main()
                 globalInfo.useSkybox = true;
                 skybox.cubeTexture = create_cube_map(newMap);
                 skybox.filtedCubeTexture = create_irradiance_map(skybox.cubeTexture, 1024, 1024, 0.0f);
-                mvPBRTextures pbrtextures = create_specular_map(skybox.cubeTexture, 2048, 1024, 1.0f);
+                mvPBRTextures pbrtextures = create_specular_map(skybox.cubeTexture, 1024, 1024, 1.0f);
                 skybox.specfiltedCubeTexture = pbrtextures.specular;
                 skybox.lut = pbrtextures.lut;
             }
@@ -452,8 +452,6 @@ int main()
                 changeScene = true;
             }
 
-
-
             ImGui::Dummy(ImVec2(50.0f, 25.0f));
             ImGui::Text("%s", "Directional Light:");
             bool directionalCameraChange = false;
@@ -544,6 +542,14 @@ int main()
         skybox.specfiltedCubeTexture.textureView->Release();
         skybox.specfiltedCubeTexture.textureView = nullptr;
         skybox.specfiltedCubeTexture.texture = nullptr;
+    }
+
+    if (skybox.lut.textureView)
+    {
+        //skybox.lut.texture->Release();
+        //skybox.lut.textureView->Release();
+        skybox.lut.textureView = nullptr;
+        skybox.lut.texture = nullptr;
     }
 
     // Cleanup

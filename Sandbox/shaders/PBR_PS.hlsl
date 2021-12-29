@@ -239,7 +239,7 @@ float filterPCF(const in float2 spos, float depthCheck)
 float3 getDiffuseLight(float3 n)
 {
     n.x = -n.x;
-    n.z = -n.z;
+    //n.z = -n.z;
     float3 color = IrradianceMap.Sample(Sampler, n).rgb;
     color = pow(abs(color), float3(0.4545.xxx));
     return color;
@@ -248,7 +248,7 @@ float3 getDiffuseLight(float3 n)
 float4 getSpecularSample(float3 reflection, float lod)
 {
     reflection.x = -reflection.x;
-    reflection.z = -reflection.z;
+    //reflection.z = -reflection.z;
     float4 color = SpecularMap.SampleLevel(Sampler, reflection, lod);
     //color = pow(abs(color), float4(0.4545.xxxx));
     return color;

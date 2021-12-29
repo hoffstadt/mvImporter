@@ -92,6 +92,7 @@ create_skybox(mvAssetManager& am)
 
     register_asset(&am, "skybox_pipeline", skybox.pipeline);
     register_asset(&am, "skybox_sampler", mvSampler{ skybox.cubeSampler });
+    register_asset(&am, "skybox_sampler", mvSampler{ skybox.envSampler });
     register_asset(&am, "skybox_ibuffer", skybox.indexBuffer);
     register_asset(&am, "skybox_vbuffer", skybox.vertexBuffer);
 
