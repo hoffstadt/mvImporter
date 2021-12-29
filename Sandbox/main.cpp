@@ -3,7 +3,7 @@
 #include <imgui_impl_win32.h>
 #include <imgui_impl_dx11.h>
 #include "mvLights.h"
-#include "mvSkybox.h"
+#include "mvEnvironment.h"
 #include "mvShadows.h"
 #include "mvOffscreenPass.h"
 #include "mvRenderer.h"
@@ -11,9 +11,9 @@
 #include "mvTimer.h"
 #include "gltf_scene_info.h"
 
-
 // TODO: make most of these runtime options
 #define MODEL_CACHE_SIZE 5
+#define ENV_CACHE_SIZE 3
 static f32         shadowWidth = 95.0f;
 static int         initialWidth = 1850;
 static int         initialHeight = 900;
@@ -53,7 +53,6 @@ int main()
     mvOffscreenPass offscreen = mvOffscreenPass(500.0f, 500.0f);
     mvDirectionalShadowPass directionalShadowMap = mvDirectionalShadowPass(am, 4096, shadowWidth);
     mvOmniShadowPass omniShadowMap = mvOmniShadowPass(am, 2048);
-    mvSkybox skybox = create_skybox(am);
     
     omniShadowMap.info.view = create_lookat_view(pointlight.camera);
 
@@ -62,13 +61,17 @@ int main()
     register_asset(&am, "global_constant_buffer", globalInfoBuffer);
 
     mvTimer timer;
-    mvTimer timer2;
+    mvEnvironment cachedEnvironments[ENV_CACHE_SIZE];
+    int cachedEnvironmentsID[ENV_CACHE_SIZE];
     int cacheModel[MODEL_CACHE_SIZE] = { -1, -1, -1 };
     mvAssetID cacheScenes[MODEL_CACHE_SIZE] = { -1, -1, -1 };
     int cacheIndex = 0;
     int activeScene = -1;
     int modelIndex = 0;
-    int envMapIndex = 0;
+    int activeEnv = -1;
+    int envMapIndex = 8;
+    int envCacheIndex = 0;
+    bool blur = true;
     while (true)
     {
         const auto dt = timer.mark() * 1.0f;
@@ -109,16 +112,9 @@ int main()
         }
 
 
-        static bool recreateSkybox = false;
-        if (recreateSkybox)
-        {
-            std::string newMap = "../../data/glTF-Sample-Environments/" + std::string(env_maps[envMapIndex]) + ".hdr";
-            if (skybox.cubeTexture.textureView)
-            {
-                skybox.cubeTexture.textureView->Release();
-                skybox.cubeTexture.textureView = nullptr;
-            }
-
+        static bool recreateEnvironment = true;
+        if (recreateEnvironment)
+        {            
             if (envMapIndex == 0)
             {
                 globalInfo.useSkybox = false;
@@ -126,10 +122,31 @@ int main()
             else
             {
                 globalInfo.useSkybox = true;
-                skybox.cubeTexture = create_environment_map(newMap, true);
+
+                b8 cacheFound = false;
+                for (int i = 0; i < ENV_CACHE_SIZE; i++)
+                {
+                    if (cachedEnvironmentsID[i] == envMapIndex)
+                    {
+                        activeEnv = i;
+                        cacheFound = true;
+                        break;
+                    }
+                }
+
+                if (!cacheFound)
+                {
+                    std::string newMap = "../../data/glTF-Sample-Environments/" + std::string(env_maps[envMapIndex]) + ".hdr";
+                    cleanup_environment(cachedEnvironments[envCacheIndex]);
+                    cachedEnvironments[envCacheIndex] = create_environment(newMap, 1024, 1024, 1.0f, 7);
+                    cachedEnvironmentsID[envCacheIndex] = envMapIndex;
+                    activeEnv = envCacheIndex;
+                    envCacheIndex++;
+                    if (envCacheIndex == ENV_CACHE_SIZE) envCacheIndex = 0;
+                }
             }
 
-            recreateSkybox = false;
+            recreateEnvironment = false;
         }
 
         static bool changeScene = false;
@@ -248,7 +265,7 @@ int main()
         }
 
         //-----------------------------------------------------------------------------
-        // offscreen pass
+        // main pass
         //-----------------------------------------------------------------------------
         ctx->OMSetRenderTargets(1, &offscreen.targetView, offscreen.depthView);
         ctx->RSSetViewports(1u, &offscreen.viewport);
@@ -276,24 +293,43 @@ int main()
         ctx->PSSetConstantBuffers(3u, 1u, &globalInfoBuffer.buffer);
 
         // samplers
-        ctx->PSSetSamplers(1u, 1, &directionalShadowMap.sampler);
-        ctx->PSSetSamplers(2u, 1, &omniShadowMap.sampler);
-        ctx->PSSetSamplers(3u, 1, &skybox.cubeSampler);
+        ctx->PSSetSamplers(5u, 1, &directionalShadowMap.sampler);
+        ctx->PSSetSamplers(6u, 1, &omniShadowMap.sampler);
+
+        if (activeEnv > -1)
+        {
+            ctx->PSSetSamplers(7u, 1, &cachedEnvironments[activeEnv].sampler);
+            ctx->PSSetSamplers(8u, 1, &cachedEnvironments[activeEnv].sampler);
+            ctx->PSSetSamplers(9u, 1, &cachedEnvironments[activeEnv].brdfSampler);
+        }
 
         // textures
         ctx->PSSetShaderResources(5u, 1, &directionalShadowMap.resourceView);
         ctx->PSSetShaderResources(6u, 1, &omniShadowMap.resourceView);
-        ctx->PSSetShaderResources(7u, 1, &skybox.cubeTexture.textureView);
+
+        if (activeEnv > -1)
+        {
+            ctx->PSSetShaderResources(7u, 1, &cachedEnvironments[activeEnv].irradianceMap.textureView);
+            ctx->PSSetShaderResources(8u, 1, &cachedEnvironments[activeEnv].specularMap.textureView);
+        }
+
+        if (activeEnv > -1)
+        {
+            ctx->PSSetShaderResources(9u, 1, &cachedEnvironments[activeEnv].brdfLUT.textureView);
+        }
 
         Renderer::render_mesh_solid(am, pointlight.mesh, translate(identity_mat4(), pointlight.camera.pos), viewMatrix, projMatrix);
 
         if (activeScene > -1)
             Renderer::render_scene(am, am.scenes[activeScene].asset, viewMatrix, projMatrix, stransform0, ttransform0);
 
-        if (globalInfo.useSkybox) render_skybox(skybox, viewMatrix, projMatrix);
+        if (globalInfo.useSkybox && activeEnv > -1)
+        {
+            Renderer::render_skybox(am, blur ? cachedEnvironments[activeEnv].specularMap : cachedEnvironments[activeEnv].skyMap, cachedEnvironments[activeEnv].sampler, viewMatrix, projMatrix);
+        }
 
         //-----------------------------------------------------------------------------
-        // main pass
+        // ui pass
         //-----------------------------------------------------------------------------
         ctx->OMSetRenderTargets(1, GContext->graphics.target.GetAddressOf(), *GContext->graphics.targetDepth.GetAddressOf());
         ctx->RSSetViewports(1u, &GContext->graphics.viewport);
@@ -375,6 +411,7 @@ int main()
             ImGui::Checkbox("Use Reflection", (bool*)&globalInfo.useReflection);
             ImGui::Checkbox("Use Emissive", (bool*)&globalInfo.useEmissiveMap);
             ImGui::Checkbox("Use Occlusion", (bool*)&globalInfo.useOcclusionMap);
+            ImGui::Checkbox("Use Punctual Lights", (bool*)&globalInfo.usePunctualLights);
 
             //-----------------------------------------------------------------------------
             // center panel
@@ -400,9 +437,10 @@ int main()
             //-----------------------------------------------------------------------------
             ImGui::TableSetColumnIndex(2);
 
-            if (ImGui::ListBox("Environment##separate", &envMapIndex, env_maps, 11, 11))
+            ImGui::Checkbox("Blur##skybox", &blur);
+            if (ImGui::ListBox("Environment##separate", &envMapIndex, env_maps, 14, 14))
             {
-                recreateSkybox = true;
+                recreateEnvironment = true;
             }
 
             ImGui::Dummy(ImVec2(50.0f, 25.0f));
@@ -412,8 +450,6 @@ int main()
             {
                 changeScene = true;
             }
-
-
 
             ImGui::Dummy(ImVec2(50.0f, 25.0f));
             ImGui::Text("%s", "Directional Light:");
@@ -482,8 +518,9 @@ int main()
     offscreen.cleanup();
     directionalShadowMap.cleanup();
     omniShadowMap.cleanup();
-    if(skybox.cubeTexture.textureView)
-        skybox.cubeTexture.textureView->Release();
+
+    for(int i = 0; i < ENV_CACHE_SIZE; i++)
+        cleanup_environment(cachedEnvironments[i]);
 
     // Cleanup
     mvCleanupAssetManager(&am);

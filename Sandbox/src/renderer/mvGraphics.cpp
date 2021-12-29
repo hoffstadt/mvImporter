@@ -26,7 +26,7 @@ setup_graphics(mvViewport& viewport)
     sd.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD; //DXGI_SWAP_EFFECT_DISCARD;
     sd.Flags = 0;
 
-    UINT creationFlags = D3D11_CREATE_DEVICE_BGRA_SUPPORT;
+    UINT creationFlags = D3D11_CREATE_DEVICE_BGRA_SUPPORT | D3D11_CREATE_DEVICE_DISABLE_GPU_TIMEOUT;
 #ifdef MV_DEBUG
     creationFlags |= D3D11_CREATE_DEVICE_DEBUG;
 #endif // MV_DEBUG

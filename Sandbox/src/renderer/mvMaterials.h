@@ -46,8 +46,7 @@ struct mvMaterialData
 
 struct mvMaterial
 {
-    mvConstBuffer  buffer;
-    mvMaterialData data;
-    mvAssetID      pipeline;
-    mvSampler      colorSampler;
+    mvConstBuffer       buffer;
+    mvMaterialData      data;
+    mvAssetID           pipeline;  
 };

@@ -493,6 +493,54 @@ mvFillBuffer(mvGLTFModel& model, mvGLTFAccessor& accessor, std::vector<W>& outBu
     }
 }
 
+static D3D11_TEXTURE_ADDRESS_MODE
+get_address_mode(mvS32 address)
+{
+    //return D3D11_TEXTURE_ADDRESS_WRAP;
+    switch (address)
+    {
+    case MV_IMP_WRAP_CLAMP_TO_EDGE:   return D3D11_TEXTURE_ADDRESS_CLAMP;
+    case MV_IMP_WRAP_MIRRORED_REPEAT: return D3D11_TEXTURE_ADDRESS_MIRROR_ONCE;
+    case MV_IMP_WRAP_REPEAT:          return D3D11_TEXTURE_ADDRESS_WRAP;
+    default:                          return D3D11_TEXTURE_ADDRESS_WRAP;
+    }
+}
+
+static D3D11_FILTER
+get_filter_mode(mvS32 minFilter, mvS32 magFilter)
+{
+
+    if (magFilter == MV_IMP_FILTER_LINEAR)
+    {
+        switch (minFilter)
+        {
+        
+        case MV_IMP_FILTER_LINEAR_MIPMAP_NEAREST:  return D3D11_FILTER_MIN_MAG_LINEAR_MIP_POINT;
+        case MV_IMP_FILTER_NEAREST_MIPMAP_LINEAR:  return D3D11_FILTER_MIN_POINT_MAG_MIP_LINEAR;
+
+        case MV_IMP_FILTER_LINEAR:
+        case MV_IMP_FILTER_LINEAR_MIPMAP_LINEAR:   return D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+
+        case MV_IMP_FILTER_NEAREST:               
+        case MV_IMP_FILTER_NEAREST_MIPMAP_NEAREST:
+        default:                                   return D3D11_FILTER_MIN_POINT_MAG_LINEAR_MIP_POINT;
+        }
+    }
+    else // MV_IMP_FILTER_NEAREST
+    {
+        switch (minFilter)
+        {
+        case MV_IMP_FILTER_LINEAR_MIPMAP_NEAREST:  return D3D11_FILTER_MIN_LINEAR_MAG_MIP_POINT;
+        case MV_IMP_FILTER_NEAREST_MIPMAP_LINEAR:  return D3D11_FILTER_MIN_MAG_POINT_MIP_LINEAR;
+        case MV_IMP_FILTER_LINEAR:
+        case MV_IMP_FILTER_LINEAR_MIPMAP_LINEAR:   return D3D11_FILTER_MIN_LINEAR_MAG_POINT_MIP_LINEAR;
+        case MV_IMP_FILTER_NEAREST_MIPMAP_NEAREST:
+        case MV_IMP_FILTER_NEAREST:
+        default:                                   return D3D11_FILTER_MIN_MAG_MIP_POINT;
+        }
+    }
+}
+
 mvAssetID
 load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
 {
@@ -804,6 +852,23 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
                     else
                         newMesh.primitives.back().albedoTexture = mvGetTextureAssetID(&assetManager, model.root + uri);
                     materialData.useAlbedoMap = true;
+                    if (texture.sampler_index > -1)
+                    {
+                        mvGLTFSampler& sampler = model.samplers[texture.sampler_index];
+                        mvTexture& newTexture = assetManager.textures[newMesh.primitives.back().albedoTexture].asset;
+
+                        // Create Sampler State
+                        D3D11_SAMPLER_DESC samplerDesc{};
+                        samplerDesc.AddressU = get_address_mode(sampler.wrap_s);
+                        samplerDesc.AddressV = get_address_mode(sampler.wrap_t);
+                        samplerDesc.AddressW = samplerDesc.AddressV;
+                        samplerDesc.Filter = get_filter_mode(sampler.min_filter, sampler.mag_filter);
+                        samplerDesc.BorderColor[0] = 0.0f;
+                        samplerDesc.MaxAnisotropy = D3D11_REQ_MAXANISOTROPY;
+
+                        HRESULT hResult = GContext->graphics.device->CreateSamplerState(&samplerDesc, &newTexture.sampler);
+                        assert(SUCCEEDED(hResult));
+                    }
                 }
 
                 if (material.normal_texture != -1)
@@ -817,6 +882,23 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
                     else
                         newMesh.primitives.back().normalTexture = mvGetTextureAssetID(&assetManager, model.root + uri);
                     materialData.useNormalMap = true;
+                    if (texture.sampler_index > -1)
+                    {
+                        mvGLTFSampler& sampler = model.samplers[texture.sampler_index];
+                        mvTexture& newTexture = assetManager.textures[newMesh.primitives.back().normalTexture].asset;
+
+                        // Create Sampler State
+                        D3D11_SAMPLER_DESC samplerDesc{};
+                        samplerDesc.AddressU = get_address_mode(sampler.wrap_s);
+                        samplerDesc.AddressV = get_address_mode(sampler.wrap_t);
+                        samplerDesc.AddressW = samplerDesc.AddressU;
+                        samplerDesc.Filter = get_filter_mode(sampler.min_filter, sampler.mag_filter);
+                        samplerDesc.BorderColor[0] = 0.0f;
+                        samplerDesc.MaxAnisotropy = D3D11_REQ_MAXANISOTROPY;
+
+                        HRESULT hResult = GContext->graphics.device->CreateSamplerState(&samplerDesc, &newTexture.sampler);
+                        assert(SUCCEEDED(hResult));
+                    }
                 }
 
                 if (material.metallic_roughness_texture != -1)
@@ -831,6 +913,23 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
                         newMesh.primitives.back().metalRoughnessTexture = mvGetTextureAssetID(&assetManager, model.root + uri);
                     materialData.useRoughnessMap = true;
                     materialData.useMetalMap = true;
+                    if (texture.sampler_index > -1)
+                    {
+                        mvGLTFSampler& sampler = model.samplers[texture.sampler_index];
+                        mvTexture& newTexture = assetManager.textures[newMesh.primitives.back().metalRoughnessTexture].asset;
+
+                        // Create Sampler State
+                        D3D11_SAMPLER_DESC samplerDesc{};
+                        samplerDesc.AddressU = get_address_mode(sampler.wrap_s);
+                        samplerDesc.AddressV = get_address_mode(sampler.wrap_t);
+                        samplerDesc.AddressW = samplerDesc.AddressU;
+                        samplerDesc.Filter = get_filter_mode(sampler.min_filter, sampler.mag_filter);
+                        samplerDesc.BorderColor[0] = 0.0f;
+                        samplerDesc.MaxAnisotropy = D3D11_REQ_MAXANISOTROPY;
+
+                        HRESULT hResult = GContext->graphics.device->CreateSamplerState(&samplerDesc, &newTexture.sampler);
+                        assert(SUCCEEDED(hResult));
+                    }
                 }
 
                 if (material.emissive_texture != -1)
@@ -844,6 +943,23 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
                     else
                         newMesh.primitives.back().emissiveTexture = mvGetTextureAssetID(&assetManager, model.root + uri);
                     materialData.useEmissiveMap = true;
+                    if (texture.sampler_index > -1)
+                    {
+                        mvGLTFSampler& sampler = model.samplers[texture.sampler_index];
+                        mvTexture& newTexture = assetManager.textures[newMesh.primitives.back().emissiveTexture].asset;
+
+                        // Create Sampler State
+                        D3D11_SAMPLER_DESC samplerDesc{};
+                        samplerDesc.AddressU = get_address_mode(sampler.wrap_s);
+                        samplerDesc.AddressV = get_address_mode(sampler.wrap_t);
+                        samplerDesc.AddressW = samplerDesc.AddressU;
+                        samplerDesc.Filter = get_filter_mode(sampler.min_filter, sampler.mag_filter);
+                        samplerDesc.BorderColor[0] = 0.0f;
+                        samplerDesc.MaxAnisotropy = D3D11_REQ_MAXANISOTROPY;
+
+                        HRESULT hResult = GContext->graphics.device->CreateSamplerState(&samplerDesc, &newTexture.sampler);
+                        assert(SUCCEEDED(hResult));
+                    }
                 }
 
                 if (material.occlusion_texture != -1)
@@ -857,6 +973,23 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
                     else
                         newMesh.primitives.back().occlusionTexture = mvGetTextureAssetID(&assetManager, model.root + uri);
                     materialData.useOcclusionMap = true;
+                    if (texture.sampler_index > -1)
+                    {
+                        mvGLTFSampler& sampler = model.samplers[texture.sampler_index];
+                        mvTexture& newTexture = assetManager.textures[newMesh.primitives.back().occlusionTexture].asset;
+
+                        // Create Sampler State
+                        D3D11_SAMPLER_DESC samplerDesc{};
+                        samplerDesc.AddressU = get_address_mode(sampler.wrap_s);
+                        samplerDesc.AddressV = get_address_mode(sampler.wrap_t);
+                        samplerDesc.AddressW = samplerDesc.AddressU;
+                        samplerDesc.Filter = get_filter_mode(sampler.min_filter, sampler.mag_filter);
+                        samplerDesc.BorderColor[0] = 0.0f;
+                        samplerDesc.MaxAnisotropy = D3D11_REQ_MAXANISOTROPY;
+
+                        HRESULT hResult = GContext->graphics.device->CreateSamplerState(&samplerDesc, &newTexture.sampler);
+                        assert(SUCCEEDED(hResult));
+                    }
                 }
 
                 std::string hash = std::string("PBR_PS.hlsl") +

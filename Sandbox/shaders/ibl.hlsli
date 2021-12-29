@@ -78,7 +78,8 @@ vec3 getIBLVolumeRefraction(vec3 n, vec3 v, float perceptualRoughness, vec3 base
 #endif
 
 
-// specularWeight is introduced with KHR_materials_specular
+//specularWeight is
+//introduced withKHR_materials_specular
 //float3 getIBLRadianceLambertian(float3 n, float3 v, float roughness, float3 diffuseColor, float3 F0, float specularWeight)
 //{
 //    float NdotV = clampedDot(n, v);

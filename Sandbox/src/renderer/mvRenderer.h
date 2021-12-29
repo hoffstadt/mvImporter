@@ -21,8 +21,8 @@ struct GlobalInfo
     //-------------------------- ( 2*16 = 32 bytes )
 
     b32 useRoughness = true;
-    b32 useIrradiance = false;
-    b32 useReflection = false;
+    b32 useIrradiance = true;
+    b32 useReflection = true;
     b32 useEmissiveMap = true;
     //-------------------------- ( 2*16 = 32 bytes )
 
@@ -36,13 +36,14 @@ struct GlobalInfo
     b32 useNormalMap = true;
     b32 usePCF = false;
     i32 pcfRange = 1;
-    char _pad0[4];
+    b32 usePunctualLights = true;
 };
 
 namespace Renderer
 {
     void mvSetupCommonAssets(mvAssetManager& am);
 
+    void render_skybox(mvAssetManager& am, mvCubeTexture& cubemap, ID3D11SamplerState* sampler, mvMat4 cam, mvMat4 proj);
     void render_mesh(mvAssetManager& am, mvMesh& mesh, mvMat4 transform, mvMat4 cam, mvMat4 proj);
     void render_mesh_solid(mvAssetManager& am, mvMesh& mesh, mvMat4 transform, mvMat4 cam, mvMat4 proj);
     void render_mesh_wireframe(mvAssetManager& am, mvMesh& mesh, mvMat4 transform, mvMat4 cam, mvMat4 proj);

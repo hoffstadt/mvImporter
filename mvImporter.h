@@ -128,6 +128,16 @@ enum mvGLTFComponentType
 	MV_IMP_DOUBLE         = 5130
 };
 
+enum mvGLTFFilter
+{
+	MV_IMP_FILTER_NEAREST                = 9728,
+	MV_IMP_FILTER_LINEAR                 = 9729,
+	MV_IMP_FILTER_NEAREST_MIPMAP_NEAREST = 9984,
+	MV_IMP_FILTER_LINEAR_MIPMAP_NEAREST  = 9985,
+	MV_IMP_FILTER_NEAREST_MIPMAP_LINEAR  = 9986,
+	MV_IMP_FILTER_LINEAR_MIPMAP_LINEAR   = 9987
+};
+
 enum mvGLTFWrapMode
 {
 	MV_IMP_WRAP_CLAMP_TO_EDGE   = 33071,
@@ -170,8 +180,8 @@ struct mvGLTFSampler
 {
 	mvS32 mag_filter = -1;
 	mvS32 min_filter = -1;
-	mvS32 wrap_s     = -1;
-	mvS32 wrap_t     = -1;
+	mvS32 wrap_s     = MV_IMP_WRAP_REPEAT;
+	mvS32 wrap_t     = MV_IMP_WRAP_REPEAT;
 };
 
 struct mvGLTFImage
