@@ -17,16 +17,16 @@ create_texture(std::vector<unsigned char> data)
 	f32 gamma = 1.0f;
 	f32 gamma_scale = 1.0f;
 
-	if (stbi_is_hdr_from_memory(data.data(), data.size()))
-	{
-		stbi_hdr_to_ldr_gamma(gamma);
-		stbi_hdr_to_ldr_scale(gamma_scale);
-	}
-	else
-	{
-		stbi_ldr_to_hdr_gamma(gamma);
-		stbi_ldr_to_hdr_scale(gamma_scale);
-	}
+	//if (stbi_is_hdr_from_memory(data.data(), data.size()))
+	//{
+	//	stbi_hdr_to_ldr_gamma(gamma);
+	//	stbi_hdr_to_ldr_scale(gamma_scale);
+	//}
+	//else
+	//{
+	//	stbi_ldr_to_hdr_gamma(gamma);
+	//	stbi_ldr_to_hdr_scale(gamma_scale);
+	//}
 
 	// Load Image
 	i32 texWidth, texHeight, texNumChannels;
@@ -93,16 +93,16 @@ create_texture(const std::string& path)
 	f32 gamma = 1.0f;
 	f32 gamma_scale = 1.0f;
 
-	if (stbi_is_hdr(path.c_str()))
-	{
-		stbi_hdr_to_ldr_gamma(gamma);
-		stbi_hdr_to_ldr_scale(gamma_scale);
-	}
-	else
-	{
-		stbi_ldr_to_hdr_gamma(gamma);
-		stbi_ldr_to_hdr_scale(gamma_scale);
-	}
+	//if (stbi_is_hdr(path.c_str()))
+	//{
+	//	stbi_hdr_to_ldr_gamma(gamma);
+	//	stbi_hdr_to_ldr_scale(gamma_scale);
+	//}
+	//else
+	//{
+	//	stbi_ldr_to_hdr_gamma(gamma);
+	//	stbi_ldr_to_hdr_scale(gamma_scale);
+	//}
 
     // Load Image
     i32 texWidth, texHeight, texNumChannels;
@@ -345,16 +345,16 @@ create_cube_map(const std::string& path)
 	f32 gamma = 1.0f;
 	f32 gamma_scale = 1.0f;
 
-	if (stbi_is_hdr(path.c_str()))
-	{
-		stbi_hdr_to_ldr_gamma(gamma);
-		stbi_hdr_to_ldr_scale(gamma_scale);
-	}
-	else
-	{
-		stbi_ldr_to_hdr_gamma(gamma);
-		stbi_ldr_to_hdr_scale(gamma_scale);
-	}
+	//if (stbi_is_hdr(path.c_str()))
+	//{
+	//	stbi_hdr_to_ldr_gamma(gamma);
+	//	stbi_hdr_to_ldr_scale(gamma_scale);
+	//}
+	//else
+	//{
+	//	stbi_ldr_to_hdr_gamma(gamma);
+	//	stbi_ldr_to_hdr_scale(gamma_scale);
+	//}
 
 	// Load Image
 	i32 texWidth, texHeight, texNumChannels;
@@ -557,7 +557,9 @@ create_irradiance_map(mvCubeTexture& cubemap, i32 resolution, i32 sampleCount, f
 	ctx->CSSetShaderResources(0u, 1, &cubemap.textureView);
 	ctx->CSSetSamplers(0u, 1, &sampler);
 	ctx->CSSetShader(filtershader.shader, nullptr, 0);
-	ctx->Dispatch(resolution / 16, resolution / 16, 2u);
+	u32 dispatchCount = resolution / 16;
+	assert(dispatchCount > 0u);
+	ctx->Dispatch(dispatchCount, dispatchCount, 2u);
 
 	for (int i = 0; i < 6; i++)
 	{
@@ -690,21 +692,20 @@ copy_resource_to_cubemap(mvCubeTexture& dst, std::vector<mvVec4*>& surfaces, i32
 }
 
 static std::vector<mvVec4*>*
-create_single_specular_map(mvCubeTexture& cubemap, i32 resolution, i32 sampleCount, f32 lodBias, i32 currentMipLevel, i32 outputMipLevels)
+create_single_specular_map(mvCubeTexture& cubemap, i32 resolution, i32 width, i32 sampleCount, f32 lodBias, i32 currentMipLevel, i32 outputMipLevels)
 {
 
 	std::vector<mvVec4*>* surfaces = new std::vector<mvVec4*>(7);
 	for (int i = 0; i < 6; i++)
-		(*surfaces)[i] = new mvVec4[resolution * resolution];
+		(*surfaces)[i] = new mvVec4[width * width];
 
-	(*surfaces)[6] = new mvVec4[512 * 512];
-
+	(*surfaces)[6] = new mvVec4[width * width];
 
 	mvBuffer faces[6];
 	for (int i = 0; i < 6; i++)
-		faces[i] = create_buffer((*surfaces)[i], resolution * resolution * sizeof(float) * 4, (D3D11_BIND_FLAG)(D3D11_BIND_UNORDERED_ACCESS | D3D11_BIND_SHADER_RESOURCE), sizeof(float) * 4, D3D11_RESOURCE_MISC_BUFFER_STRUCTURED);
+		faces[i] = create_buffer((*surfaces)[i], width * width * sizeof(float) * 4, (D3D11_BIND_FLAG)(D3D11_BIND_UNORDERED_ACCESS | D3D11_BIND_SHADER_RESOURCE), sizeof(float) * 4, D3D11_RESOURCE_MISC_BUFFER_STRUCTURED);
 		
-	mvBuffer LutBuffer = create_buffer((*surfaces)[6], 512 * 512 * sizeof(float) * 4, (D3D11_BIND_FLAG)(D3D11_BIND_UNORDERED_ACCESS | D3D11_BIND_SHADER_RESOURCE), sizeof(float) * 4, D3D11_RESOURCE_MISC_BUFFER_STRUCTURED);
+	mvBuffer LutBuffer = create_buffer((*surfaces)[6], width * width * sizeof(float) * 4, (D3D11_BIND_FLAG)(D3D11_BIND_UNORDERED_ACCESS | D3D11_BIND_SHADER_RESOURCE), sizeof(float) * 4, D3D11_RESOURCE_MISC_BUFFER_STRUCTURED);
 
 	struct MetaData
 	{
@@ -721,7 +722,7 @@ create_single_specular_map(mvCubeTexture& cubemap, i32 resolution, i32 sampleCou
 
 	MetaData mdata{};
 	mdata.resolution = resolution;
-	mdata.width = resolution;
+	mdata.width = width;
 	mdata.sampleCount = sampleCount;
 	mdata.distribution = 1;
 	mdata.roughness = (float)currentMipLevel / (float)(outputMipLevels - 1);
@@ -733,8 +734,8 @@ create_single_specular_map(mvCubeTexture& cubemap, i32 resolution, i32 sampleCou
 
 	// texture descriptor
 	D3D11_TEXTURE2D_DESC textureDesc = {};
-	textureDesc.Width = resolution;
-	textureDesc.Height = resolution;
+	textureDesc.Width = width;
+	textureDesc.Height = width;
 	textureDesc.MipLevels = 1;
 	textureDesc.ArraySize = 6;
 	textureDesc.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
@@ -748,11 +749,11 @@ create_single_specular_map(mvCubeTexture& cubemap, i32 resolution, i32 sampleCou
 	// filtering
 	mvComputeShader filtershader = create_compute_shader(GContext->IO.shaderDirectory + "filter_environment.hlsl");
 	D3D11_SAMPLER_DESC samplerDesc{};
-	samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_BORDER;
-	samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_BORDER;
-	samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_BORDER;
+	samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
+	samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
+	samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
 	samplerDesc.BorderColor[0] = 0.0f;
-	samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
+	samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
 	samplerDesc.MaxAnisotropy = D3D11_REQ_MAXANISOTROPY;
 	ID3D11SamplerState* sampler;
 	GContext->graphics.device->CreateSamplerState(&samplerDesc, &sampler);
@@ -766,7 +767,9 @@ create_single_specular_map(mvCubeTexture& cubemap, i32 resolution, i32 sampleCou
 	ctx->CSSetShaderResources(0u, 1, &cubemap.textureView);
 	ctx->CSSetSamplers(0u, 1, &sampler);
 	ctx->CSSetShader(filtershader.shader, nullptr, 0);
-	ctx->Dispatch(resolution / 16, resolution / 16, 2u);
+	u32 dispatchCount = width / 16;
+	assert(dispatchCount > 0u);
+	ctx->Dispatch(dispatchCount, dispatchCount, 2u);
 
 	for (int i = 0; i < 6; i++)
 	{
@@ -788,7 +791,7 @@ create_single_specular_map(mvCubeTexture& cubemap, i32 resolution, i32 sampleCou
 		hResult = GContext->graphics.imDeviceContext->Map(stagingBuffer, 0, D3D11_MAP_READ, 0, &MappedResource);
 		assert(SUCCEEDED(hResult));
 
-		memcpy((*surfaces)[i], MappedResource.pData, resolution * resolution * sizeof(float) * 4);
+		memcpy((*surfaces)[i], MappedResource.pData, width* width * sizeof(float) * 4);
 
 		stagingBuffer->Release();
 	}
@@ -813,7 +816,7 @@ create_single_specular_map(mvCubeTexture& cubemap, i32 resolution, i32 sampleCou
 		hResult = GContext->graphics.imDeviceContext->Map(stagingBuffer, 0, D3D11_MAP_READ, 0, &MappedResource);
 		assert(SUCCEEDED(hResult));
 
-		memcpy((*surfaces)[6], MappedResource.pData, 512 * 512 * sizeof(float) * 4);
+		memcpy((*surfaces)[6], MappedResource.pData, width * width * sizeof(float) * 4);
 
 		stagingBuffer->Release();
 	}
@@ -838,7 +841,7 @@ mvPBRTextures
 create_specular_map(mvCubeTexture& cubemap, i32 resolution, i32 sampleCount, f32 lodBias)
 {
 
-	int mipLevels = 10;
+	int mipLevels = 7;
 
 	mvPBRTextures pbrtextures{};
 
@@ -847,15 +850,16 @@ create_specular_map(mvCubeTexture& cubemap, i32 resolution, i32 sampleCount, f32
 	for (int i = mipLevels - 1; i != -1; i--)
 	{
 		i32 currentWidth = resolution >> i;
-		std::vector<mvVec4*>* faces = create_single_specular_map(cubemap, currentWidth, sampleCount, lodBias, i, mipLevels);
+		//i32 currentWidth = resolution;
+		std::vector<mvVec4*>* faces = create_single_specular_map(cubemap, resolution, currentWidth, sampleCount, lodBias, i, mipLevels);
 		copy_resource_to_cubemap(pbrtextures.specular, *faces, currentWidth, currentWidth, i, mipLevels);
 
 		if (i == 0)
 		{
 			// Create Texture
 			D3D11_TEXTURE2D_DESC textureDesc = {};
-			textureDesc.Width = 512;
-			textureDesc.Height = 512;
+			textureDesc.Width = currentWidth;
+			textureDesc.Height = currentWidth;
 			textureDesc.MipLevels = 1;
 			textureDesc.ArraySize = 1;
 			textureDesc.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
@@ -867,14 +871,14 @@ create_specular_map(mvCubeTexture& cubemap, i32 resolution, i32 sampleCount, f32
 
 			HRESULT hResult = GContext->graphics.device->CreateTexture2D(&textureDesc, nullptr, &pbrtextures.lut.texture);
 			assert(SUCCEEDED(hResult));
-			GContext->graphics.imDeviceContext->UpdateSubresource(pbrtextures.lut.texture.Get(), 0u, nullptr, (*faces)[6], 4 * 512 * sizeof(float), 0u);
+			GContext->graphics.imDeviceContext->UpdateSubresource(pbrtextures.lut.texture.Get(), 0u, nullptr, (*faces)[6], 4 * currentWidth * sizeof(float), 0u);
 
 			// create the resource view on the texture
 			D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
 			srvDesc.Format = textureDesc.Format;
 			srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
 			srvDesc.Texture2D.MostDetailedMip = 0;
-			srvDesc.Texture2D.MipLevels = 1;
+			srvDesc.Texture2D.MipLevels = -1;
 
 			hResult = GContext->graphics.device->CreateShaderResourceView(pbrtextures.lut.texture.Get(), &srvDesc, pbrtextures.lut.textureView.GetAddressOf());
 			assert(SUCCEEDED(hResult));

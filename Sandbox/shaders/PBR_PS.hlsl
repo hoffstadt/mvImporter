@@ -1,4 +1,6 @@
 
+static const int miplevelsoutput = 7;
+
 struct mvPointLight
 {
     float3 viewLightPos;
@@ -236,15 +238,19 @@ float filterPCF(const in float2 spos, float depthCheck)
 
 float3 getDiffuseLight(float3 n)
 {
-    float3 color = IrradianceMap.Sample(EnvironmentSampler, n).rgb;
-    color = pow(color, float3(0.4545.xxx));
+    n.x = -n.x;
+    n.z = -n.z;
+    float3 color = IrradianceMap.Sample(Sampler, n).rgb;
+    //color = pow(abs(color), float3(0.4545.xxx));
     return color;
 }
 
 float4 getSpecularSample(float3 reflection, float lod)
 {
-    float4 color = SpecularMap.SampleLevel(EnvironmentSampler, reflection, lod);
-    color = pow(color, float4(0.4545.xxxx));
+    reflection.x = -reflection.x;
+    reflection.z = -reflection.z;
+    float4 color = SpecularMap.SampleLevel(Sampler, reflection, lod);
+    //color = pow(abs(color), float4(0.4545.xxxx));
     return color;
 }
 
@@ -275,7 +281,7 @@ float3 getIBLRadianceLambertian(float3 n, float3 v, float roughness, float3 diff
 float3 getIBLRadianceGGX(float3 n, float3 v, float roughness, float3 F0, float specularWeight)
 {
     float NdotV = clampedDot(n, v);
-    float lod = roughness * float(10 - 1); // mip count is 10
+    float lod = roughness * float(miplevelsoutput - 1); // mip count is 10
     float3 reflection = normalize(reflect(-v, n));
 
     float2 brdfSamplePoint = clamp(float2(NdotV, roughness), float2(0.0, 0.0), float2(1.0, 1.0));
@@ -598,8 +604,9 @@ float4 main(VSOut input) : SV_Target
 #ifdef LINEAR_OUTPUT
     finalColor = float4(color.rgb, baseColor.a);
 #else
-    finalColor = float4(toneMap(color), baseColor.a);
-    //finalColor = float4(pow(color.rgb, float3(0.4545, 0.4545, 0.4545)), baseColor.a);
+    //finalColor = float4(toneMap(color), baseColor.a);
+    finalColor = float4(pow(color.rgb, float3(0.4545, 0.4545, 0.4545)), baseColor.a);
+    //finalColor = float4(color.rgb, baseColor.a);
 #endif
 
     return finalColor;

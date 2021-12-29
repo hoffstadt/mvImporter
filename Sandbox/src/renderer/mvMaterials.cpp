@@ -51,7 +51,7 @@ create_material(mvAssetManager& am, const std::string& vs, const std::string& ps
 		material.pipeline = register_asset(&am, hash, finalize_pipeline(pipelineInfo));
 	}
 
-	material.colorSampler = create_sampler();
+	material.colorSampler = create_sampler(D3D11_FILTER_MIN_MAG_MIP_LINEAR);
 	material.data = materialData;
 	material.buffer = create_const_buffer(&material.data, sizeof(mvMaterialData));
 

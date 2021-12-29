@@ -15,6 +15,7 @@ void     render_skybox(mvSkybox& skybox, mvMat4 cam, mvMat4 proj);
 struct mvSkybox
 {
     ID3D11SamplerState* cubeSampler = nullptr;
+    ID3D11SamplerState* envSampler = nullptr;
     mvBuffer            vertexBuffer;
     mvBuffer            indexBuffer;
     mvVertexLayout      vertexLayout;

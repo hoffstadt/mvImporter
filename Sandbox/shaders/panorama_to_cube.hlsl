@@ -87,5 +87,6 @@ void main(uint3 groupID : SV_GroupID, uint3 threadID : SV_GroupThreadID)
     float3 color = float3(BufferIn[srcpixelIndex].r, BufferIn[srcpixelIndex].g, BufferIn[srcpixelIndex].b);
 	
     //color = pow(color, float3(0.4545.xxx));
+    //color = pow(abs(color), float3(2.2.xxx));
     writeFace(currentPixel, face, color);
 }

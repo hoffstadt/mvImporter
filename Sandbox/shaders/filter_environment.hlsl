@@ -234,7 +234,7 @@ float computeLod(float pdf)
     // We achieved good results by using the original formulation from Krivanek & Colbert adapted to cubemaps
 
     // https://cgg.mff.cuni.cz/~jaroslav/papers/2007-sketch-fis/Final_sap_0073.pdf
-    float lod = 0.5 * log2(6.0 * float(resolution) * float(resolution) / (float(sampleCount) * pdf));
+    float lod = 0.5 * log2(6.0 * float(width) * float(width) / (float(sampleCount) * pdf));
 
     return lod;
 }
@@ -316,7 +316,7 @@ float3 filterColor(float3 N)
 // https://google.github.io/filament/Filament.html#toc4.4.2
 float V_SmithGGXCorrelated(float NoV, float NoL, float inroughness)
 {
-    float a2 = inroughness * inroughness;
+    float a2 = pow(inroughness, 4.0);
     float GGXV = NoL * sqrt(NoV * NoV * (1.0 - a2) + a2);
     float GGXL = NoV * sqrt(NoL * NoL * (1.0 - a2) + a2);
     return 0.5 / (GGXV + GGXL);
@@ -420,7 +420,7 @@ void writeFace(int pixel, int face, float3 colorIn)
 {
     float4 color = float4(colorIn.rgb, 1.0f);
     
-    color = pow(color, float4(2.2.xxx, 1.0f));
+    //color = pow(abs(color), float4(2.2.xxx, 1.0f));
 
     if (face == 0)
         FaceOut_0[pixel] = color;
@@ -446,7 +446,7 @@ void main(uint3 groupID : SV_GroupID, uint3 threadID : SV_GroupThreadID)
     const float xinc = 1.0f / (float) resolution;
     const float yinc = 1.0f / (float) resolution;
     const float2 inUV = float2(xcoord * xinc, ycoord * yinc);
-    const int currentPixel = xcoord + ycoord * resolution;
+    const int currentPixel = xcoord + ycoord * width;
     
     float2 newUV = inUV * float(1 << (currentMipLevel));
 	 
@@ -454,49 +454,20 @@ void main(uint3 groupID : SV_GroupID, uint3 threadID : SV_GroupThreadID)
 	 
     float3 scan = uvToXYZ(face, newUV);
     float3 direction = normalize(scan);
-   
-    //if(distribution == 0)
-    //{
-    //    float3 irradiance = float3(0.0.xxx);
-
-    //    float3 up = float3(0.0, 1.0, 0.0);
-    //    float3 right = normalize(cross(up, direction));
-    //    up = normalize(cross(direction, right));
-
-    //    //float sampleDelta = 0.025;
-    //    float sampleDelta = 0.1;
-    //    float nrSamples = 0.0;
-    //    for (float phi = 0.0; phi < 2.0 * M_PI; phi += sampleDelta)
-    //    {
-    //        for (float theta = 0.0; theta < 0.5 * M_PI; theta += sampleDelta)
-    //        {
-    //        // spherical to cartesian (in tangent space)
-    //            float3 tangentSample = float3(sin(theta) * cos(phi), sin(theta) * sin(phi), cos(theta));
-    //        // tangent space to world
-    //            float3 sampleVec = tangentSample.x * right + tangentSample.y * up + tangentSample.z * direction;
-            
-    //            float3 lambertian = pow(tex.SampleLevel(sam, sampleVec, 0).rgb, float3(0.4545.xxx));
-
-    //            irradiance += lambertian * cos(theta) * sin(theta);
-    //            nrSamples++;
-    //        }
-    //    }
-    //    irradiance = M_PI * irradiance * (1.0 / float(nrSamples));
-    //    writeFace(currentPixel, face, irradiance);
-    //}
-    //else
-    {
-        writeFace(currentPixel, face, filterColor(direction));
-    }
+    writeFace(currentPixel, face, filterColor(direction));
     
     // Write LUT:
 	// x-coordinate: NdotV
 	// y-coordinate: roughness
     if (currentMipLevel == 0)
     {
-        const int currentLUTPixel = xcoord + ycoord * 512;
-        float3 color = LUT(inUV.x, 1.0f - inUV.y);
-        color = pow(color, float3(2.2.xxx));
+        const float lutxinc = 1.0f / (float) resolution;
+        const float lutyinc = 1.0f / (float) resolution;
+        const float2 lutUV = float2(xcoord * lutxinc, ycoord * lutyinc);
+        const int currentLUTPixel = xcoord + ycoord * resolution;
+        float3 color = LUT(lutUV.x, lutUV.y);
+        //float3 color = LUT(inUV.x, 1.0f - inUV.y);
+        //color = pow(color, float3(2.2.xxx));
         outLUT[currentLUTPixel] = float4(color, 1.0f);
     }
 }

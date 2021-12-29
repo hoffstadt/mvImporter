@@ -153,8 +153,8 @@ int main()
             {
                 globalInfo.useSkybox = true;
                 skybox.cubeTexture = create_cube_map(newMap);
-                skybox.filtedCubeTexture = create_irradiance_map(skybox.cubeTexture, 512, 1024, 0.0f);
-                mvPBRTextures pbrtextures = create_specular_map(skybox.cubeTexture, 1024, 1024, 1.0f);
+                skybox.filtedCubeTexture = create_irradiance_map(skybox.cubeTexture, 1024, 1024, 0.0f);
+                mvPBRTextures pbrtextures = create_specular_map(skybox.cubeTexture, 2048, 1024, 0.2f);
                 skybox.specfiltedCubeTexture = pbrtextures.specular;
                 skybox.lut = pbrtextures.lut;
             }
@@ -308,7 +308,7 @@ int main()
         // samplers
         ctx->PSSetSamplers(1u, 1, &directionalShadowMap.sampler);
         ctx->PSSetSamplers(2u, 1, &omniShadowMap.sampler);
-        ctx->PSSetSamplers(3u, 1, &skybox.cubeSampler);
+        ctx->PSSetSamplers(3u, 1, &skybox.envSampler);
 
         // textures
         ctx->PSSetShaderResources(5u, 1, &directionalShadowMap.resourceView);
