@@ -1,4 +1,5 @@
 #include <imgui.h>
+#include <imgui_internal.h>
 #include <implot.h>
 #include <imgui_impl_win32.h>
 #include <imgui_impl_dx11.h>
@@ -18,6 +19,13 @@ static f32         shadowWidth = 95.0f;
 static int         initialWidth = 1850;
 static int         initialHeight = 900;
 static ImVec2      oldContentRegion = ImVec2(500, 500);
+
+void blendCallback(const ImDrawList* parent_list, const ImDrawCmd* cmd)
+{
+    // Setup blend state
+    const float blend_factor[4] = { 0.f, 0.f, 0.f, 0.f };
+    GContext->graphics.imDeviceContext->OMSetBlendState((ID3D11BlendState*)cmd->UserCallbackData, blend_factor, 0xffffffff);
+}
 
 int main()
 {    
@@ -40,6 +48,21 @@ int main()
     mvAssetManager am{};
     mvInitializeAssetManager(&am);
     Renderer::mvSetupCommonAssets(am);
+
+    mvRendererContext renderCtx{};
+    {
+        D3D11_BLEND_DESC desc{};
+        desc.AlphaToCoverageEnable = false;
+        desc.RenderTarget[0].BlendEnable = false;
+        desc.RenderTarget[0].SrcBlend = D3D11_BLEND_SRC_ALPHA;
+        desc.RenderTarget[0].DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
+        desc.RenderTarget[0].BlendOp = D3D11_BLEND_OP_ADD;
+        desc.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ONE;
+        desc.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_INV_SRC_ALPHA;
+        desc.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
+        desc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
+        GContext->graphics.device->CreateBlendState(&desc, &renderCtx.finalBlendState);
+    }
 
     // main camera
     mvCamera camera = create_perspective_camera({ -13.5f, 6.0f, 3.5f }, (f32)M_PI_4, 1.0f, 0.1f, 400.0f);
@@ -321,7 +344,11 @@ int main()
         Renderer::render_mesh_solid(am, pointlight.mesh, translate(identity_mat4(), pointlight.camera.pos), viewMatrix, projMatrix);
 
         if (activeScene > -1)
-            Renderer::render_scene(am, am.scenes[activeScene].asset, viewMatrix, projMatrix, stransform0, ttransform0);
+        {
+            Renderer::submit_scene(am, renderCtx, am.scenes[activeScene].asset, stransform0, ttransform0);
+            Renderer::render_jobs(am, renderCtx, viewMatrix, projMatrix);
+            //Renderer::render_scene(am, am.scenes[activeScene].asset, viewMatrix, projMatrix, stransform0, ttransform0);
+        }
 
         if (globalInfo.useSkybox && activeEnv > -1)
         {
@@ -427,10 +454,12 @@ int main()
             offscreen.viewport = { 0.0f, 0.0f, contentSize.x, contentSize.y, 0.0f, 1.0f };
             camera.aspectRatio = offscreen.viewport.Width / offscreen.viewport.Height;
 
-            ImGui::Image(offscreen.resourceView, contentSize);
+            ImGui::GetWindowDrawList()->AddCallback(blendCallback, renderCtx.finalBlendState);
+            ImGui::Image(offscreen.resourceView, contentSize, ImVec2(0,0), ImVec2(1, 1), ImVec4(1, 1, 1, 1), ImVec4(0, 0, 0, 0));
             if (!(contentSize.x == oldContentRegion.x && contentSize.y == oldContentRegion.y))
                 recreatePrimary = true;
             oldContentRegion = contentSize;
+            ImGui::GetWindowDrawList()->AddCallback(ImDrawCallback_ResetRenderState, nullptr);
 
             //-----------------------------------------------------------------------------
             // right panel
@@ -523,6 +552,7 @@ int main()
         cleanup_environment(cachedEnvironments[i]);
 
     // Cleanup
+    renderCtx.finalBlendState->Release();
     mvCleanupAssetManager(&am);
     ImGui_ImplDX11_Shutdown();
     ImGui_ImplWin32_Shutdown();

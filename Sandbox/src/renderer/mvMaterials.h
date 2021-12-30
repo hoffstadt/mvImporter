@@ -35,11 +35,14 @@ struct mvMaterialData
     b32 useEmissiveMap = false;
 
     
-    b32 hasAlpha = false;
+    i32 alphaMode = 0; // 0: OPAQUE, 1: MASK, 2: BLEND
     b32 useOcclusionMap = false;
     f32 occlusionStrength = 1.0f;
     f32 alphaCutoff;
     //-------------------------- ( 16 bytes )
+
+    b32 doubleSided = false;
+    char padding[12];
 
     //-------------------------- ( 4 * 16 = 64 bytes )
 };

@@ -835,10 +835,14 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
                 materialData.albedo = *(mvVec4*)material.base_color_factor;
                 materialData.metalness = material.metallic_factor;
                 materialData.roughness = material.roughness_factor;
-                materialData.hasAlpha = material.double_sided;
                 materialData.emisiveFactor = *(mvVec3*)material.emissive_factor;
                 materialData.occlusionStrength = material.occlusion_texture_strength;
-                materialData.alphaCutoff = material.alphaCutoff;
+                materialData.alphaCutoff = 0.5f;
+                materialData.alphaMode = material.alphaMode;
+                materialData.doubleSided = material.double_sided;
+                if(materialData.alphaMode == 1)
+                    materialData.alphaCutoff = material.alphaCutoff;
+
 
                 if (material.base_color_texture != -1)
                 {
@@ -1005,7 +1009,8 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
                     std::to_string(materialData.emisiveFactor.z) +
                     std::to_string(materialData.radiance) +
                     std::to_string(materialData.fresnel) +
-                    std::string(materialData.hasAlpha ? "T" : "F") +
+                    std::to_string(materialData.alphaMode) +
+                    std::string(materialData.doubleSided ? "T" : "F") +
                     std::string(materialData.useAlbedoMap ? "T" : "F") +
                     std::string(materialData.useNormalMap ? "T" : "F") +
                     std::string(materialData.useRoughnessMap ? "T" : "F") +
@@ -1026,8 +1031,9 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
                 materialData.albedo = { 0.45f, 0.45f, 0.85f, 1.0f };
                 materialData.metalness = 0.0f;
                 materialData.roughness = 0.5f;
-                materialData.hasAlpha = true;
                 materialData.alphaCutoff = 0.5f;
+                materialData.alphaMode = 0;
+                materialData.doubleSided = false;
                 std::string hash = std::string("PBR_PS.hlsl") +
                     std::string("PBR_VS.hlsl") +
                     std::to_string(materialData.albedo.x) +
@@ -1042,7 +1048,8 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
                     std::to_string(materialData.emisiveFactor.z) +
                     std::to_string(materialData.radiance) +
                     std::to_string(materialData.fresnel) +
-                    std::string(materialData.hasAlpha ? "T" : "F") +
+                    std::to_string(materialData.alphaMode) +
+                    std::string(materialData.doubleSided ? "T" : "F") +
                     std::string(materialData.useAlbedoMap ? "T" : "F") +
                     std::string(materialData.useNormalMap ? "T" : "F") +
                     std::string(materialData.useRoughnessMap ? "T" : "F") +

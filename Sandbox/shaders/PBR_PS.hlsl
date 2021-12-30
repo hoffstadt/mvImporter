@@ -39,11 +39,14 @@ struct mvMaterial
     bool useEmissiveMap;
     //-------------------------- ( 16 bytes )
     
-    bool hasAlpha;
+    int alphaMode;
     bool useOcclusionMap;
     float occlusionStrength;
     float alphaCutoff;
     //-------------------------- ( 4 * 16 = 64 bytes )
+
+    bool doubleSided;
+
 };
 
 struct mvDirectionalLight
@@ -312,12 +315,15 @@ float4 main(VSOut input) : SV_Target
     float4 finalColor;
     float4 baseColor = getBaseColor(input);
     
-    if (baseColor.a < material.alphaCutoff)
+    if (material.alphaMode == 1)
     {
-        discard;
+        if (baseColor.a < material.alphaCutoff)
+        {
+            discard;
+        }
     }
     
-    clip(baseColor.a < 0.1f ? -1 : 1); // bail if highly translucent
+    //clip(baseColor.a < 0.1f ? -1 : 1); // bail if highly translucent
     
     float3 v = normalize(ginfo.camPos - input.WorldPos);
     NormalInfo normalInfo = getNormalInfo(input);
@@ -607,13 +613,16 @@ float4 main(VSOut input) : SV_Target
     color = f_emissive + diffuse + f_specular;
     color = f_sheen + color * albedoSheenScaling;
     color = color * (1.0 - clearcoatFactor * clearcoatFresnel) + f_clearcoat;
+
+    if (material.alphaMode == 0 || material.alphaMode == 1)
+    {
+        baseColor.a = 1.0;
+    }
     
 #ifdef LINEAR_OUTPUT
     finalColor = float4(color.rgb, baseColor.a);
 #else
-    //finalColor = float4(toneMap(color), baseColor.a);
     finalColor = float4(pow(color.rgb, float3(0.4545, 0.4545, 0.4545)), baseColor.a);
-    //finalColor = float4(color.rgb, baseColor.a);
 #endif
 
     return finalColor;

@@ -14,7 +14,7 @@ create_material(mvAssetManager& am, const std::string& vs, const std::string& ps
 	pipelineInfo.depthBias = 0;
 	pipelineInfo.slopeBias = 0.0f;
 	pipelineInfo.clamp = 0.0f;
-	pipelineInfo.cull = !materialData.hasAlpha;
+	pipelineInfo.cull = !materialData.doubleSided;
 
 	pipelineInfo.layout = create_vertex_layout(
 		{
@@ -39,7 +39,8 @@ create_material(mvAssetManager& am, const std::string& vs, const std::string& ps
 		std::to_string(materialData.emisiveFactor.z) +
 		std::to_string(materialData.radiance) +
 		std::to_string(materialData.fresnel) +
-		std::string(materialData.hasAlpha ? "T" : "F") +
+		std::to_string(materialData.alphaMode) +
+		std::string(materialData.doubleSided ? "T" : "F") +
 		std::string(materialData.useAlbedoMap ? "T" : "F") +
 		std::string(materialData.useNormalMap ? "T" : "F") +
 		std::string(materialData.useRoughnessMap ? "T" : "F") +

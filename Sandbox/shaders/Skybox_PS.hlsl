@@ -11,6 +11,7 @@ float4 main(float3 worldPos : Position) : SV_TARGET
     
     // Gamma correct
     color = pow(color, float4(0.4545, 0.4545, 0.4545, 1.0));
+    color.a = 1.0;
     
     return color;
 }

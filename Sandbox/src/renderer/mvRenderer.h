@@ -39,9 +39,29 @@ struct GlobalInfo
     b32 usePunctualLights = true;
 };
 
+struct mvRenderJob
+{
+    mvMeshPrimitive* meshPrimitive = nullptr;
+    mvMat4           accumulatedTransform = identity_mat4();
+};
+
+struct mvRendererContext
+{
+    mvRenderJob       opaqueJobs[1024];
+    mvRenderJob       transparentJobs[1024];
+    mvRenderJob       wireframeJobs[1024];
+    u32               opaqueJobCount      = 0u;
+    u32               transparentJobCount = 0u;
+    u32               wireframeJobCount   = 0u;
+    ID3D11BlendState* finalBlendState = nullptr;
+};
+
 namespace Renderer
 {
     void mvSetupCommonAssets(mvAssetManager& am);
+
+    void submit_scene(mvAssetManager& am, mvRendererContext& ctx, mvScene& scene, mvMat4 scaleM, mvMat4 trans);
+    void render_jobs(mvAssetManager& am, mvRendererContext& ctx, mvMat4 cam, mvMat4 proj);
 
     void render_skybox(mvAssetManager& am, mvCubeTexture& cubemap, ID3D11SamplerState* sampler, mvMat4 cam, mvMat4 proj);
     void render_mesh(mvAssetManager& am, mvMesh& mesh, mvMat4 transform, mvMat4 cam, mvMat4 proj);

@@ -270,6 +270,170 @@ mvSetupCommonAssets(mvAssetManager& am)
     }
 }
 
+static void
+submit_mesh(mvAssetManager& am, mvRendererContext& ctx, mvMesh& mesh, mvMat4 transform)
+{
+    auto device = GContext->graphics.imDeviceContext;
+
+    for (u32 i = 0; i < mesh.primitives.size(); i++)
+    {
+        mvMeshPrimitive& primitive = mesh.primitives[i];
+
+        // if material not assigned, get material
+        if (primitive.materialID == -1)
+        {
+            assert(false && "material not assigned");
+        }
+
+        mvMaterial* material = &am.materials[primitive.materialID].asset;
+
+        if (material->data.alphaMode == 2)
+        {
+            ctx.transparentJobs[ctx.transparentJobCount] = { &primitive, transform };
+            ctx.transparentJobCount++;
+        }
+        else
+        {
+            ctx.opaqueJobs[ctx.opaqueJobCount] = { &primitive, transform };
+            ctx.opaqueJobCount++;
+        }
+    }
+}
+
+static void
+submit_node(mvAssetManager& am, mvRendererContext& ctx, mvNode& node, mvMat4 transform)
+{
+
+    if (node.mesh > -1 && node.camera == -1)
+        submit_mesh(am, ctx, am.meshes[node.mesh].asset, transform * node.matrix);
+    else if (node.camera > -1)
+    {
+        for (u32 i = 0; i < am.meshes[node.mesh].asset.primitives.size(); i++)
+        {
+            mvMeshPrimitive& primitive = am.meshes[node.mesh].asset.primitives[i];
+            ctx.wireframeJobs[ctx.wireframeJobCount] = { &primitive, transform * node.matrix * scale(identity_mat4(), { -1.0f, -1.0f, -1.0f }) };
+            ctx.wireframeJobCount++;
+        }
+    }
+
+    for (u32 i = 0; i < node.childCount; i++)
+    {
+        submit_node(am, ctx, am.nodes[node.children[i]].asset, transform * node.matrix);
+    }
+}
+
+void 
+submit_scene(mvAssetManager& am, mvRendererContext& ctx, mvScene& scene, mvMat4 scaleM, mvMat4 trans)
+{
+    for (u32 i = 0; i < scene.nodeCount; i++)
+    {
+        mvNode& rootNode = am.nodes[scene.nodes[i]].asset;
+
+        if (rootNode.mesh > -1 && rootNode.camera == -1)
+            submit_mesh(am, ctx, am.meshes[rootNode.mesh].asset, trans * rootNode.matrix * scaleM);
+        else if (rootNode.camera > -1)
+        {
+            for (u32 i = 0; i < am.meshes[rootNode.mesh].asset.primitives.size(); i++)
+            {
+                mvMeshPrimitive& primitive = am.meshes[rootNode.mesh].asset.primitives[i];
+                ctx.wireframeJobs[ctx.wireframeJobCount] = { &primitive, trans * rootNode.matrix * scale(identity_mat4(), { -1.0f, -1.0f, -1.0f }) };
+                ctx.wireframeJobCount++;
+            }
+        }
+
+        for (u32 j = 0; j < rootNode.childCount; j++)
+        {
+            submit_node(am, ctx, am.nodes[rootNode.children[j]].asset, trans * rootNode.matrix * scaleM);
+        }
+    }
+}
+
+static void
+render_job(mvAssetManager& am, mvRenderJob& job, mvMat4 cam, mvMat4 proj)
+{
+    auto device = GContext->graphics.imDeviceContext;
+
+    mvMeshPrimitive& primitive = *job.meshPrimitive;
+
+    mvMaterial* material = &am.materials[primitive.materialID].asset;
+
+    mvTexture* albedoMap = primitive.albedoTexture == -1 ? nullptr : &am.textures[primitive.albedoTexture].asset;
+    mvTexture* normMap = primitive.normalTexture == -1 ? nullptr : &am.textures[primitive.normalTexture].asset;
+    mvTexture* metalRoughMap = primitive.metalRoughnessTexture == -1 ? nullptr : &am.textures[primitive.metalRoughnessTexture].asset;
+    mvTexture* emissiveMap = primitive.emissiveTexture == -1 ? nullptr : &am.textures[primitive.emissiveTexture].asset;
+    mvTexture* occlussionMap = primitive.occlusionTexture == -1 ? nullptr : &am.textures[primitive.occlusionTexture].asset;
+
+    mvPipeline& pipeline = am.pipelines[material->pipeline].asset;
+
+    if (pipeline.info.layout != primitive.layout)
+    {
+        assert(false && "Mesh and material vertex layouts don't match.");
+        return;
+    }
+
+    // pipeline
+    set_pipeline_state(pipeline);
+    static ID3D11SamplerState* emptySamplers = nullptr;
+    device->PSSetSamplers(0, 1, albedoMap ? &albedoMap->sampler : &emptySamplers);
+    device->PSSetSamplers(1, 1, normMap ? &normMap->sampler : &emptySamplers);
+    device->PSSetSamplers(2, 1, metalRoughMap ? &metalRoughMap->sampler : &emptySamplers);
+    device->PSSetSamplers(3, 1, metalRoughMap ? &metalRoughMap->sampler : &emptySamplers);
+    device->PSSetSamplers(4, 1, occlussionMap ? &occlussionMap->sampler : &emptySamplers);
+
+    // maps
+    ID3D11ShaderResourceView* const pSRV[1] = { NULL };
+    device->PSSetShaderResources(0, 1, albedoMap ? &albedoMap->textureView : pSRV);
+    device->PSSetShaderResources(1, 1, normMap ? &normMap->textureView : pSRV);
+    device->PSSetShaderResources(2, 1, metalRoughMap ? &metalRoughMap->textureView : pSRV);
+    device->PSSetShaderResources(3, 1, emissiveMap ? &emissiveMap->textureView : pSRV);
+    device->PSSetShaderResources(4, 1, occlussionMap ? &occlussionMap->textureView : pSRV);
+
+    update_const_buffer(material->buffer, &material->data);
+    device->PSSetConstantBuffers(1u, 1u, &material->buffer.buffer);
+
+    mvTransforms transforms{};
+    transforms.model = job.accumulatedTransform;
+    transforms.modelView = cam * transforms.model;
+    transforms.modelViewProjection = proj * cam * transforms.model;
+
+    D3D11_MAPPED_SUBRESOURCE mappedSubresource;
+    device->Map(GContext->graphics.tranformCBuf.Get(), 0u, D3D11_MAP_WRITE_DISCARD, 0u, &mappedSubresource);
+    memcpy(mappedSubresource.pData, &transforms, sizeof(mvTransforms));
+    device->Unmap(GContext->graphics.tranformCBuf.Get(), 0u);
+
+    // mesh
+    static const UINT offset = 0u;
+    device->VSSetConstantBuffers(0u, 1u, GContext->graphics.tranformCBuf.GetAddressOf());
+    device->IASetIndexBuffer(am.buffers[primitive.indexBuffer].asset.buffer, DXGI_FORMAT_R32_UINT, 0u);
+    device->IASetVertexBuffers(0u, 1u,
+        &am.buffers[primitive.vertexBuffer].asset.buffer,
+        &pipeline.info.layout.size, &offset);
+
+    // draw
+    device->DrawIndexed(am.buffers[primitive.indexBuffer].asset.size / sizeof(u32), 0u, 0u);
+}
+
+void 
+render_jobs(mvAssetManager& am, mvRendererContext& ctx, mvMat4 cam, mvMat4 proj)
+{
+    // opaque objects
+    for (int i = 0; i < ctx.opaqueJobCount; i++)
+        render_job(am, ctx.opaqueJobs[i], cam, proj);
+
+    // transparent objects
+    for (int i = 0; i < ctx.transparentJobCount; i++)
+        render_job(am, ctx.transparentJobs[i], cam, proj);
+
+    // wireframe objects
+    for (int i = 0; i < ctx.wireframeJobCount; i++)
+        render_job(am, ctx.wireframeJobs[i], cam, proj);
+
+    // reset
+    ctx.opaqueJobCount = 0u;
+    ctx.transparentJobCount = 0u;
+    ctx.wireframeJobCount = 0u;
+}
+
 void
 render_mesh(mvAssetManager& am, mvMesh& mesh, mvMat4 transform, mvMat4 cam, mvMat4 proj)
 {
@@ -286,6 +450,7 @@ render_mesh(mvAssetManager& am, mvMesh& mesh, mvMat4 transform, mvMat4 cam, mvMa
         }
 
         mvMaterial* material = &am.materials[primitive.materialID].asset;
+
         mvTexture* albedoMap = primitive.albedoTexture == -1 ? nullptr : &am.textures[primitive.albedoTexture].asset;
         mvTexture* normMap = primitive.normalTexture == -1 ? nullptr : &am.textures[primitive.normalTexture].asset;
         mvTexture* metalRoughMap = primitive.metalRoughnessTexture == -1 ? nullptr : &am.textures[primitive.metalRoughnessTexture].asset;
@@ -425,7 +590,7 @@ render_mesh_shadow(mvAssetManager& am, mvMesh& mesh, mvMat4 transform, mvMat4 ca
         mvMaterial* material = &am.materials[primitive.materialID].asset;
         mvTexture* albedoMap = primitive.albedoTexture == -1 ? nullptr : &am.textures[primitive.albedoTexture].asset;
 
-        mvPipeline* pipeline = material->data.hasAlpha ? mvGetRawPipelineAsset(&am, "shadow_alpha") : mvGetRawPipelineAsset(&am, "shadow_no_alpha");
+        mvPipeline* pipeline = material->data.alphaMode == 0 ? mvGetRawPipelineAsset(&am, "shadow_no_alpha") : mvGetRawPipelineAsset(&am, "shadow_alpha");
 
 
         // pipeline
@@ -491,6 +656,9 @@ mvRenderNode(mvAssetManager& am, mvNode& node, mvMat4 accumulatedTransform, mvMa
 void
 render_scene(mvAssetManager& am, mvScene& scene, mvMat4 cam, mvMat4 proj, mvMat4 scaleM, mvMat4 trans)
 {
+    // extremely dumb method of handling sorting for transparency. Needs to be fixed
+
+    // opaque objects
     for (u32 i = 0; i < scene.nodeCount; i++)
     {
         mvNode& rootNode = am.nodes[scene.nodes[i]].asset;
@@ -501,6 +669,20 @@ render_scene(mvAssetManager& am, mvScene& scene, mvMat4 cam, mvMat4 proj, mvMat4
         {
             render_mesh_wireframe(am, am.meshes[rootNode.mesh].asset, trans * rootNode.matrix * scale(identity_mat4(), { -1.0f, -1.0f, -1.0f }), cam, proj);
         }
+
+        for (u32 j = 0; j < rootNode.childCount; j++)
+        {
+            mvRenderNode(am, am.nodes[rootNode.children[j]].asset, trans * rootNode.matrix * scaleM, cam, proj);
+        }
+    }
+
+    // transparent objects
+    for (u32 i = 0; i < scene.nodeCount; i++)
+    {
+        mvNode& rootNode = am.nodes[scene.nodes[i]].asset;
+
+        if (rootNode.mesh > -1 && rootNode.camera == -1)
+            render_mesh(am, am.meshes[rootNode.mesh].asset, trans * rootNode.matrix * scaleM, cam, proj);
 
         for (u32 j = 0; j < rootNode.childCount; j++)
         {
