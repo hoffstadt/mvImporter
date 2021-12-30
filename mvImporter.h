@@ -178,10 +178,11 @@ struct mvGLTFTexture
 
 struct mvGLTFSampler
 {
-	mvS32 mag_filter = -1;
-	mvS32 min_filter = -1;
-	mvS32 wrap_s     = MV_IMP_WRAP_REPEAT;
-	mvS32 wrap_t     = MV_IMP_WRAP_REPEAT;
+	std::string name;
+	mvS32       mag_filter = -1;
+	mvS32       min_filter = -1;
+	mvS32       wrap_s     = MV_IMP_WRAP_REPEAT;
+	mvS32       wrap_t     = MV_IMP_WRAP_REPEAT;
 };
 
 struct mvGLTFImage
@@ -1623,6 +1624,9 @@ namespace mvImp {
 		{
 			mvJsonObject& jsampler = j["samplers"][i];
 			mvGLTFSampler& sampler = samplers[size];
+
+			if (jsampler.doesMemberExist("name"))
+				sampler.name = jsampler.getMember("name");
 
 			if (jsampler.doesMemberExist("magFilter"))
 				sampler.mag_filter = jsampler.getMember("magFilter");

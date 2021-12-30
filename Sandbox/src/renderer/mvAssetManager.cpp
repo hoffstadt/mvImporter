@@ -368,28 +368,28 @@ register_asset(mvAssetManager* manager, const std::string& tag, mvCubeTexture as
 }
 
 mvAssetID
-mvGetTextureAssetID(mvAssetManager* manager, const std::string& path)
+mvGetTextureAssetID(mvAssetManager* manager, const std::string& tag, const std::string& path)
 {
 	for (s32 i = 0; i < manager->maxTextureCount; i++)
 	{
-		if (manager->textures[i].hash == path)
+		if (manager->textures[i].hash == tag)
 			return i;
 	}
 
-	s32 freeIndex = register_asset(manager, path, create_texture(path));
+	s32 freeIndex = register_asset(manager, tag, create_texture(path));
 	return freeIndex;
 }
 
 mvAssetID
-mvGetTextureAssetID(mvAssetManager* manager, const std::string& path, std::vector<unsigned char> data)
+mvGetTextureAssetID(mvAssetManager* manager, const std::string& tag, std::vector<unsigned char> data)
 {
 	for (s32 i = 0; i < manager->maxTextureCount; i++)
 	{
-		if (manager->textures[i].hash == path)
+		if (manager->textures[i].hash == tag)
 			return i;
 	}
 
-	s32 freeIndex = register_asset(manager, path, create_texture(data));
+	s32 freeIndex = register_asset(manager, tag, create_texture(data));
 	return freeIndex;
 }
 

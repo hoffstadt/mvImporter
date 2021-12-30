@@ -496,11 +496,10 @@ mvFillBuffer(mvGLTFModel& model, mvGLTFAccessor& accessor, std::vector<W>& outBu
 static D3D11_TEXTURE_ADDRESS_MODE
 get_address_mode(mvS32 address)
 {
-    //return D3D11_TEXTURE_ADDRESS_WRAP;
     switch (address)
     {
     case MV_IMP_WRAP_CLAMP_TO_EDGE:   return D3D11_TEXTURE_ADDRESS_CLAMP;
-    case MV_IMP_WRAP_MIRRORED_REPEAT: return D3D11_TEXTURE_ADDRESS_MIRROR_ONCE;
+    case MV_IMP_WRAP_MIRRORED_REPEAT: return D3D11_TEXTURE_ADDRESS_MIRROR;
     case MV_IMP_WRAP_REPEAT:          return D3D11_TEXTURE_ADDRESS_WRAP;
     default:                          return D3D11_TEXTURE_ADDRESS_WRAP;
     }
@@ -509,7 +508,7 @@ get_address_mode(mvS32 address)
 static D3D11_FILTER
 get_filter_mode(mvS32 minFilter, mvS32 magFilter)
 {
-
+    return D3D11_FILTER_MIN_MAG_MIP_POINT;
     if (magFilter == MV_IMP_FILTER_LINEAR)
     {
         switch (minFilter)
@@ -850,7 +849,7 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
                         newMesh.primitives.back().albedoTexture = mvGetTextureAssetID(&assetManager, model.root + newMesh.name + std::to_string(currentPrimitive) + uri + "_a", model.images[texture.image_index].data);
                     }
                     else
-                        newMesh.primitives.back().albedoTexture = mvGetTextureAssetID(&assetManager, model.root + uri);
+                        newMesh.primitives.back().albedoTexture = mvGetTextureAssetID(&assetManager, model.root + newMesh.name + std::to_string(currentPrimitive) + uri + "_a", model.root + uri);
                     materialData.useAlbedoMap = true;
                     if (texture.sampler_index > -1)
                     {
@@ -880,7 +879,7 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
                         newMesh.primitives.back().normalTexture = mvGetTextureAssetID(&assetManager, model.root + newMesh.name + std::to_string(currentPrimitive) + uri + "_n", model.images[texture.image_index].data);
                     }
                     else
-                        newMesh.primitives.back().normalTexture = mvGetTextureAssetID(&assetManager, model.root + uri);
+                        newMesh.primitives.back().normalTexture = mvGetTextureAssetID(&assetManager, model.root + newMesh.name + std::to_string(currentPrimitive) + uri + "_n", model.root + uri);
                     materialData.useNormalMap = true;
                     if (texture.sampler_index > -1)
                     {
@@ -910,7 +909,7 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
                         newMesh.primitives.back().metalRoughnessTexture = mvGetTextureAssetID(&assetManager, model.root + newMesh.name + std::to_string(currentPrimitive) + uri + "_m", model.images[texture.image_index].data);
                     }
                     else
-                        newMesh.primitives.back().metalRoughnessTexture = mvGetTextureAssetID(&assetManager, model.root + uri);
+                        newMesh.primitives.back().metalRoughnessTexture = mvGetTextureAssetID(&assetManager, model.root + newMesh.name + std::to_string(currentPrimitive) + uri + "_m", model.root + uri);
                     materialData.useRoughnessMap = true;
                     materialData.useMetalMap = true;
                     if (texture.sampler_index > -1)
@@ -941,7 +940,7 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
                         newMesh.primitives.back().emissiveTexture = mvGetTextureAssetID(&assetManager, model.root + newMesh.name + std::to_string(currentPrimitive) + uri + "_e", model.images[texture.image_index].data);
                     }
                     else
-                        newMesh.primitives.back().emissiveTexture = mvGetTextureAssetID(&assetManager, model.root + uri);
+                        newMesh.primitives.back().emissiveTexture = mvGetTextureAssetID(&assetManager, model.root + newMesh.name + std::to_string(currentPrimitive) + uri + "_e", model.root + uri);
                     materialData.useEmissiveMap = true;
                     if (texture.sampler_index > -1)
                     {
@@ -971,7 +970,7 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
                         newMesh.primitives.back().occlusionTexture = mvGetTextureAssetID(&assetManager, model.root + newMesh.name + std::to_string(currentPrimitive) + uri + "_o", model.images[texture.image_index].data);
                     }
                     else
-                        newMesh.primitives.back().occlusionTexture = mvGetTextureAssetID(&assetManager, model.root + uri);
+                        newMesh.primitives.back().occlusionTexture = mvGetTextureAssetID(&assetManager, model.root + newMesh.name + std::to_string(currentPrimitive) + uri + "_o", model.root + uri);
                     materialData.useOcclusionMap = true;
                     if (texture.sampler_index > -1)
                     {
