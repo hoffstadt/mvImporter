@@ -51,6 +51,29 @@ float3 getClearcoatNormal(NormalInfo normalInfo)
 #endif
 }
 
+MaterialInfo getClearCoatInfo(VSOut input, MaterialInfo info, NormalInfo normalInfo)
+{
+    info.clearcoatFactor = material.clearcoatFactor;
+    info.clearcoatRoughness = material.clearcoatRoughnessFactor;
+    info.clearcoatF0 = float3(info.f0.xxx);
+    info.clearcoatF90 = float3(1.0.xxx);
+
+    if (material.useClearcoatMap)
+    {
+        float4 clearcoatSample = ClearCoatTexture.Sample(ClearCoatTextureSampler, input.UV);
+        info.clearcoatFactor *= clearcoatSample.r;
+    }
+
+#ifdef HAS_CLEARCOAT_ROUGHNESS_MAP
+    vec4 clearcoatSampleRoughness = texture(u_ClearcoatRoughnessSampler, getClearcoatRoughnessUV());
+    info.clearcoatRoughness *= clearcoatSampleRoughness.g;
+#endif
+
+    info.clearcoatNormal = getClearcoatNormal(normalInfo);
+    info.clearcoatRoughness = clamp(info.clearcoatRoughness, 0.0, 1.0);
+    return info;
+}
+
 MaterialInfo getMetallicRoughnessInfo(VSOut input, MaterialInfo info)
 {
     info.metallic = material.metalness;

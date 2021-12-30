@@ -995,6 +995,96 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
                     }
                 }
 
+                if (material.clearcoat_texture != -1)
+                {
+                    mvGLTFTexture& texture = model.textures[material.clearcoat_texture];
+                    std::string uri = model.images[texture.image_index].uri;
+                    if (model.images[texture.image_index].embedded)
+                    {
+                        newMesh.primitives.back().clearcoatTexture = mvGetTextureAssetID(&assetManager, model.root + newMesh.name + std::to_string(currentPrimitive) + uri + "_cc", model.images[texture.image_index].data);
+                    }
+                    else
+                        newMesh.primitives.back().clearcoatTexture = mvGetTextureAssetID(&assetManager, model.root + newMesh.name + std::to_string(currentPrimitive) + uri + "_cc", model.root + uri);
+                    materialData.useClearcoatMap = true;
+                    if (texture.sampler_index > -1)
+                    {
+                        mvGLTFSampler& sampler = model.samplers[texture.sampler_index];
+                        mvTexture& newTexture = assetManager.textures[newMesh.primitives.back().clearcoatTexture].asset;
+
+                        // Create Sampler State
+                        D3D11_SAMPLER_DESC samplerDesc{};
+                        samplerDesc.AddressU = get_address_mode(sampler.wrap_s);
+                        samplerDesc.AddressV = get_address_mode(sampler.wrap_t);
+                        samplerDesc.AddressW = samplerDesc.AddressU;
+                        samplerDesc.Filter = get_filter_mode(sampler.min_filter, sampler.mag_filter);
+                        samplerDesc.BorderColor[0] = 0.0f;
+                        samplerDesc.MaxAnisotropy = D3D11_REQ_MAXANISOTROPY;
+
+                        HRESULT hResult = GContext->graphics.device->CreateSamplerState(&samplerDesc, &newTexture.sampler);
+                        assert(SUCCEEDED(hResult));
+                    }
+                }
+
+                if (material.clearcoat_roughness_texture != -1)
+                {
+                    mvGLTFTexture& texture = model.textures[material.clearcoat_roughness_texture];
+                    std::string uri = model.images[texture.image_index].uri;
+                    if (model.images[texture.image_index].embedded)
+                    {
+                        newMesh.primitives.back().clearcoatRoughnessTexture = mvGetTextureAssetID(&assetManager, model.root + newMesh.name + std::to_string(currentPrimitive) + uri + "_ccr", model.images[texture.image_index].data);
+                    }
+                    else
+                        newMesh.primitives.back().clearcoatRoughnessTexture = mvGetTextureAssetID(&assetManager, model.root + newMesh.name + std::to_string(currentPrimitive) + uri + "_ccr", model.root + uri);
+                    materialData.useClearcoatRoughnessMap = true;
+                    if (texture.sampler_index > -1)
+                    {
+                        mvGLTFSampler& sampler = model.samplers[texture.sampler_index];
+                        mvTexture& newTexture = assetManager.textures[newMesh.primitives.back().clearcoatRoughnessTexture].asset;
+
+                        // Create Sampler State
+                        D3D11_SAMPLER_DESC samplerDesc{};
+                        samplerDesc.AddressU = get_address_mode(sampler.wrap_s);
+                        samplerDesc.AddressV = get_address_mode(sampler.wrap_t);
+                        samplerDesc.AddressW = samplerDesc.AddressU;
+                        samplerDesc.Filter = get_filter_mode(sampler.min_filter, sampler.mag_filter);
+                        samplerDesc.BorderColor[0] = 0.0f;
+                        samplerDesc.MaxAnisotropy = D3D11_REQ_MAXANISOTROPY;
+
+                        HRESULT hResult = GContext->graphics.device->CreateSamplerState(&samplerDesc, &newTexture.sampler);
+                        assert(SUCCEEDED(hResult));
+                    }
+                }
+
+                if (material.clearcoat_normal_texture != -1)
+                {
+                    mvGLTFTexture& texture = model.textures[material.clearcoat_normal_texture];
+                    std::string uri = model.images[texture.image_index].uri;
+                    if (model.images[texture.image_index].embedded)
+                    {
+                        newMesh.primitives.back().clearcoatNormalTexture = mvGetTextureAssetID(&assetManager, model.root + newMesh.name + std::to_string(currentPrimitive) + uri + "_ccn", model.images[texture.image_index].data);
+                    }
+                    else
+                        newMesh.primitives.back().clearcoatNormalTexture = mvGetTextureAssetID(&assetManager, model.root + newMesh.name + std::to_string(currentPrimitive) + uri + "_ccn", model.root + uri);
+                    materialData.useClearcoatNormalMap = true;
+                    if (texture.sampler_index > -1)
+                    {
+                        mvGLTFSampler& sampler = model.samplers[texture.sampler_index];
+                        mvTexture& newTexture = assetManager.textures[newMesh.primitives.back().clearcoatNormalTexture].asset;
+
+                        // Create Sampler State
+                        D3D11_SAMPLER_DESC samplerDesc{};
+                        samplerDesc.AddressU = get_address_mode(sampler.wrap_s);
+                        samplerDesc.AddressV = get_address_mode(sampler.wrap_t);
+                        samplerDesc.AddressW = samplerDesc.AddressU;
+                        samplerDesc.Filter = get_filter_mode(sampler.min_filter, sampler.mag_filter);
+                        samplerDesc.BorderColor[0] = 0.0f;
+                        samplerDesc.MaxAnisotropy = D3D11_REQ_MAXANISOTROPY;
+
+                        HRESULT hResult = GContext->graphics.device->CreateSamplerState(&samplerDesc, &newTexture.sampler);
+                        assert(SUCCEEDED(hResult));
+                    }
+                }
+
                 std::string hash = std::string("PBR_PS.hlsl") +
                     std::string("PBR_VS.hlsl") +
                     std::to_string(materialData.albedo.x) +
@@ -1010,6 +1100,11 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
                     std::to_string(materialData.radiance) +
                     std::to_string(materialData.fresnel) +
                     std::to_string(materialData.alphaMode) +
+                    std::to_string(materialData.clearcoatFactor) +
+                    std::to_string(materialData.clearcoatRoughnessFactor) +
+                    std::string(materialData.useClearcoatMap ? "T" : "F") +
+                    std::string(materialData.useClearcoatRoughnessMap ? "T" : "F") +
+                    std::string(materialData.useClearcoatNormalMap ? "T" : "F") +
                     std::string(materialData.doubleSided ? "T" : "F") +
                     std::string(materialData.useAlbedoMap ? "T" : "F") +
                     std::string(materialData.useNormalMap ? "T" : "F") +
@@ -1049,6 +1144,11 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
                     std::to_string(materialData.radiance) +
                     std::to_string(materialData.fresnel) +
                     std::to_string(materialData.alphaMode) +
+                    std::to_string(materialData.clearcoatFactor) +
+                    std::to_string(materialData.clearcoatRoughnessFactor) +
+                    std::string(materialData.useClearcoatMap ? "T" : "F") +
+                    std::string(materialData.useClearcoatRoughnessMap ? "T" : "F") +
+                    std::string(materialData.useClearcoatNormalMap ? "T" : "F") +
                     std::string(materialData.doubleSided ? "T" : "F") +
                     std::string(materialData.useAlbedoMap ? "T" : "F") +
                     std::string(materialData.useNormalMap ? "T" : "F") +

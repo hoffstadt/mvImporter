@@ -41,8 +41,14 @@ struct mvMaterialData
     f32 alphaCutoff;
     //-------------------------- ( 16 bytes )
 
-    b32 doubleSided = false;
-    char padding[12];
+    b32 doubleSided              = false;
+    b32 useClearcoatMap          = false;
+    b32 useClearcoatRoughnessMap = false;
+    b32 useClearcoatNormalMap    = false;
+
+    f32 clearcoatFactor          = 0.0;
+    f32 clearcoatRoughnessFactor = 0.0;
+    char padding[8];
 
     //-------------------------- ( 4 * 16 = 64 bytes )
 };

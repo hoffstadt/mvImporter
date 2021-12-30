@@ -30,6 +30,9 @@ struct mvMeshPrimitive
     mvAssetID      emissiveTexture = -1;
     mvAssetID      occlusionTexture = -1;
     mvAssetID      metalRoughnessTexture = -1;
+    mvAssetID      clearcoatTexture = -1;
+    mvAssetID      clearcoatRoughnessTexture = -1;
+    mvAssetID      clearcoatNormalTexture = -1;
     mvAssetID      materialID = -1;
     mvAssetID      shadowMaterialID = -1;
 };

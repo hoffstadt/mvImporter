@@ -229,20 +229,25 @@ struct mvGLTFMesh
 struct mvGLTFMaterial
 {
 	std::string     name;
-	mvS32           base_color_texture         = -1;
-	mvS32           metallic_roughness_texture = -1;
-	mvS32           normal_texture             = -1;
-	mvS32           occlusion_texture          = -1;
-	mvS32           emissive_texture           = -1;
-	mvF32           normal_texture_scale       = 1.0f;
-	mvF32           occlusion_texture_strength = 1.0f;
-	mvF32           metallic_factor            = 1.0f;
-	mvF32           roughness_factor           = 1.0f;
-	mvF32           base_color_factor[4]       = { 1.0f, 1.0f, 1.0f, 1.0f };
-	mvF32           emissive_factor[3]         = { 0.0f, 0.0f, 0.0f };
-	mvF32           alphaCutoff                = 0.5;
-	bool            double_sided               = false;
-	mvGLTFAlphaMode alphaMode                  = MV_ALPHA_MODE_OPAQUE;
+	mvS32           base_color_texture           = -1;
+	mvS32           metallic_roughness_texture   = -1;
+	mvS32           normal_texture               = -1;
+	mvS32           occlusion_texture            = -1;
+	mvS32           emissive_texture             = -1;
+	mvS32           clearcoat_texture            = -1;
+	mvS32           clearcoat_roughness_texture  = -1;
+	mvS32           clearcoat_normal_texture     = -1;
+	mvF32           normal_texture_scale         = 1.0f;
+	mvF32           occlusion_texture_strength   = 1.0f;
+	mvF32           metallic_factor              = 1.0f;
+	mvF32           roughness_factor             = 1.0f;
+	mvF32           base_color_factor[4]         = { 1.0f, 1.0f, 1.0f, 1.0f };
+	mvF32           emissive_factor[3]           = { 0.0f, 0.0f, 0.0f };
+	mvF32           alphaCutoff                  = 0.5;
+	bool            double_sided                 = false;
+	mvGLTFAlphaMode alphaMode                    = MV_ALPHA_MODE_OPAQUE;
+	mvF32           clearcoat_factor             = 0.0;
+	mvF32           clearcoat_roughness_factor   = 0.0;
 };
 
 struct mvGLTFPerspective
@@ -1575,6 +1580,52 @@ namespace mvImp {
 
 			if (jmaterial.doesMemberExist("alphaCutoff"))
 				material.alphaCutoff = jmaterial.getMember("alphaCutoff");
+
+			if (jmaterial.doesMemberExist("extensions"))
+			{
+				if (jmaterial["extensions"].doesMemberExist("KHR_materials_clearcoat"))
+				{
+					if (jmaterial["extensions"]["KHR_materials_clearcoat"].doesMemberExist("clearcoatFactor"))
+						material.clearcoat_factor = jmaterial["pbrMetallicRoughness"]["KHR_materials_clearcoat"].getMember("clearcoatFactor");
+					if (jmaterial["extensions"]["KHR_materials_clearcoat"].doesMemberExist("clearcoatRoughnessFactor"))
+						material.clearcoat_roughness_factor = jmaterial["pbrMetallicRoughness"]["KHR_materials_clearcoat"].getMember("clearcoatRoughnessFactor");
+					if (jmaterial["extensions"]["KHR_materials_clearcoat"].doesMemberExist("clearcoatTexture"))
+					{
+						if (jmaterial["extensions"]["KHR_materials_clearcoat"]["clearcoatTexture"].doesMemberExist("index"))
+							material.clearcoat_texture = jmaterial["extensions"]["KHR_materials_clearcoat"]["clearcoatTexture"].getMember("index");
+					}
+					if (jmaterial["extensions"]["KHR_materials_clearcoat"].doesMemberExist("clearcoatRoughnessTexture"))
+					{
+						if (jmaterial["extensions"]["KHR_materials_clearcoat"]["clearcoatRoughnessTexture"].doesMemberExist("index"))
+							material.clearcoat_roughness_texture = jmaterial["extensions"]["KHR_materials_clearcoat"]["clearcoatRoughnessTexture"].getMember("index");
+					}
+					if (jmaterial["extensions"]["KHR_materials_clearcoat"].doesMemberExist("clearcoatNormalTexture"))
+					{
+						if (jmaterial["extensions"]["KHR_materials_clearcoat"]["clearcoatNormalTexture"].doesMemberExist("index"))
+							material.clearcoat_normal_texture = jmaterial["extensions"]["KHR_materials_clearcoat"]["clearcoatNormalTexture"].getMember("index");
+					}
+				}
+
+				if (jmaterial["pbrMetallicRoughness"].doesMemberExist("baseColorFactor"))
+				{
+					material.base_color_factor[0] = jmaterial["pbrMetallicRoughness"]["baseColorFactor"][0];
+					material.base_color_factor[1] = jmaterial["pbrMetallicRoughness"]["baseColorFactor"][1];
+					material.base_color_factor[2] = jmaterial["pbrMetallicRoughness"]["baseColorFactor"][2];
+					material.base_color_factor[3] = jmaterial["pbrMetallicRoughness"]["baseColorFactor"][3];
+				}
+
+				if (jmaterial["pbrMetallicRoughness"].doesMemberExist("metallicRoughnessTexture"))
+				{
+					if (jmaterial["pbrMetallicRoughness"]["metallicRoughnessTexture"].doesMemberExist("index"))
+						material.metallic_roughness_texture = jmaterial["pbrMetallicRoughness"]["metallicRoughnessTexture"].getMember("index");
+				}
+
+				if (jmaterial["pbrMetallicRoughness"].doesMemberExist("metallicFactor"))
+					material.metallic_factor = jmaterial["pbrMetallicRoughness"].getMember("metallicFactor");
+
+				if (jmaterial["pbrMetallicRoughness"].doesMemberExist("roughnessFactor"))
+					material.roughness_factor = jmaterial["pbrMetallicRoughness"].getMember("roughnessFactor");
+			}
 
 			size++;
 		}

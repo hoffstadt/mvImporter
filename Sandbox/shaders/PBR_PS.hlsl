@@ -43,9 +43,17 @@ struct mvMaterial
     bool useOcclusionMap;
     float occlusionStrength;
     float alphaCutoff;
-    //-------------------------- ( 4 * 16 = 64 bytes )
+    //-------------------------- ( 16 bytes )
 
     bool doubleSided;
+    bool useClearcoatMap;
+    bool useClearcoatRoughnessMap;
+    bool useClearcoatNormalMap;
+    //-------------------------- ( 16 bytes )
+
+    float clearcoatFactor;
+    float clearcoatRoughnessFactor;
+    //-------------------------- ( 16 bytes )
 
 };
 
@@ -95,30 +103,36 @@ struct mvGlobalInfo
 //-----------------------------------------------------------------------------
 // textures
 //-----------------------------------------------------------------------------
-Texture2D   AlbedoTexture        : register(t0);
-Texture2D   NormalTexture        : register(t1);
-Texture2D   MetalRoughnessTexture: register(t2);
-Texture2D   EmmissiveTexture     : register(t3);
-Texture2D   OcclusionTexture     : register(t4);
-Texture2D   DirectionalShadowMap : register(t5);
-TextureCube ShadowMap            : register(t6);
-TextureCube IrradianceMap        : register(t7);
-TextureCube SpecularMap          : register(t8);
-Texture2D   u_GGXLUT             : register(t9);
+Texture2D   AlbedoTexture             : register(t0);
+Texture2D   NormalTexture             : register(t1);
+Texture2D   MetalRoughnessTexture     : register(t2);
+Texture2D   EmmissiveTexture          : register(t3);
+Texture2D   OcclusionTexture          : register(t4);
+Texture2D   DirectionalShadowMap      : register(t5);
+TextureCube ShadowMap                 : register(t6);
+TextureCube IrradianceMap             : register(t7);
+TextureCube SpecularMap               : register(t8);
+Texture2D   u_GGXLUT                  : register(t9);
+Texture2D   ClearCoatTexture          : register(t10);
+Texture2D   ClearCoatRoughnessTexture : register(t11);
+Texture2D   ClearCoatNormalTexture    : register(t12);
 
 //-----------------------------------------------------------------------------
 // samplers
 //-----------------------------------------------------------------------------
-SamplerState           AlbedoTextureSampler         : register(s0);
-SamplerState           NormalTextureSampler         : register(s1);
-SamplerState           MetalRoughnessTextureSampler : register(s2);
-SamplerState           EmmissiveTextureSampler      : register(s3);
-SamplerState           OcclusionTextureSampler      : register(s4);
-SamplerComparisonState DirectionalShadowMapSampler  : register(s5);
-SamplerComparisonState ShadowMapSampler             : register(s6);
-SamplerState           IrradianceMapSampler         : register(s7);
-SamplerState           SpecularMapSampler           : register(s8);
-SamplerState           u_GGXLUTSampler              : register(s9);
+SamplerState           AlbedoTextureSampler             : register(s0);
+SamplerState           NormalTextureSampler             : register(s1);
+SamplerState           MetalRoughnessTextureSampler     : register(s2);
+SamplerState           EmmissiveTextureSampler          : register(s3);
+SamplerState           OcclusionTextureSampler          : register(s4);
+SamplerComparisonState DirectionalShadowMapSampler      : register(s5);
+SamplerComparisonState ShadowMapSampler                 : register(s6);
+SamplerState           IrradianceMapSampler             : register(s7);
+SamplerState           SpecularMapSampler               : register(s8);
+SamplerState           u_GGXLUTSampler                  : register(s9);
+SamplerState           ClearCoatTextureSampler          : register(s10);
+SamplerState           ClearCoatRoughnessTextureSampler : register(s11);
+SamplerState           ClearCoatNormalTextureSampler    : register(s12);
 
 
 //-----------------------------------------------------------------------------
@@ -184,7 +198,7 @@ NormalInfo getNormalInfo(VSOut input)
     {
         
         normalInfo.ntex = NormalTexture.Sample(NormalTextureSampler, input.UV).xyz * 2.0 - 1.0;
-        normalInfo.ntex.y = -normalInfo.ntex.y;
+        //normalInfo.ntex.y = -normalInfo.ntex.y;
         //float u_NormalScale = -1.0;
         //normalInfo.ntex *= float3(u_NormalScale, u_NormalScale, 1.0);
         normalInfo.ntex = normalize(normalInfo.ntex);
@@ -310,6 +324,14 @@ float3 getIBLRadianceGGX(float3 n, float3 v, float roughness, float3 F0, float s
     return specularWeight * specularLight * FssEss;
 }
 
+float3 getPunctualRadianceClearCoat(float3 clearcoatNormal, float3 v, float3 l, float3 h, float VdotH, float3 f0, float3 f90, float clearcoatRoughness)
+{
+    float NdotL = clampedDot(clearcoatNormal, l);
+    float NdotV = clampedDot(clearcoatNormal, v);
+    float NdotH = clampedDot(clearcoatNormal, h);
+    return NdotL * BRDF_specularGGX(f0, f90, clearcoatRoughness * clearcoatRoughness, 1.0, VdotH, NdotL, NdotV, NdotH);
+}
+
 float4 main(VSOut input) : SV_Target
 {
     float4 finalColor;
@@ -322,8 +344,6 @@ float4 main(VSOut input) : SV_Target
             discard;
         }
     }
-    
-    //clip(baseColor.a < 0.1f ? -1 : 1); // bail if highly translucent
     
     float3 v = normalize(ginfo.camPos - input.WorldPos);
     NormalInfo normalInfo = getNormalInfo(input);
@@ -360,9 +380,9 @@ float4 main(VSOut input) : SV_Target
     materialInfo = getSheenInfo(materialInfo);
 #endif
 
-#ifdef MATERIAL_CLEARCOAT
-    materialInfo = getClearCoatInfo(materialInfo, normalInfo);
-#endif
+//#ifdef MATERIAL_CLEARCOAT
+    materialInfo = getClearCoatInfo(input, materialInfo, normalInfo);
+//#endif
 
 #ifdef MATERIAL_SPECULAR
     materialInfo = getSpecularInfo(materialInfo);
@@ -403,6 +423,8 @@ float4 main(VSOut input) : SV_Target
         f_diffuse += getIBLRadianceLambertian(n, v, materialInfo.perceptualRoughness, materialInfo.c_diff, materialInfo.f0, materialInfo.specularWeight);
     if (ginfo.useReflection)
         f_specular += getIBLRadianceGGX(n, v, materialInfo.perceptualRoughness, materialInfo.f0, materialInfo.specularWeight);
+
+    f_clearcoat += getIBLRadianceGGX(materialInfo.clearcoatNormal, v, materialInfo.clearcoatRoughness, materialInfo.clearcoatF0, 1.0);
     
     // Calculate lighting contribution from image based lighting source (IBL)
 #ifdef USE_IBL
@@ -469,7 +491,8 @@ float4 main(VSOut input) : SV_Target
             float3 intensity = DirectionalLight.diffuseIntensity * DirectionalLight.diffuseColor;
             f_diffuse += shadowLevel * intensity * NdotL * BRDF_lambertian(materialInfo.f0, materialInfo.f90, materialInfo.c_diff, materialInfo.specularWeight, VdotH);
             f_specular += shadowLevel * intensity * NdotL * BRDF_specularGGX(materialInfo.f0, materialInfo.f90, materialInfo.alphaRoughness, materialInfo.specularWeight, VdotH, NdotL, NdotV, NdotH);
-
+            f_clearcoat += shadowLevel * intensity * getPunctualRadianceClearCoat(materialInfo.clearcoatNormal, v, l, h, VdotH,
+                materialInfo.clearcoatF0, materialInfo.clearcoatF90, materialInfo.clearcoatRoughness);
 #ifdef MATERIAL_SHEEN
         f_sheen += shadowLevel *intensity * getPunctualRadianceSheen(materialInfo.sheenColorFactor, materialInfo.sheenRoughnessFactor, NdotL, NdotV, NdotH);
         albedoSheenScaling = min(1.0 - max3(materialInfo.sheenColorFactor) * albedoSheenScalingLUT(NdotV, materialInfo.sheenRoughnessFactor),
@@ -551,7 +574,8 @@ float4 main(VSOut input) : SV_Target
             float3 intensity = DirectionalLight.diffuseIntensity * DirectionalLight.diffuseColor;
             f_diffuse += shadowLevel * intensity * NdotL * BRDF_lambertian(materialInfo.f0, materialInfo.f90, materialInfo.c_diff, materialInfo.specularWeight, VdotH);
             f_specular += shadowLevel * intensity * NdotL * BRDF_specularGGX(materialInfo.f0, materialInfo.f90, materialInfo.alphaRoughness, materialInfo.specularWeight, VdotH, NdotL, NdotV, NdotH);
-
+            f_clearcoat += shadowLevel * intensity * getPunctualRadianceClearCoat(materialInfo.clearcoatNormal, v, l, h, VdotH,
+                materialInfo.clearcoatF0, materialInfo.clearcoatF90, materialInfo.clearcoatRoughness);
 #ifdef MATERIAL_SHEEN
             f_sheen += shadowLevel * intensity * getPunctualRadianceSheen(materialInfo.sheenColorFactor, materialInfo.sheenRoughnessFactor, NdotL, NdotV, NdotH);
             albedoSheenScaling = min(1.0 - max3(materialInfo.sheenColorFactor) * albedoSheenScalingLUT(NdotV, materialInfo.sheenRoughnessFactor),
@@ -597,6 +621,10 @@ float4 main(VSOut input) : SV_Target
     // Layer blending
     float clearcoatFactor = 0.0;
     float3 clearcoatFresnel = float3(0.0.xxx);
+
+    clearcoatFactor = materialInfo.clearcoatFactor;
+    clearcoatFresnel = F_Schlick(materialInfo.clearcoatF0, materialInfo.clearcoatF90, clampedDot(materialInfo.clearcoatNormal, v));
+    f_clearcoat = f_clearcoat * clearcoatFactor;
 
 #ifdef MATERIAL_CLEARCOAT
     clearcoatFactor = materialInfo.clearcoatFactor;

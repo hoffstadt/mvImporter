@@ -456,6 +456,9 @@ render_mesh(mvAssetManager& am, mvMesh& mesh, mvMat4 transform, mvMat4 cam, mvMa
         mvTexture* metalRoughMap = primitive.metalRoughnessTexture == -1 ? nullptr : &am.textures[primitive.metalRoughnessTexture].asset;
         mvTexture* emissiveMap = primitive.emissiveTexture == -1 ? nullptr : &am.textures[primitive.emissiveTexture].asset;
         mvTexture* occlussionMap = primitive.occlusionTexture == -1 ? nullptr : &am.textures[primitive.occlusionTexture].asset;
+        mvTexture* clearcoatMap = primitive.clearcoatTexture == -1 ? nullptr : &am.textures[primitive.clearcoatTexture].asset;
+        mvTexture* clearcoatRoughnessMap = primitive.clearcoatRoughnessTexture == -1 ? nullptr : &am.textures[primitive.clearcoatRoughnessTexture].asset;
+        mvTexture* clearcoatNormalMap = primitive.clearcoatNormalTexture == -1 ? nullptr : &am.textures[primitive.clearcoatNormalTexture].asset;
 
         mvPipeline& pipeline = am.pipelines[material->pipeline].asset;
 
@@ -473,6 +476,9 @@ render_mesh(mvAssetManager& am, mvMesh& mesh, mvMat4 transform, mvMat4 cam, mvMa
         device->PSSetSamplers(2, 1, metalRoughMap ? &metalRoughMap->sampler : &emptySamplers);
         device->PSSetSamplers(3, 1, metalRoughMap ? &metalRoughMap->sampler : &emptySamplers);
         device->PSSetSamplers(4, 1, occlussionMap ? &occlussionMap->sampler : &emptySamplers);
+        device->PSSetSamplers(10, 1, clearcoatMap ? &clearcoatMap->sampler : &emptySamplers);
+        device->PSSetSamplers(11, 1, clearcoatRoughnessMap ? &clearcoatRoughnessMap->sampler : &emptySamplers);
+        device->PSSetSamplers(12, 1, clearcoatNormalMap ? &clearcoatNormalMap->sampler : &emptySamplers);
 
         // maps
         ID3D11ShaderResourceView* const pSRV[1] = { NULL };
@@ -481,6 +487,9 @@ render_mesh(mvAssetManager& am, mvMesh& mesh, mvMat4 transform, mvMat4 cam, mvMa
         device->PSSetShaderResources(2, 1, metalRoughMap ? &metalRoughMap->textureView : pSRV);
         device->PSSetShaderResources(3, 1, emissiveMap ? &emissiveMap->textureView : pSRV);
         device->PSSetShaderResources(4, 1, occlussionMap ? &occlussionMap->textureView : pSRV);
+        device->PSSetShaderResources(10, 1, clearcoatMap ? &clearcoatMap->textureView : pSRV);
+        device->PSSetShaderResources(11, 1, clearcoatRoughnessMap ? &clearcoatRoughnessMap->textureView : pSRV);
+        device->PSSetShaderResources(12, 1, clearcoatNormalMap ? &clearcoatNormalMap->textureView : pSRV);
 
         update_const_buffer(material->buffer, &material->data);
         device->PSSetConstantBuffers(1u, 1u, &material->buffer.buffer);
