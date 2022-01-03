@@ -840,6 +840,8 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
                 materialData.alphaCutoff = 0.5f;
                 materialData.alphaMode = material.alphaMode;
                 materialData.doubleSided = material.double_sided;
+                materialData.clearcoatFactor = material.clearcoat_factor;
+                materialData.clearcoatRoughnessFactor = material.clearcoat_roughness_factor;
                 if(materialData.alphaMode == 1)
                     materialData.alphaCutoff = material.alphaCutoff;
 
@@ -1102,6 +1104,8 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
                     std::to_string(materialData.alphaMode) +
                     std::to_string(materialData.clearcoatFactor) +
                     std::to_string(materialData.clearcoatRoughnessFactor) +
+                    std::to_string(materialData.clearcoatNormalScale) +
+                    std::to_string(materialData.normalScale) +
                     std::string(materialData.useClearcoatMap ? "T" : "F") +
                     std::string(materialData.useClearcoatRoughnessMap ? "T" : "F") +
                     std::string(materialData.useClearcoatNormalMap ? "T" : "F") +
@@ -1146,6 +1150,8 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
                     std::to_string(materialData.alphaMode) +
                     std::to_string(materialData.clearcoatFactor) +
                     std::to_string(materialData.clearcoatRoughnessFactor) +
+                    std::to_string(materialData.clearcoatNormalScale) +
+                    std::to_string(materialData.normalScale) +
                     std::string(materialData.useClearcoatMap ? "T" : "F") +
                     std::string(materialData.useClearcoatRoughnessMap ? "T" : "F") +
                     std::string(materialData.useClearcoatNormalMap ? "T" : "F") +

@@ -27,31 +27,33 @@ create_material(mvAssetManager& am, const std::string& vs, const std::string& ps
 	);
 
 	std::string hash = ps + vs +
-		std::to_string(materialData.albedo.x) +
-		std::to_string(materialData.albedo.y) +
-		std::to_string(materialData.albedo.z) +
-		std::to_string(materialData.albedo.w) +
-		std::to_string(materialData.metalness) +
-		std::to_string(materialData.roughness) +
-		std::to_string(materialData.alphaCutoff) +
-		std::to_string(materialData.emisiveFactor.x) +
-		std::to_string(materialData.emisiveFactor.y) +
-		std::to_string(materialData.emisiveFactor.z) +
-		std::to_string(materialData.radiance) +
-		std::to_string(materialData.fresnel) +
-		std::to_string(materialData.alphaMode) +
-		std::to_string(materialData.clearcoatFactor) +
-		std::to_string(materialData.clearcoatRoughnessFactor) +
-		std::string(materialData.useClearcoatMap ? "T" : "F") +
-		std::string(materialData.useClearcoatRoughnessMap ? "T" : "F") +
-		std::string(materialData.useClearcoatNormalMap ? "T" : "F") +
-		std::string(materialData.doubleSided ? "T" : "F") +
-		std::string(materialData.useAlbedoMap ? "T" : "F") +
-		std::string(materialData.useNormalMap ? "T" : "F") +
-		std::string(materialData.useRoughnessMap ? "T" : "F") +
-		std::string(materialData.useOcclusionMap ? "T" : "F") +
-		std::string(materialData.useEmissiveMap ? "T" : "F") +
-		std::string(materialData.useMetalMap ? "T" : "F");
+        std::to_string(materialData.albedo.x) +
+        std::to_string(materialData.albedo.y) +
+        std::to_string(materialData.albedo.z) +
+        std::to_string(materialData.albedo.w) +
+        std::to_string(materialData.metalness) +
+        std::to_string(materialData.roughness) +
+        std::to_string(materialData.alphaCutoff) +
+        std::to_string(materialData.emisiveFactor.x) +
+        std::to_string(materialData.emisiveFactor.y) +
+        std::to_string(materialData.emisiveFactor.z) +
+        std::to_string(materialData.radiance) +
+        std::to_string(materialData.fresnel) +
+        std::to_string(materialData.alphaMode) +
+        std::to_string(materialData.clearcoatFactor) +
+        std::to_string(materialData.clearcoatRoughnessFactor) +
+        std::to_string(materialData.clearcoatNormalScale) +
+        std::to_string(materialData.normalScale) +
+        std::string(materialData.useClearcoatMap ? "T" : "F") +
+        std::string(materialData.useClearcoatRoughnessMap ? "T" : "F") +
+        std::string(materialData.useClearcoatNormalMap ? "T" : "F") +
+        std::string(materialData.doubleSided ? "T" : "F") +
+        std::string(materialData.useAlbedoMap ? "T" : "F") +
+        std::string(materialData.useNormalMap ? "T" : "F") +
+        std::string(materialData.useRoughnessMap ? "T" : "F") +
+        std::string(materialData.useOcclusionMap ? "T" : "F") +
+        std::string(materialData.useEmissiveMap ? "T" : "F") +
+        std::string(materialData.useMetalMap ? "T" : "F");
 
 	material.pipeline = mvGetMaterialAssetID(&am, hash);
 	if (material.pipeline == -1)

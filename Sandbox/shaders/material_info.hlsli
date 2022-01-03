@@ -39,16 +39,17 @@ struct MaterialInfo
 //    return info;
 //}
 
-float3 getClearcoatNormal(NormalInfo normalInfo)
+float3 getClearcoatNormal(VSOut input, NormalInfo normalInfo)
 {
-#ifdef HAS_CLEARCOAT_NORMAL_MAP
-    vec3 n = texture(u_ClearcoatNormalSampler, getClearcoatNormalUV()).rgb * 2.0 - vec3(1.0);
-    n *= vec3(u_ClearcoatNormalScale, u_ClearcoatNormalScale, 1.0);
-    n = mat3(normalInfo.t, normalInfo.b, normalInfo.ng) * normalize(n);
-    return n;
-#else
+    if (material.useClearcoatNormalMap)
+    {
+        float3 n = ClearCoatNormalTexture.Sample(ClearCoatNormalTextureSampler, input.UV).rgb * 2.0 - float3(1.0.xxx);
+        n *= float3(material.clearcoatNormalScale, material.clearcoatNormalScale, 1.0);
+        n = mul(float3x3(normalInfo.t, normalInfo.b, normalInfo.ng), normalize(n));
+        //n = mul(input.TBN, normalize(n));
+        return n;
+    }
     return normalInfo.ng;
-#endif
 }
 
 MaterialInfo getClearCoatInfo(VSOut input, MaterialInfo info, NormalInfo normalInfo)
@@ -64,12 +65,13 @@ MaterialInfo getClearCoatInfo(VSOut input, MaterialInfo info, NormalInfo normalI
         info.clearcoatFactor *= clearcoatSample.r;
     }
 
-#ifdef HAS_CLEARCOAT_ROUGHNESS_MAP
-    vec4 clearcoatSampleRoughness = texture(u_ClearcoatRoughnessSampler, getClearcoatRoughnessUV());
-    info.clearcoatRoughness *= clearcoatSampleRoughness.g;
-#endif
+    if (material.useClearcoatRoughnessMap)
+    {
+        float4 clearcoatSampleRoughness = ClearCoatRoughnessTexture.Sample(ClearCoatRoughnessTextureSampler, input.UV);
+        info.clearcoatRoughness *= clearcoatSampleRoughness.g;
+    }
 
-    info.clearcoatNormal = getClearcoatNormal(normalInfo);
+    info.clearcoatNormal = getClearcoatNormal(input, normalInfo);
     info.clearcoatRoughness = clamp(info.clearcoatRoughness, 0.0, 1.0);
     return info;
 }

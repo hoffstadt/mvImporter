@@ -53,6 +53,8 @@ struct mvMaterial
 
     float clearcoatFactor;
     float clearcoatRoughnessFactor;
+    float normalScale;
+    float clearcoatNormalScale;
     //-------------------------- ( 16 bytes )
 
 };

@@ -48,7 +48,8 @@ struct mvMaterialData
 
     f32 clearcoatFactor          = 0.0;
     f32 clearcoatRoughnessFactor = 0.0;
-    char padding[8];
+    f32 normalScale              = 1.0f;
+    f32 clearcoatNormalScale     = 1.0f;
 
     //-------------------------- ( 4 * 16 = 64 bytes )
 };
