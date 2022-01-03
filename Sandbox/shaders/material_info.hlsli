@@ -32,12 +32,23 @@ struct MaterialInfo
     float attenuationDistance;
 };
 
-//MaterialInfo getIorInfo(MaterialInfo info)
-//{
-//    info.f0 = vec3(pow((u_Ior - 1.0) / (u_Ior + 1.0), 2.0));
-//    info.ior = u_Ior;
-//    return info;
-//}
+#ifdef MATERIAL_SPECULARGLOSSINESS
+MaterialInfo getSpecularGlossinessInfo(MaterialInfo info)
+{
+    info.f0 = u_SpecularFactor;
+    info.perceptualRoughness = u_GlossinessFactor;
+
+#ifdef HAS_SPECULAR_GLOSSINESS_MAP
+    vec4 sgSample = texture(u_SpecularGlossinessSampler, getSpecularGlossinessUV());
+    info.perceptualRoughness *= sgSample.a; // glossiness to roughness
+    info.f0 *= sgSample.rgb; // specular
+#endif // ! HAS_SPECULAR_GLOSSINESS_MAP
+
+    info.perceptualRoughness = 1.0 - info.perceptualRoughness; // 1 - glossiness
+    info.c_diff = info.baseColor.rgb * (1.0 - max(max(info.f0.r, info.f0.g), info.f0.b));
+    return info;
+}
+#endif
 
 NormalInfo getNormalInfo(VSOut input)
 {
@@ -71,38 +82,69 @@ NormalInfo getNormalInfo(VSOut input)
     NormalInfo normalInfo;
     normalInfo.ng = ng;
     normalInfo.n = ng;
-    if (material.useNormalMap && ginfo.useNormalMap)
-    {
-
-        normalInfo.ntex = NormalTexture.Sample(NormalTextureSampler, input.UV).xyz * 2.0 - 1.0;
-        //normalInfo.ntex.y = -normalInfo.ntex.y;
-        //float u_NormalScale = -1.0;
-        //normalInfo.ntex *= float3(u_NormalScale, u_NormalScale, 1.0);
-        normalInfo.ntex = normalize(normalInfo.ntex);
-        normalInfo.n = normalize(mul(input.TBN, normalInfo.ntex));
-        //normalInfo.n = normalize(mul(float3x3(t, b, ng), normalInfo.ntex));
-        //return normalize(mul(input.TBN, tangentNormal));
-
-    }
+#ifdef HAS_NORMAL_MAP
+    normalInfo.ntex = NormalTexture.Sample(NormalTextureSampler, input.UV).xyz * 2.0 - 1.0;
+    //normalInfo.ntex.y = -normalInfo.ntex.y;
+    //float u_NormalScale = -1.0;
+    //normalInfo.ntex *= float3(u_NormalScale, u_NormalScale, 1.0);
+    normalInfo.ntex = normalize(normalInfo.ntex);
+    normalInfo.n = normalize(mul(input.TBN, normalInfo.ntex));
+    //normalInfo.n = normalize(mul(float3x3(t, b, ng), normalInfo.ntex));
+    //return normalize(mul(input.TBN, tangentNormal));
+#else
+    normalInfo.n = ng;
+#endif
 
     normalInfo.t = t;
     normalInfo.b = b;
     return normalInfo;
 }
 
+#ifdef MATERIAL_CLEARCOAT
 float3 getClearcoatNormal(VSOut input, NormalInfo normalInfo)
 {
-    if (material.useClearcoatNormalMap)
-    {
+#ifdef HAS_CLEARCOAT_NORMAL_MAP
         float3 n = ClearCoatNormalTexture.Sample(ClearCoatNormalTextureSampler, input.UV).rgb * 2.0 - float3(1.0.xxx);
         n *= float3(material.clearcoatNormalScale, material.clearcoatNormalScale, 1.0);
         n = mul(float3x3(normalInfo.t, normalInfo.b, normalInfo.ng), normalize(n));
         //n = mul(input.TBN, normalize(n));
         return n;
-    }
+#else
     return normalInfo.ng;
+#endif
 }
+#endif
 
+#ifdef MATERIAL_TRANSMISSION
+MaterialInfo getTransmissionInfo(MaterialInfo info)
+{
+    info.transmissionFactor = u_TransmissionFactor;
+
+#ifdef HAS_TRANSMISSION_MAP
+    vec4 transmissionSample = texture(u_TransmissionSampler, getTransmissionUV());
+    info.transmissionFactor *= transmissionSample.r;
+#endif
+    return info;
+}
+#endif
+
+
+#ifdef MATERIAL_VOLUME
+MaterialInfo getVolumeInfo(MaterialInfo info)
+{
+    info.thickness = u_ThicknessFactor;
+    info.attenuationColor = u_AttenuationColor;
+    info.attenuationDistance = u_AttenuationDistance;
+
+#ifdef HAS_THICKNESS_MAP
+    vec4 thicknessSample = texture(u_ThicknessSampler, getThicknessUV());
+    info.thickness *= thicknessSample.g;
+#endif
+    return info;
+}
+#endif
+
+#ifdef MATERIAL_CLEARCOAT
 MaterialInfo getClearCoatInfo(VSOut input, MaterialInfo info, NormalInfo normalInfo)
 {
     info.clearcoatFactor = material.clearcoatFactor;
@@ -110,61 +152,91 @@ MaterialInfo getClearCoatInfo(VSOut input, MaterialInfo info, NormalInfo normalI
     info.clearcoatF0 = float3(info.f0.xxx);
     info.clearcoatF90 = float3(1.0.xxx);
 
-    if (material.useClearcoatMap)
-    {
-        float4 clearcoatSample = ClearCoatTexture.Sample(ClearCoatTextureSampler, input.UV);
-        info.clearcoatFactor *= clearcoatSample.r;
-    }
+#ifdef HAS_CLEARCOAT_MAP
+    float4 clearcoatSample = ClearCoatTexture.Sample(ClearCoatTextureSampler, input.UV);
+    info.clearcoatFactor *= clearcoatSample.r;
+#endif
 
-    if (material.useClearcoatRoughnessMap)
-    {
-        float4 clearcoatSampleRoughness = ClearCoatRoughnessTexture.Sample(ClearCoatRoughnessTextureSampler, input.UV);
-        info.clearcoatRoughness *= clearcoatSampleRoughness.g;
-    }
+#ifdef HAS_CLEARCOAT_ROUGHNESS_MAP
+    float4 clearcoatSampleRoughness = ClearCoatRoughnessTexture.Sample(ClearCoatRoughnessTextureSampler, input.UV);
+    info.clearcoatRoughness *= clearcoatSampleRoughness.g;
+#endif
 
     info.clearcoatNormal = getClearcoatNormal(input, normalInfo);
     info.clearcoatRoughness = clamp(info.clearcoatRoughness, 0.0, 1.0);
     return info;
 }
+#endif
 
+#ifdef MATERIAL_METALLICROUGHNESS
 MaterialInfo getMetallicRoughnessInfo(VSOut input, MaterialInfo info)
 {
-    info.metallic = material.metalness;
-    info.perceptualRoughness = material.roughness;
 
-    if (material.useMetalMap)
+#ifdef HAS_METALLIC_ROUGHNESS_MAP
+    // Roughness is stored in the 'g' channel, metallic is stored in the 'b' channel.
+    // This layout intentionally reserves the 'r' channel for (optional) occlusion map data
+    float4 mrSample = MetalRoughnessTexture.Sample(MetalRoughnessTextureSampler, input.UV);
+    //mrSample = pow(mrSample, float4(0.4545f.xxx, 1.0f));
+    if (ginfo.useRoughness)
     {
-        // Roughness is stored in the 'g' channel, metallic is stored in the 'b' channel.
-        // This layout intentionally reserves the 'r' channel for (optional) occlusion map data
-        float4 mrSample = MetalRoughnessTexture.Sample(MetalRoughnessTextureSampler, input.UV);
-        //mrSample = pow(mrSample, float4(0.4545f.xxx, 1.0f));
-        if (ginfo.useRoughness)
-        {
-            info.perceptualRoughness *= mrSample.g;
-        }
-        if (ginfo.useMetalness)
-        {
-            info.metallic *= mrSample.b;
-        }
+        info.perceptualRoughness *= mrSample.g;
     }
+    if (ginfo.useMetalness)
+    {
+        info.metallic *= mrSample.b;
+    }
+#endif
 
     // Achromatic f0 based on IOR.
     info.c_diff = lerp(info.baseColor.rgb, float3(0.0.xxx), info.metallic);
     info.f0 = lerp(info.f0, info.baseColor.rgb, info.metallic);
     return info;
 }
+#endif
+
+#ifdef MATERIAL_SHEEN
+MaterialInfo getSheenInfo(MaterialInfo info)
+{
+    info.sheenColorFactor = u_SheenColorFactor;
+    info.sheenRoughnessFactor = u_SheenRoughnessFactor;
+
+#ifdef HAS_SHEEN_COLOR_MAP
+    vec4 sheenColorSample = texture(u_SheenColorSampler, getSheenColorUV());
+    info.sheenColorFactor *= sheenColorSample.rgb;
+#endif
+
+#ifdef HAS_SHEEN_ROUGHNESS_MAP
+    vec4 sheenRoughnessSample = texture(u_SheenRoughnessSampler, getSheenRoughnessUV());
+    info.sheenRoughnessFactor *= sheenRoughnessSample.a;
+#endif
+    return info;
+}
+#endif
 
 float4 getBaseColor(VSOut input)
 {
     float4 base_color = float4(1.0.xxxx);
     
+#if defined(MATERIAL_SPECULARGLOSSINESS)
+    baseColor = u_DiffuseFactor;
+#elif defined(MATERIAL_METALLICROUGHNESS)
     base_color = material.albedo;
-    
-    if (material.useAlbedoMap && ginfo.useAlbedo)
-    {
-        base_color *= sRGBToLinear(AlbedoTexture.Sample(AlbedoTextureSampler, input.UV).rgba);
-
-    }
+#endif
+   
+#if defined(MATERIAL_SPECULARGLOSSINESS) && defined(HAS_DIFFUSE_MAP)
+    baseColor *= texture(u_DiffuseSampler, getDiffuseUV());
+#elif defined(MATERIAL_METALLICROUGHNESS) && defined(HAS_BASE_COLOR_MAP)
+    base_color *= sRGBToLinear(AlbedoTexture.Sample(AlbedoTextureSampler, input.UV).rgba);
+#endif
     
     return base_color;
 }
+
+#ifdef MATERIAL_IOR
+MaterialInfo getIorInfo(MaterialInfo info)
+{
+    info.f0 = vec3(pow((u_Ior - 1.0) / (u_Ior + 1.0), 2.0));
+    info.ior = u_Ior;
+    return info;
+}
+#endif

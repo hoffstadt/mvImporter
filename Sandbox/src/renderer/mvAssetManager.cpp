@@ -1,5 +1,6 @@
 #include "mvAssetManager.h"
 #include <assert.h>
+#include "mvSandbox.h"
 
 void 
 mvInitializeAssetManager(mvAssetManager* manager)
@@ -153,6 +154,62 @@ mvCleanupAssetManager(mvAssetManager* manager)
 	delete[] manager->freenodes;
 	delete[] manager->freematerials;
 	delete[] manager->freescenes;
+}
+
+void
+reload_materials(mvAssetManager* manager)
+{
+
+	for (int i = 0; i < manager->maxMaterialCount; i++)
+	{
+		if (!manager->freematerials[i])
+		{
+			mvMaterial& material = manager->materials[i].asset;
+			mvPipeline& pipeline = manager->pipelines[material.pipeline].asset;
+
+			// clear old pipeline
+			if (manager->pipelines[material.pipeline].asset.vertexShader)
+			{
+				manager->pipelines[material.pipeline].asset.vertexShader->Release();
+				manager->pipelines[material.pipeline].asset.vertexBlob->Release();
+			}
+			if (manager->pipelines[material.pipeline].asset.inputLayout)
+				manager->pipelines[material.pipeline].asset.inputLayout->Release();
+			if (manager->pipelines[material.pipeline].asset.blendState)
+				manager->pipelines[material.pipeline].asset.blendState->Release();
+			if (manager->pipelines[material.pipeline].asset.depthStencilState)
+				manager->pipelines[material.pipeline].asset.depthStencilState->Release();
+			if (manager->pipelines[material.pipeline].asset.rasterizationState)
+				manager->pipelines[material.pipeline].asset.rasterizationState->Release();
+			if (manager->pipelines[material.pipeline].asset.pixelShader)
+			{
+				manager->pipelines[material.pipeline].asset.pixelBlob->Release();
+				manager->pipelines[material.pipeline].asset.pixelShader->Release();
+			}
+
+			pipeline.info.macros.clear();
+			if (GContext->IO.imageBasedLighting) pipeline.info.macros.push_back({ "USE_IBL", "0" });
+			if (GContext->IO.punctualLighting) pipeline.info.macros.push_back({ "USE_PUNCTUAL", "0" });
+			if (material.extensionClearcoat && GContext->IO.clearcoat) pipeline.info.macros.push_back({ "MATERIAL_CLEARCOAT", "0" });
+			if (material.pbrMetallicRoughness) pipeline.info.macros.push_back({ "MATERIAL_METALLICROUGHNESS", "0" });
+			if (material.alphaMode == 0) pipeline.info.macros.push_back({ "ALPHAMODE", "0" });
+			else if (material.alphaMode == 1) pipeline.info.macros.push_back({ "ALPHAMODE", "1" });
+			else if (material.alphaMode == 2) pipeline.info.macros.push_back({ "ALPHAMODE", "2" });
+			if (material.hasAlbedoMap)pipeline.info.macros.push_back({ "HAS_BASE_COLOR_MAP", "0" });
+			if (material.hasNormalMap)pipeline.info.macros.push_back({ "HAS_NORMAL_MAP", "0" });
+			if (material.hasMetallicRoughnessMap)pipeline.info.macros.push_back({ "HAS_METALLIC_ROUGHNESS_MAP", "0" });
+			if (material.hasEmmissiveMap)pipeline.info.macros.push_back({ "HAS_EMISSIVE_MAP", "0" });
+			if (material.hasOcculusionMap)pipeline.info.macros.push_back({ "HAS_OCCLUSION_MAP", "0" });
+			if (material.hasClearcoatMap)pipeline.info.macros.push_back({ "HAS_CLEARCOAT_MAP", "0" });
+			if (material.hasClearcoatRoughnessMap)pipeline.info.macros.push_back({ "HAS_CLEARCOAT_ROUGHNESS_MAP", "0" });
+			if (material.hasClearcoatNormalMap)pipeline.info.macros.push_back({ "HAS_CLEARCOAT_NORMAL_MAP", "0" });
+			pipeline.info.macros.push_back({ NULL, NULL });
+
+			manager->pipelines[material.pipeline].asset = finalize_pipeline(pipeline.info);
+		}
+	}
+
+
 }
 
 //-----------------------------------------------------------------------------

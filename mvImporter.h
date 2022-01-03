@@ -249,6 +249,10 @@ struct mvGLTFMaterial
 	mvGLTFAlphaMode alphaMode                      = MV_ALPHA_MODE_OPAQUE;
 	mvF32           clearcoat_factor               = 0.0;
 	mvF32           clearcoat_roughness_factor     = 0.0;
+
+	// extensions & models
+	bool pbrMetallicRoughness  = false;
+	bool clearcoat_extension   = false;
 };
 
 struct mvGLTFPerspective
@@ -345,6 +349,7 @@ struct mvGLTFModel
 	mvGLTFAccessor*   accessors   = nullptr;
 	mvGLTFCamera*     cameras     = nullptr;
 	mvGLTFAnimation*  animations  = nullptr;
+	std::string*      extensions  = nullptr;
 
 	mvS32 scene            = -1;
 	mvU32 scene_count      = 0u;
@@ -359,6 +364,7 @@ struct mvGLTFModel
 	mvU32 accessor_count   = 0u;
 	mvU32 camera_count     = 0u;
 	mvU32 animation_count  = 0u;
+	mvU32 extension_count  = 0u;
 };
 
 //-----------------------------------------------------------------------------
@@ -1124,6 +1130,26 @@ mvJsonMember::operator mvJsonObject& ()
 
 namespace mvImp {
 
+	static std::string*
+	_LoadExtensions(mvJsonContext& j, mvU32& size)
+	{
+		if (!j.doesMemberExist("extensionsUsed"))
+			return nullptr;
+
+		mvU32 extensionCount = j["extensionsUsed"].members.size();
+
+		std::string* extensions = new std::string[extensionCount];
+
+		for (int i = 0; i < extensionCount; i++)
+		{
+			//mvJsonObject& jExtension = j["extensionsUsed"][i];
+			extensions[i] = j["extensionsUsed"][i];
+			size++;
+		}
+
+		return extensions;
+	}
+
 	static mvGLTFAnimation*
 	_LoadAnimations(mvJsonContext& j, mvU32& size)
 	{
@@ -1517,6 +1543,8 @@ namespace mvImp {
 
 			if (jmaterial.doesMemberExist("pbrMetallicRoughness"))
 			{
+				material.pbrMetallicRoughness = true;
+
 				if (jmaterial["pbrMetallicRoughness"].doesMemberExist("baseColorTexture"))
 				{
 					if (jmaterial["pbrMetallicRoughness"]["baseColorTexture"].doesMemberExist("index"))
@@ -1586,6 +1614,8 @@ namespace mvImp {
 			{
 				if (jmaterial["extensions"].doesMemberExist("KHR_materials_clearcoat"))
 				{
+					material.clearcoat_extension = true;
+
 					if (jmaterial["extensions"]["KHR_materials_clearcoat"].doesMemberExist("clearcoatFactor"))
 						material.clearcoat_factor = jmaterial["extensions"]["KHR_materials_clearcoat"].getMember("clearcoatFactor");
 					if (jmaterial["extensions"]["KHR_materials_clearcoat"].doesMemberExist("clearcoatRoughnessFactor"))
@@ -1959,6 +1989,7 @@ mvLoadBinaryGLTF(const char* root, const char* file)
 	model.accessors = mvImp::_LoadAccessors(context, model.accessor_count);
 	model.cameras = mvImp::_LoadCameras(context, model.camera_count);
 	model.animations = mvImp::_LoadAnimations(context, model.animation_count);
+	model.extensions = mvImp::_LoadExtensions(context, model.extension_count);
 
 	if (chunkLength + 20 != length)
 	{
@@ -2086,6 +2117,7 @@ mvLoadGLTF(const char* root, const char* file)
 	model.accessors = mvImp::_LoadAccessors(context, model.accessor_count);
 	model.cameras = mvImp::_LoadCameras(context, model.camera_count);
 	model.animations = mvImp::_LoadAnimations(context, model.animation_count);
+	model.extensions = mvImp::_LoadExtensions(context, model.extension_count);
 
 	for (mvU32 i = 0; i < model.image_count; i++)
 	{
@@ -2180,6 +2212,7 @@ mvCleanupGLTF(mvGLTFModel& model)
 	delete[] model.accessors;
 	delete[] model.cameras;
 	delete[] model.animations;
+	delete[] model.extensions;
 
 	model.scenes = nullptr;
 	model.nodes = nullptr;
@@ -2193,6 +2226,7 @@ mvCleanupGLTF(mvGLTFModel& model)
 	model.accessors = nullptr;
 	model.cameras = nullptr;
 	model.animations = nullptr;
+	model.extensions = nullptr;
 
 	model.scene_count = 0u;
 	model.node_count = 0u;
@@ -2206,6 +2240,7 @@ mvCleanupGLTF(mvGLTFModel& model)
 	model.accessor_count = 0u;
 	model.camera_count = 0u;
 	model.animation_count = 0u;
+	model.extension_count = 0u;
 }
 
 #endif
