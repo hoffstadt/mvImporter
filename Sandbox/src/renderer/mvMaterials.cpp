@@ -3,10 +3,43 @@
 #include <assert.h>
 #include "mvSandbox.h"
 
-mvMaterial
-create_material(mvAssetManager& am, const std::string& vs, const std::string& ps, mvMaterialData& materialData)
+std::string hash_material(const mvMaterial& material, const std::string& pixelShader, const std::string& vertexShader)
 {
-	mvMaterial material{};
+	std::string hash = pixelShader + vertexShader +
+		std::to_string(material.data.albedo.x) +
+		std::to_string(material.data.albedo.y) +
+		std::to_string(material.data.albedo.z) +
+		std::to_string(material.data.albedo.w) +
+		std::to_string(material.data.metalness) +
+		std::to_string(material.data.roughness) +
+		std::to_string(material.data.alphaCutoff) +
+		std::to_string(material.data.emisiveFactor.x) +
+		std::to_string(material.data.emisiveFactor.y) +
+		std::to_string(material.data.emisiveFactor.z) +
+		std::to_string(material.data.radiance) +
+		std::to_string(material.data.fresnel) +
+		std::to_string(material.alphaMode) +
+		std::to_string(material.data.clearcoatFactor) +
+		std::to_string(material.data.clearcoatRoughnessFactor) +
+		std::to_string(material.data.clearcoatNormalScale) +
+		std::to_string(material.data.normalScale) +
+		std::string(material.hasClearcoatMap ? "T" : "F") +
+		std::string(material.hasClearcoatRoughnessMap ? "T" : "F") +
+		std::string(material.hasClearcoatNormalMap ? "T" : "F") +
+		std::string(material.data.doubleSided ? "T" : "F") +
+		std::string(material.hasAlbedoMap ? "T" : "F") +
+		std::string(material.hasNormalMap ? "T" : "F") +
+		std::string(material.hasMetallicRoughnessMap ? "T" : "F") +
+		std::string(material.hasOcculusionMap ? "T" : "F") +
+		std::string(material.hasEmmissiveMap ? "T" : "F");;
+
+	return hash;
+}
+
+mvMaterial
+create_material(mvAssetManager& am, const std::string& vs, const std::string& ps, mvMaterial materialInfo)
+{
+	mvMaterial material = materialInfo;
 
 	mvPipelineInfo pipelineInfo{};
 	pipelineInfo.pixelShader = ps;
@@ -14,7 +47,25 @@ create_material(mvAssetManager& am, const std::string& vs, const std::string& ps
 	pipelineInfo.depthBias = 0;
 	pipelineInfo.slopeBias = 0.0f;
 	pipelineInfo.clamp = 0.0f;
-	pipelineInfo.cull = !materialData.doubleSided;
+	pipelineInfo.cull = !materialInfo.data.doubleSided;
+    pipelineInfo.macros = materialInfo.macros;
+
+	if(GContext->IO.imageBasedLighting) pipelineInfo.macros.push_back({ "USE_IBL", "0" });
+	if (GContext->IO.punctualLighting) pipelineInfo.macros.push_back({ "USE_PUNCTUAL", "0" });
+	if (materialInfo.extensionClearcoat && GContext->IO.clearcoat) pipelineInfo.macros.push_back({ "MATERIAL_CLEARCOAT", "0" });
+	if(materialInfo.pbrMetallicRoughness) pipelineInfo.macros.push_back({ "MATERIAL_METALLICROUGHNESS", "0" });
+	if(materialInfo.alphaMode == 0) pipelineInfo.macros.push_back({ "ALPHAMODE", "0" });
+	else if(materialInfo.alphaMode == 1) pipelineInfo.macros.push_back({ "ALPHAMODE", "1" });
+	else if(materialInfo.alphaMode == 2) pipelineInfo.macros.push_back({ "ALPHAMODE", "2" });
+	if(materialInfo.hasAlbedoMap)pipelineInfo.macros.push_back({ "HAS_BASE_COLOR_MAP", "0" });
+	if(materialInfo.hasNormalMap)pipelineInfo.macros.push_back({ "HAS_NORMAL_MAP", "0" });
+	if(materialInfo.hasMetallicRoughnessMap)pipelineInfo.macros.push_back({ "HAS_METALLIC_ROUGHNESS_MAP", "0" });
+	if(materialInfo.hasEmmissiveMap)pipelineInfo.macros.push_back({ "HAS_EMISSIVE_MAP", "0" });
+	if(materialInfo.hasOcculusionMap)pipelineInfo.macros.push_back({ "HAS_OCCLUSION_MAP", "0" });
+	if(materialInfo.hasClearcoatMap)pipelineInfo.macros.push_back({ "HAS_CLEARCOAT_MAP", "0" });
+	if(materialInfo.hasClearcoatRoughnessMap)pipelineInfo.macros.push_back({ "HAS_CLEARCOAT_ROUGHNESS_MAP", "0" });
+	if(materialInfo.hasClearcoatNormalMap)pipelineInfo.macros.push_back({ "HAS_CLEARCOAT_NORMAL_MAP", "0" });
+	pipelineInfo.macros.push_back({ NULL, NULL });
 
 	pipelineInfo.layout = create_vertex_layout(
 		{
@@ -26,34 +77,7 @@ create_material(mvAssetManager& am, const std::string& vs, const std::string& ps
 		}
 	);
 
-	std::string hash = ps + vs +
-        std::to_string(materialData.albedo.x) +
-        std::to_string(materialData.albedo.y) +
-        std::to_string(materialData.albedo.z) +
-        std::to_string(materialData.albedo.w) +
-        std::to_string(materialData.metalness) +
-        std::to_string(materialData.roughness) +
-        std::to_string(materialData.alphaCutoff) +
-        std::to_string(materialData.emisiveFactor.x) +
-        std::to_string(materialData.emisiveFactor.y) +
-        std::to_string(materialData.emisiveFactor.z) +
-        std::to_string(materialData.radiance) +
-        std::to_string(materialData.fresnel) +
-        std::to_string(materialData.alphaMode) +
-        std::to_string(materialData.clearcoatFactor) +
-        std::to_string(materialData.clearcoatRoughnessFactor) +
-        std::to_string(materialData.clearcoatNormalScale) +
-        std::to_string(materialData.normalScale) +
-        std::string(materialData.useClearcoatMap ? "T" : "F") +
-        std::string(materialData.useClearcoatRoughnessMap ? "T" : "F") +
-        std::string(materialData.useClearcoatNormalMap ? "T" : "F") +
-        std::string(materialData.doubleSided ? "T" : "F") +
-        std::string(materialData.useAlbedoMap ? "T" : "F") +
-        std::string(materialData.useNormalMap ? "T" : "F") +
-        std::string(materialData.useRoughnessMap ? "T" : "F") +
-        std::string(materialData.useOcclusionMap ? "T" : "F") +
-        std::string(materialData.useEmissiveMap ? "T" : "F") +
-        std::string(materialData.useMetalMap ? "T" : "F");
+	std::string hash = hash_material(material, ps, vs);
 
 	material.pipeline = mvGetMaterialAssetID(&am, hash);
 	if (material.pipeline == -1)
@@ -61,7 +85,6 @@ create_material(mvAssetManager& am, const std::string& vs, const std::string& ps
 		material.pipeline = register_asset(&am, hash, finalize_pipeline(pipelineInfo));
 	}
 
-	material.data = materialData;
 	material.buffer = create_const_buffer(&material.data, sizeof(mvMaterialData));
 
 	return material;

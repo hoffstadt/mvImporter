@@ -26,6 +26,7 @@ struct mvAssetManager;
 
 void mvInitializeAssetManager(mvAssetManager* manager);
 void mvCleanupAssetManager   (mvAssetManager* manager);
+void reload_materials        (mvAssetManager* manager);
 
 // registering
 mvAssetID register_asset(mvAssetManager* manager, const std::string& tag, mvScene asset);

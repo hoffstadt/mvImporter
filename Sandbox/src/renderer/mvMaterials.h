@@ -10,7 +10,8 @@ struct mvAssetManager;
 struct mvMaterial;
 struct mvMaterialData;
 
-mvMaterial create_material(mvAssetManager& am, const std::string& vs, const std::string& ps, mvMaterialData& materialData);
+mvMaterial  create_material(mvAssetManager& am, const std::string& vs, const std::string& ps, mvMaterial materialInfo);
+std::string hash_material (const mvMaterial& materialInfo, const std::string& pixelShader, const std::string& vertexShader);
 
 struct mvMaterialData
 {
@@ -24,39 +25,49 @@ struct mvMaterialData
 
     //-------------------------- ( 16 bytes )
 
-    b32 useAlbedoMap    = false;
-    b32 useNormalMap    = false;
-    b32 useRoughnessMap = false;
-    b32 useMetalMap     = false;
-    //-------------------------- ( 16 bytes )
-
-    
     mvVec3 emisiveFactor = { 0.0f, 0.0f, 0.0f };
-    b32 useEmissiveMap = false;
-
-    
-    i32 alphaMode = 0; // 0: OPAQUE, 1: MASK, 2: BLEND
-    b32 useOcclusionMap = false;
     f32 occlusionStrength = 1.0f;
+
+    b32 doubleSided = false;
     f32 alphaCutoff;
+    f32 clearcoatFactor = 0.0;
+    f32 clearcoatRoughnessFactor = 0.0;
     //-------------------------- ( 16 bytes )
 
-    b32 doubleSided              = false;
-    b32 useClearcoatMap          = false;
-    b32 useClearcoatRoughnessMap = false;
-    b32 useClearcoatNormalMap    = false;
-
-    f32 clearcoatFactor          = 0.0;
-    f32 clearcoatRoughnessFactor = 0.0;
     f32 normalScale              = 1.0f;
     f32 clearcoatNormalScale     = 1.0f;
+    char _pad[8];
 
     //-------------------------- ( 4 * 16 = 64 bytes )
 };
 
 struct mvMaterial
 {
-    mvConstBuffer       buffer;
-    mvMaterialData      data;
-    mvAssetID           pipeline;  
+    mvConstBuffer                 buffer;
+    mvMaterialData                data;
+    mvAssetID                     pipeline; 
+    std::vector<D3D_SHADER_MACRO> macros;
+
+    i32 alphaMode = 0;
+    b8 hasNormalMap = false;
+    b8 hasEmmissiveMap = false;
+    b8 hasOcculusionMap = false;
+    b8 hasSpecularMap = false;
+    b8 hasSpecularColorMap = false;
+    b8 hasSpecularGlossinessMap = false;
+    b8 hasSheenColorMap = false;
+    b8 hasSheenRoughnessMap = false;
+    b8 hasTransmissionMap = false;
+    b8 hasThicknessMap = false;
+
+    // pbr
+    b8 pbrMetallicRoughness = false;
+    b8 hasAlbedoMap = false;
+    b8 hasMetallicRoughnessMap = false;
+
+    // clearcoat extension
+    b8 extensionClearcoat = false;
+    b8 hasClearcoatMap = false;
+    b8 hasClearcoatNormalMap = false;
+    b8 hasClearcoatRoughnessMap = false;
 };

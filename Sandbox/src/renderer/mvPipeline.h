@@ -2,49 +2,23 @@
 
 #include <string>
 #include "mvVertexLayout.h"
+#include "mvShader.h"
 
-struct mvPixelShader;
-struct mvVertexShader;
-struct mvComputeShader;
 struct mvPipelineInfo;
 struct mvPipeline;
 
-mvPipeline      finalize_pipeline    (mvPipelineInfo& info);
-mvPixelShader   create_pixel_shader  (const std::string& path);
-mvVertexShader  create_vertex_shader (const std::string& path, mvVertexLayout& layout);
-mvComputeShader create_compute_shader(const std::string& path);
-
-struct mvPixelShader
-{
-    ID3D11PixelShader* shader;
-    ID3DBlob*          blob;
-    std::string        path;
-};
-
-struct mvVertexShader
-{
-    ID3D11VertexShader* shader;
-    ID3D11InputLayout*  inputLayout;
-    ID3DBlob*           blob;
-    std::string         path;
-};
-
-struct mvComputeShader
-{
-    ID3D11ComputeShader* shader;
-    ID3DBlob*            blob;
-    std::string          path;
-};
+mvPipeline finalize_pipeline(mvPipelineInfo& info);
 
 struct mvPipelineInfo
 {
-    std::string    pixelShader;
-    std::string    vertexShader;
-    mvVertexLayout layout;
-    i32            depthBias;
-    f32            slopeBias;
-    f32            clamp;
-    b8             cull = true;
+    std::string                   pixelShader;
+    std::string                   vertexShader;
+    mvVertexLayout                layout;
+    i32                           depthBias;
+    f32                           slopeBias;
+    f32                           clamp;
+    b8                            cull = true;
+    std::vector<D3D_SHADER_MACRO> macros;
 };
 
 struct mvPipeline
@@ -57,8 +31,8 @@ struct mvPipeline
     ID3D11BlendState*        blendState = nullptr;
     ID3D11DepthStencilState* depthStencilState = nullptr;
     ID3D11RasterizerState*   rasterizationState = nullptr;
-    D3D11_PRIMITIVE_TOPOLOGY          topology;
-    mvPipelineInfo                    info;
+    D3D11_PRIMITIVE_TOPOLOGY topology;
+    mvPipelineInfo           info;
 };
 
 

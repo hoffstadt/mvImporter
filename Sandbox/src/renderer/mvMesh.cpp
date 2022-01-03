@@ -831,19 +831,23 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
 
                 mvGLTFMaterial& material = model.materials[glprimitive.material_index];
 
-                mvMaterialData materialData{};
-                materialData.albedo = *(mvVec4*)material.base_color_factor;
-                materialData.metalness = material.metallic_factor;
-                materialData.roughness = material.roughness_factor;
-                materialData.emisiveFactor = *(mvVec3*)material.emissive_factor;
-                materialData.occlusionStrength = material.occlusion_texture_strength;
-                materialData.alphaCutoff = 0.5f;
+                mvMaterial materialData{};
+                materialData.data.albedo = *(mvVec4*)material.base_color_factor;
+                materialData.data.metalness = material.metallic_factor;
+                materialData.data.roughness = material.roughness_factor;
+                materialData.data.emisiveFactor = *(mvVec3*)material.emissive_factor;
+                materialData.data.occlusionStrength = material.occlusion_texture_strength;
+                materialData.data.alphaCutoff = 0.5f;
+                materialData.data.doubleSided = material.double_sided;
+                materialData.data.clearcoatFactor = material.clearcoat_factor;
+                materialData.data.clearcoatRoughnessFactor = material.clearcoat_roughness_factor;
+                materialData.data.clearcoatNormalScale = material.clearcoat_normal_texture_scale;
+                materialData.extensionClearcoat = material.clearcoat_extension;
+                materialData.pbrMetallicRoughness = material.pbrMetallicRoughness;
                 materialData.alphaMode = material.alphaMode;
-                materialData.doubleSided = material.double_sided;
-                materialData.clearcoatFactor = material.clearcoat_factor;
-                materialData.clearcoatRoughnessFactor = material.clearcoat_roughness_factor;
-                if(materialData.alphaMode == 1)
-                    materialData.alphaCutoff = material.alphaCutoff;
+                if (materialData.alphaMode == 1)
+                    materialData.data.alphaCutoff = material.alphaCutoff;
+                    
 
 
                 if (material.base_color_texture != -1)
@@ -856,7 +860,7 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
                     }
                     else
                         newMesh.primitives.back().albedoTexture = mvGetTextureAssetID(&assetManager, model.root + newMesh.name + std::to_string(currentPrimitive) + uri + "_a", model.root + uri);
-                    materialData.useAlbedoMap = true;
+                    materialData.hasAlbedoMap = true;
                     if (texture.sampler_index > -1)
                     {
                         mvGLTFSampler& sampler = model.samplers[texture.sampler_index];
@@ -886,7 +890,7 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
                     }
                     else
                         newMesh.primitives.back().normalTexture = mvGetTextureAssetID(&assetManager, model.root + newMesh.name + std::to_string(currentPrimitive) + uri + "_n", model.root + uri);
-                    materialData.useNormalMap = true;
+                    materialData.hasNormalMap = true;
                     if (texture.sampler_index > -1)
                     {
                         mvGLTFSampler& sampler = model.samplers[texture.sampler_index];
@@ -916,8 +920,7 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
                     }
                     else
                         newMesh.primitives.back().metalRoughnessTexture = mvGetTextureAssetID(&assetManager, model.root + newMesh.name + std::to_string(currentPrimitive) + uri + "_m", model.root + uri);
-                    materialData.useRoughnessMap = true;
-                    materialData.useMetalMap = true;
+                    materialData.hasMetallicRoughnessMap = true;
                     if (texture.sampler_index > -1)
                     {
                         mvGLTFSampler& sampler = model.samplers[texture.sampler_index];
@@ -947,7 +950,7 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
                     }
                     else
                         newMesh.primitives.back().emissiveTexture = mvGetTextureAssetID(&assetManager, model.root + newMesh.name + std::to_string(currentPrimitive) + uri + "_e", model.root + uri);
-                    materialData.useEmissiveMap = true;
+                    materialData.hasEmmissiveMap = true;
                     if (texture.sampler_index > -1)
                     {
                         mvGLTFSampler& sampler = model.samplers[texture.sampler_index];
@@ -977,7 +980,7 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
                     }
                     else
                         newMesh.primitives.back().occlusionTexture = mvGetTextureAssetID(&assetManager, model.root + newMesh.name + std::to_string(currentPrimitive) + uri + "_o", model.root + uri);
-                    materialData.useOcclusionMap = true;
+                    materialData.hasOcculusionMap = true;
                     if (texture.sampler_index > -1)
                     {
                         mvGLTFSampler& sampler = model.samplers[texture.sampler_index];
@@ -1007,7 +1010,7 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
                     }
                     else
                         newMesh.primitives.back().clearcoatTexture = mvGetTextureAssetID(&assetManager, model.root + newMesh.name + std::to_string(currentPrimitive) + uri + "_cc", model.root + uri);
-                    materialData.useClearcoatMap = true;
+                    materialData.hasClearcoatMap = true;
                     if (texture.sampler_index > -1)
                     {
                         mvGLTFSampler& sampler = model.samplers[texture.sampler_index];
@@ -1037,7 +1040,7 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
                     }
                     else
                         newMesh.primitives.back().clearcoatRoughnessTexture = mvGetTextureAssetID(&assetManager, model.root + newMesh.name + std::to_string(currentPrimitive) + uri + "_ccr", model.root + uri);
-                    materialData.useClearcoatRoughnessMap = true;
+                    materialData.hasClearcoatRoughnessMap = true;
                     if (texture.sampler_index > -1)
                     {
                         mvGLTFSampler& sampler = model.samplers[texture.sampler_index];
@@ -1067,7 +1070,7 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
                     }
                     else
                         newMesh.primitives.back().clearcoatNormalTexture = mvGetTextureAssetID(&assetManager, model.root + newMesh.name + std::to_string(currentPrimitive) + uri + "_ccn", model.root + uri);
-                    materialData.useClearcoatNormalMap = true;
+                    materialData.hasClearcoatNormalMap = true;
                     if (texture.sampler_index > -1)
                     {
                         mvGLTFSampler& sampler = model.samplers[texture.sampler_index];
@@ -1087,35 +1090,7 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
                     }
                 }
 
-                std::string hash = std::string("PBR_PS.hlsl") +
-                    std::string("PBR_VS.hlsl") +
-                    std::to_string(materialData.albedo.x) +
-                    std::to_string(materialData.albedo.y) +
-                    std::to_string(materialData.albedo.z) +
-                    std::to_string(materialData.albedo.w) +
-                    std::to_string(materialData.metalness) +
-                    std::to_string(materialData.roughness) +
-                    std::to_string(materialData.alphaCutoff) +
-                    std::to_string(materialData.emisiveFactor.x) +
-                    std::to_string(materialData.emisiveFactor.y) +
-                    std::to_string(materialData.emisiveFactor.z) +
-                    std::to_string(materialData.radiance) +
-                    std::to_string(materialData.fresnel) +
-                    std::to_string(materialData.alphaMode) +
-                    std::to_string(materialData.clearcoatFactor) +
-                    std::to_string(materialData.clearcoatRoughnessFactor) +
-                    std::to_string(materialData.clearcoatNormalScale) +
-                    std::to_string(materialData.normalScale) +
-                    std::string(materialData.useClearcoatMap ? "T" : "F") +
-                    std::string(materialData.useClearcoatRoughnessMap ? "T" : "F") +
-                    std::string(materialData.useClearcoatNormalMap ? "T" : "F") +
-                    std::string(materialData.doubleSided ? "T" : "F") +
-                    std::string(materialData.useAlbedoMap ? "T" : "F") +
-                    std::string(materialData.useNormalMap ? "T" : "F") +
-                    std::string(materialData.useRoughnessMap ? "T" : "F") +
-                    std::string(materialData.useOcclusionMap ? "T" : "F") +
-                    std::string(materialData.useEmissiveMap ? "T" : "F") +
-                    std::string(materialData.useMetalMap ? "T" : "F");
+                std::string hash = hash_material(materialData, std::string("PBR_PS.hlsl"), std::string("PBR_VS.hlsl"));
 
                 newMesh.primitives.back().materialID = mvGetMaterialAssetID(&assetManager, hash);
                 if (newMesh.primitives.back().materialID == -1)
@@ -1126,42 +1101,15 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
             }
             else
             {
-                mvMaterialData materialData{};
-                materialData.albedo = { 0.45f, 0.45f, 0.85f, 1.0f };
-                materialData.metalness = 0.0f;
-                materialData.roughness = 0.5f;
-                materialData.alphaCutoff = 0.5f;
-                materialData.alphaMode = 0;
-                materialData.doubleSided = false;
-                std::string hash = std::string("PBR_PS.hlsl") +
-                    std::string("PBR_VS.hlsl") +
-                    std::to_string(materialData.albedo.x) +
-                    std::to_string(materialData.albedo.y) +
-                    std::to_string(materialData.albedo.z) +
-                    std::to_string(materialData.albedo.w) +
-                    std::to_string(materialData.metalness) +
-                    std::to_string(materialData.roughness) +
-                    std::to_string(materialData.alphaCutoff) +
-                    std::to_string(materialData.emisiveFactor.x) +
-                    std::to_string(materialData.emisiveFactor.y) +
-                    std::to_string(materialData.emisiveFactor.z) +
-                    std::to_string(materialData.radiance) +
-                    std::to_string(materialData.fresnel) +
-                    std::to_string(materialData.alphaMode) +
-                    std::to_string(materialData.clearcoatFactor) +
-                    std::to_string(materialData.clearcoatRoughnessFactor) +
-                    std::to_string(materialData.clearcoatNormalScale) +
-                    std::to_string(materialData.normalScale) +
-                    std::string(materialData.useClearcoatMap ? "T" : "F") +
-                    std::string(materialData.useClearcoatRoughnessMap ? "T" : "F") +
-                    std::string(materialData.useClearcoatNormalMap ? "T" : "F") +
-                    std::string(materialData.doubleSided ? "T" : "F") +
-                    std::string(materialData.useAlbedoMap ? "T" : "F") +
-                    std::string(materialData.useNormalMap ? "T" : "F") +
-                    std::string(materialData.useRoughnessMap ? "T" : "F") +
-                    std::string(materialData.useOcclusionMap ? "T" : "F") +
-                    std::string(materialData.useEmissiveMap ? "T" : "F") +
-                    std::string(materialData.useMetalMap ? "T" : "F");
+
+
+                mvMaterial materialData{};
+                materialData.data.albedo = { 0.45f, 0.45f, 0.85f, 1.0f };
+                materialData.data.metalness = 0.0f;
+                materialData.data.roughness = 0.5f;
+                materialData.data.alphaCutoff = 0.5f;
+                materialData.data.doubleSided = false;
+                std::string hash = hash_material(materialData, std::string("PBR_PS.hlsl"), std::string("PBR_VS.hlsl"));
 
                 newMesh.primitives.back().materialID = mvGetMaterialAssetID(&assetManager, hash);
                 if (newMesh.primitives.back().materialID == -1)

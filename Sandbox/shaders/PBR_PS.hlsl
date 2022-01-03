@@ -28,31 +28,17 @@ struct mvMaterial
     float radiance;
     float fresnel;
     //-------------------------- ( 16 bytes )
-    
-    bool useAlbedoMap;
-    bool useNormalMap;
-    bool useRoughnessMap;
-    bool useMetalMap;
-    //-------------------------- ( 16 bytes )
-    
+     
     float3 emisiveFactor;
-    bool useEmissiveMap;
+    float occlusionStrength;
     //-------------------------- ( 16 bytes )
     
-    int alphaMode;
-    bool useOcclusionMap;
-    float occlusionStrength;
-    float alphaCutoff;
-    //-------------------------- ( 16 bytes )
-
     bool doubleSided;
-    bool useClearcoatMap;
-    bool useClearcoatRoughnessMap;
-    bool useClearcoatNormalMap;
-    //-------------------------- ( 16 bytes )
-
+    float alphaCutoff;
     float clearcoatFactor;
     float clearcoatRoughnessFactor;
+    //-------------------------- ( 16 bytes )
+
     float normalScale;
     float clearcoatNormalScale;
     //-------------------------- ( 16 bytes )
@@ -103,38 +89,61 @@ struct mvGlobalInfo
 };
 
 //-----------------------------------------------------------------------------
-// textures
+// textures & samplers
 //-----------------------------------------------------------------------------
-Texture2D   AlbedoTexture             : register(t0);
-Texture2D   NormalTexture             : register(t1);
-Texture2D   MetalRoughnessTexture     : register(t2);
-Texture2D   EmmissiveTexture          : register(t3);
-Texture2D   OcclusionTexture          : register(t4);
-Texture2D   DirectionalShadowMap      : register(t5);
-TextureCube ShadowMap                 : register(t6);
-TextureCube IrradianceMap             : register(t7);
-TextureCube SpecularMap               : register(t8);
-Texture2D   u_GGXLUT                  : register(t9);
-Texture2D   ClearCoatTexture          : register(t10);
-Texture2D   ClearCoatRoughnessTexture : register(t11);
-Texture2D   ClearCoatNormalTexture    : register(t12);
+#ifdef HAS_BASE_COLOR_MAP
+Texture2D AlbedoTexture : register(t0);
+SamplerState AlbedoTextureSampler : register(s0);
+#endif
 
-//-----------------------------------------------------------------------------
-// samplers
-//-----------------------------------------------------------------------------
-SamplerState           AlbedoTextureSampler             : register(s0);
-SamplerState           NormalTextureSampler             : register(s1);
-SamplerState           MetalRoughnessTextureSampler     : register(s2);
-SamplerState           EmmissiveTextureSampler          : register(s3);
-SamplerState           OcclusionTextureSampler          : register(s4);
-SamplerComparisonState DirectionalShadowMapSampler      : register(s5);
-SamplerComparisonState ShadowMapSampler                 : register(s6);
-SamplerState           IrradianceMapSampler             : register(s7);
-SamplerState           SpecularMapSampler               : register(s8);
-SamplerState           u_GGXLUTSampler                  : register(s9);
-SamplerState           ClearCoatTextureSampler          : register(s10);
-SamplerState           ClearCoatRoughnessTextureSampler : register(s11);
-SamplerState           ClearCoatNormalTextureSampler    : register(s12);
+#ifdef HAS_NORMAL_MAP
+Texture2D NormalTexture : register(t1);
+SamplerState NormalTextureSampler : register(s1);
+#endif
+
+#ifdef HAS_METALLIC_ROUGHNESS_MAP
+Texture2D MetalRoughnessTexture : register(t2);
+SamplerState MetalRoughnessTextureSampler : register(s2);
+#endif
+
+#ifdef HAS_EMISSIVE_MAP
+Texture2D EmmissiveTexture : register(t3);
+SamplerState EmmissiveTextureSampler : register(s3);
+#endif
+
+#ifdef HAS_OCCLUSION_MAP
+Texture2D OcclusionTexture : register(t4);
+SamplerState OcclusionTextureSampler : register(s4);
+#endif
+
+Texture2D DirectionalShadowMap : register(t5);
+TextureCube ShadowMap : register(t6);
+SamplerComparisonState DirectionalShadowMapSampler : register(s5);
+SamplerComparisonState ShadowMapSampler : register(s6);
+
+#ifdef USE_IBL
+TextureCube IrradianceMap : register(t7);
+TextureCube SpecularMap : register(t8);
+Texture2D u_GGXLUT : register(t9);
+SamplerState IrradianceMapSampler : register(s7);
+SamplerState SpecularMapSampler : register(s8);
+SamplerState u_GGXLUTSampler : register(s9);
+#endif
+
+#ifdef HAS_CLEARCOAT_MAP
+Texture2D ClearCoatTexture : register(t10);
+SamplerState ClearCoatTextureSampler : register(s10);
+#endif
+
+#ifdef HAS_CLEARCOAT_ROUGHNESS_MAP
+Texture2D ClearCoatRoughnessTexture : register(t11);
+SamplerState ClearCoatRoughnessTextureSampler : register(s11);
+#endif
+
+#ifdef HAS_CLEARCOAT_NORMAL_MAP
+Texture2D ClearCoatNormalTexture : register(t12);
+SamplerState ClearCoatNormalTextureSampler : register(s12);
+#endif
 
 
 //-----------------------------------------------------------------------------
@@ -215,15 +224,19 @@ float4 main(VSOut input) : SV_Target
 {
     float4 finalColor;
     float4 baseColor = getBaseColor(input);
+
     
-    if (material.alphaMode == 1)
+#if ALPHAMODE == 0
+    baseColor.a = 1.0;
+#endif
+
+#if ALPHAMODE == 1
+    if (baseColor.a < material.alphaCutoff)
     {
-        if (baseColor.a < material.alphaCutoff)
-        {
-            discard;
-        }
+        discard;
     }
-    
+#endif
+
     float3 v = normalize(ginfo.camPos - input.WorldPos);
     NormalInfo normalInfo = getNormalInfo(input);
     
@@ -237,10 +250,28 @@ float4 main(VSOut input) : SV_Target
     
     MaterialInfo materialInfo;
     materialInfo.baseColor = baseColor.rgb;
+    materialInfo.metallic = material.metalness;
+    materialInfo.perceptualRoughness = material.roughness;
+    materialInfo.alphaRoughness = 0.0;
+    materialInfo.c_diff = float3(0.00.xxx);
+    materialInfo.f90 = float3(0.0.xxx);
+    materialInfo.sheenRoughnessFactor = 0.0f;
+    materialInfo.sheenColorFactor = float3(0.0.xxx);
+    materialInfo.clearcoatF0 = float3(0.0.xxx);
+    materialInfo.clearcoatF90 = float3(0.0.xxx);
+    materialInfo.clearcoatNormal = float3(0.0.xxx);
+    materialInfo.attenuationColor = float3(0.0.xxx);
+    materialInfo.clearcoatFactor = 0.0;
+    materialInfo.clearcoatRoughness = 0.0;
+    materialInfo.specularWeight = 0.0; // product of specularFactor and specularTexture.a
+    materialInfo.transmissionFactor = 0.0;
+    materialInfo.thickness = 0.0;
+    materialInfo.attenuationDistance = 0.0;
     
     // The default index of refraction of 1.5 yields a dielectric normal incidence reflectance of 0.04.
     materialInfo.ior = 1.5;
     materialInfo.f0 = float3(0.04.xxx);
+
     materialInfo.specularWeight = 1.0;
     
 #ifdef MATERIAL_IOR
@@ -251,17 +282,17 @@ float4 main(VSOut input) : SV_Target
     materialInfo = getSpecularGlossinessInfo(materialInfo);
 #endif
 
-//#ifdef MATERIAL_METALLICROUGHNESS
+#ifdef MATERIAL_METALLICROUGHNESS
     materialInfo = getMetallicRoughnessInfo(input, materialInfo);
-//#endif
+#endif
 
 #ifdef MATERIAL_SHEEN
     materialInfo = getSheenInfo(materialInfo);
 #endif
 
-//#ifdef MATERIAL_CLEARCOAT
+#ifdef MATERIAL_CLEARCOAT
     materialInfo = getClearCoatInfo(input, materialInfo, normalInfo);
-//#endif
+#endif
 
 #ifdef MATERIAL_SPECULAR
     materialInfo = getSpecularInfo(materialInfo);
@@ -297,14 +328,7 @@ float4 main(VSOut input) : SV_Target
     float3 f_transmission = float3(0.0.xxx);
 
     float albedoSheenScaling = 1.0;
-    
-    if(ginfo.useIrradiance)
-        f_diffuse += getIBLRadianceLambertian(n, v, materialInfo.perceptualRoughness, materialInfo.c_diff, materialInfo.f0, materialInfo.specularWeight);
-    if (ginfo.useReflection)
-        f_specular += getIBLRadianceGGX(n, v, materialInfo.perceptualRoughness, materialInfo.f0, materialInfo.specularWeight);
 
-    f_clearcoat += getIBLRadianceGGX(materialInfo.clearcoatNormal, v, materialInfo.clearcoatRoughness, materialInfo.clearcoatF0, 1.0);
-    
     // Calculate lighting contribution from image based lighting source (IBL)
 #ifdef USE_IBL
     f_specular += getIBLRadianceGGX(n, v, materialInfo.perceptualRoughness, materialInfo.f0, materialInfo.specularWeight);
@@ -330,18 +354,17 @@ float4 main(VSOut input) : SV_Target
 
     float ao = 1.0;
     // Apply optional PBR terms for additional (optional) shading
-    if (material.useOcclusionMap && ginfo.useOcclusionMap)
-    {
-        ao = OcclusionTexture.Sample(OcclusionTextureSampler, input.UV).r;
+#ifdef HAS_OCCLUSION_MAP
+    ao = OcclusionTexture.Sample(OcclusionTextureSampler, input.UV).r;
         
-        f_diffuse = lerp(f_diffuse, f_diffuse * ao, material.occlusionStrength);
-        // apply ambient occlusion to all lighting that is not punctual
-        f_specular = lerp(f_specular, f_specular * ao, material.occlusionStrength);
-        f_sheen = lerp(f_sheen, f_sheen * ao, material.occlusionStrength);
-        f_clearcoat = lerp(f_clearcoat, f_clearcoat * ao, material.occlusionStrength);
-    }
+    f_diffuse = lerp(f_diffuse, f_diffuse * ao, material.occlusionStrength);
+    // apply ambient occlusion to all lighting that is not punctual
+    f_specular = lerp(f_specular, f_specular * ao, material.occlusionStrength);
+    f_sheen = lerp(f_sheen, f_sheen * ao, material.occlusionStrength);
+    f_clearcoat = lerp(f_clearcoat, f_clearcoat * ao, material.occlusionStrength);
+#endif
     
-    if(ginfo.usePunctualLights)
+#ifdef USE_PUNCTUAL
     {
         
         //-----------------------------------------------------------------------------
@@ -367,11 +390,11 @@ float4 main(VSOut input) : SV_Target
         // Calculation of analytical light
         // https://github.com/KhronosGroup/glTF/tree/master/specification/2.0#acknowledgments AppendixB
         //float3 intensity = getLighIntensity(pointToLight);
-            float3 intensity = DirectionalLight.diffuseIntensity * DirectionalLight.diffuseColor;
-            f_diffuse += shadowLevel * intensity * NdotL * BRDF_lambertian(materialInfo.f0, materialInfo.f90, materialInfo.c_diff, materialInfo.specularWeight, VdotH);
-            f_specular += shadowLevel * intensity * NdotL * BRDF_specularGGX(materialInfo.f0, materialInfo.f90, materialInfo.alphaRoughness, materialInfo.specularWeight, VdotH, NdotL, NdotV, NdotH);
-            f_clearcoat += shadowLevel * intensity * getPunctualRadianceClearCoat(materialInfo.clearcoatNormal, v, l, h, VdotH,
-                materialInfo.clearcoatF0, materialInfo.clearcoatF90, materialInfo.clearcoatRoughness);
+        float3 intensity = DirectionalLight.diffuseIntensity * DirectionalLight.diffuseColor;
+        f_diffuse += shadowLevel * intensity * NdotL * BRDF_lambertian(materialInfo.f0, materialInfo.f90, materialInfo.c_diff, materialInfo.specularWeight, VdotH);
+        f_specular += shadowLevel * intensity * NdotL * BRDF_specularGGX(materialInfo.f0, materialInfo.f90, materialInfo.alphaRoughness, materialInfo.specularWeight, VdotH, NdotL, NdotV, NdotH);
+        f_clearcoat += shadowLevel * intensity * getPunctualRadianceClearCoat(materialInfo.clearcoatNormal, v, l, h, VdotH,
+            materialInfo.clearcoatF0, materialInfo.clearcoatF90, materialInfo.clearcoatRoughness);
 #ifdef MATERIAL_SHEEN
         f_sheen += shadowLevel *intensity * getPunctualRadianceSheen(materialInfo.sheenColorFactor, materialInfo.sheenRoughnessFactor, NdotL, NdotV, NdotH);
         albedoSheenScaling = min(1.0 - max3(materialInfo.sheenColorFactor) * albedoSheenScalingLUT(NdotV, materialInfo.sheenRoughnessFactor),
@@ -403,8 +426,7 @@ float4 main(VSOut input) : SV_Target
         f_transmission += materialInfo.transmissionFactor * transmittedLight;
 #endif
     }
-     
-    if (ginfo.usePunctualLights)
+ 
     {
         
         //-----------------------------------------------------------------------------
@@ -485,25 +507,18 @@ float4 main(VSOut input) : SV_Target
         f_transmission += materialInfo.transmissionFactor * transmittedLight;
 #endif
     }
-    
+#endif
+
     f_emissive = material.emisiveFactor;
-    if (material.useEmissiveMap && ginfo.useEmissiveMap)
-    {
-        f_emissive *= pow(abs(EmmissiveTexture.Sample(EmmissiveTextureSampler, input.UV).rgb), float3(2.2, 2.2, 2.2));
-    }
-    else if (material.useEmissiveMap)
-    {
-        f_emissive = float3(0.0, 0.0, 0.0);
-    }
+#ifdef HAS_EMISSIVE_MAP
+    f_emissive *= pow(abs(EmmissiveTexture.Sample(EmmissiveTextureSampler, input.UV).rgb), float3(2.2, 2.2, 2.2));
+#endif
+
     float3 color = float3(0.0.xxx);
     
     // Layer blending
     float clearcoatFactor = 0.0;
     float3 clearcoatFresnel = float3(0.0.xxx);
-
-    clearcoatFactor = materialInfo.clearcoatFactor;
-    clearcoatFresnel = F_Schlick(materialInfo.clearcoatF0, materialInfo.clearcoatF90, clampedDot(materialInfo.clearcoatNormal, v));
-    f_clearcoat = f_clearcoat * clearcoatFactor;
 
 #ifdef MATERIAL_CLEARCOAT
     clearcoatFactor = materialInfo.clearcoatFactor;
@@ -521,15 +536,19 @@ float4 main(VSOut input) : SV_Target
     color = f_sheen + color * albedoSheenScaling;
     color = color * (1.0 - clearcoatFactor * clearcoatFresnel) + f_clearcoat;
 
-    if (material.alphaMode == 0 || material.alphaMode == 1)
+#if ALPHAMODE == 1  || ALPHAMODE == 0
+    // Late discard to avoid samplig artifacts. See https://github.com/KhronosGroup/glTF-Sample-Viewer/issues/267
+    if (baseColor.a < material.alphaCutoff)
     {
-        baseColor.a = 1.0;
+        discard;
     }
+    baseColor.a = 1.0;
+#endif
     
 #ifdef LINEAR_OUTPUT
     finalColor = float4(color.rgb, baseColor.a);
 #else
-    finalColor = float4(pow(color.rgb, float3(0.4545, 0.4545, 0.4545)), baseColor.a);
+    finalColor = float4(pow(abs(color.rgb), float3(0.4545, 0.4545, 0.4545)), baseColor.a);
 #endif
 
     return finalColor;

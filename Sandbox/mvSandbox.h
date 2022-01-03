@@ -9,6 +9,10 @@ struct mvIO
 {
     std::string shaderDirectory;
     std::string resourceDirectory;
+
+    b8 punctualLighting = true;
+    b8 imageBasedLighting = true;
+    b8 clearcoat = true;
 };
 
 struct mvContext

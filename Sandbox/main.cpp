@@ -15,10 +15,10 @@
 // TODO: make most of these runtime options
 #define MODEL_CACHE_SIZE 5
 #define ENV_CACHE_SIZE 3
-static f32         shadowWidth = 95.0f;
-static int         initialWidth = 1850;
-static int         initialHeight = 900;
-static ImVec2      oldContentRegion = ImVec2(500, 500);
+static f32    shadowWidth = 95.0f;
+static int    initialWidth = 1850;
+static int    initialHeight = 900;
+static ImVec2 oldContentRegion = ImVec2(500, 500);
 
 void blendCallback(const ImDrawList* parent_list, const ImDrawCmd* cmd)
 {
@@ -113,6 +113,13 @@ int main()
             window->resized = false;
         }
 
+        static bool reloadMaterials = false;
+        if (reloadMaterials)
+        {
+            reload_materials(&am);
+            reloadMaterials = false;
+        }
+
         static bool recreatePrimary = false;
         if (recreatePrimary)
         {
@@ -133,7 +140,6 @@ int main()
             omniShadowMap.recreate();
             recreateOShadowMapRS = false;
         }
-
 
         static bool recreateEnvironment = true;
         if (recreateEnvironment)
@@ -430,15 +436,9 @@ int main()
 
             ImGui::Dummy(ImVec2(50.0f, 25.0f));
             ImGui::Text("%s", "Textures:");
-            ImGui::Checkbox("Use Albedo", (bool*)&globalInfo.useAlbedo);
-            ImGui::Checkbox("Use Normal", (bool*)&globalInfo.useNormalMap);
-            ImGui::Checkbox("Use Metalness", (bool*)&globalInfo.useMetalness);
-            ImGui::Checkbox("Use Roughness", (bool*)&globalInfo.useRoughness);
-            ImGui::Checkbox("Use Irradiance", (bool*)&globalInfo.useIrradiance);
-            ImGui::Checkbox("Use Reflection", (bool*)&globalInfo.useReflection);
-            ImGui::Checkbox("Use Emissive", (bool*)&globalInfo.useEmissiveMap);
-            ImGui::Checkbox("Use Occlusion", (bool*)&globalInfo.useOcclusionMap);
-            ImGui::Checkbox("Use Punctual Lights", (bool*)&globalInfo.usePunctualLights);
+            if (ImGui::Checkbox("Punctual Lighting", (bool*)&GContext->IO.punctualLighting))reloadMaterials = true;
+            if(ImGui::Checkbox("Image Based", (bool*)&GContext->IO.imageBasedLighting)) reloadMaterials = true;
+            if(ImGui::Checkbox("KHR_materials_clearcoat", (bool*)&GContext->IO.clearcoat)) reloadMaterials = true;
 
             //-----------------------------------------------------------------------------
             // center panel

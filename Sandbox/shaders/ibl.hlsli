@@ -3,8 +3,14 @@ float3 getDiffuseLight(float3 n)
 {
     n.x = -n.x;
     //n.z = -n.z;
-    float3 color = IrradianceMap.Sample(IrradianceMapSampler, n).rgb;
+
+    float3 color = ginfo.ambientColor;
+
+#ifdef USE_IBL
+    color = IrradianceMap.Sample(IrradianceMapSampler, n).rgb;
     color = pow(abs(color), float3(0.4545.xxx));
+#endif
+
     return color;
 }
 
@@ -12,11 +18,17 @@ float4 getSpecularSample(float3 reflection, float lod)
 {
     reflection.x = -reflection.x;
     //reflection.z = -reflection.z;
-    float4 color = SpecularMap.SampleLevel(SpecularMapSampler, reflection, lod);
+
+    float4 color = float4(1.0f.xxxx);
+
+#ifdef USE_IBL
+    color = SpecularMap.SampleLevel(SpecularMapSampler, reflection, lod);
+#endif
     //color = pow(abs(color), float4(0.4545.xxxx));
     return color;
 }
 
+#ifdef USE_IBL
 float3 getIBLRadianceGGX(float3 n, float3 v, float roughness, float3 F0, float specularWeight)
 {
     float NdotV = clampedDot(n, v);
@@ -38,6 +50,7 @@ float3 getIBLRadianceGGX(float3 n, float3 v, float roughness, float3 F0, float s
 
     return specularWeight * specularLight * FssEss;
 }
+#endif
 
 #ifdef MATERIAL_TRANSMISSION
 vec3 getTransmissionSample(vec2 fragCoord, float roughness, float ior)
@@ -78,6 +91,7 @@ vec3 getIBLVolumeRefraction(vec3 n, vec3 v, float perceptualRoughness, vec3 base
 #endif
 
 
+#ifdef USE_IBL
 //specularWeight is
 //introduced withKHR_materials_specular
 float3 getIBLRadianceLambertian(float3 n, float3 v, float roughness, float3 diffuseColor, float3 F0, float specularWeight)
@@ -103,6 +117,7 @@ float3 getIBLRadianceLambertian(float3 n, float3 v, float roughness, float3 diff
 
     return (FmsEms + k_D) * irradiance;
 }
+#endif
 
 
 //float3 getIBLRadianceCharlie(float3 n, float3 v, float sheenRoughness, float3 sheenColor)

@@ -7,6 +7,7 @@
 #include "mvBuffers.h"
 #include "mvVertexLayout.h"
 #include "mvAssetManager.h"
+#include "mvShader.h"
 
 namespace Renderer{
 
@@ -287,7 +288,7 @@ submit_mesh(mvAssetManager& am, mvRendererContext& ctx, mvMesh& mesh, mvMat4 tra
 
         mvMaterial* material = &am.materials[primitive.materialID].asset;
 
-        if (material->data.alphaMode == 2)
+        if (material->alphaMode == 2)
         {
             ctx.transparentJobs[ctx.transparentJobCount] = { &primitive, transform };
             ctx.transparentJobCount++;
@@ -608,7 +609,7 @@ render_mesh_shadow(mvAssetManager& am, mvMesh& mesh, mvMat4 transform, mvMat4 ca
         mvMaterial* material = &am.materials[primitive.materialID].asset;
         mvTexture* albedoMap = primitive.albedoTexture == -1 ? nullptr : &am.textures[primitive.albedoTexture].asset;
 
-        mvPipeline* pipeline = material->data.alphaMode == 0 ? mvGetRawPipelineAsset(&am, "shadow_no_alpha") : mvGetRawPipelineAsset(&am, "shadow_alpha");
+        mvPipeline* pipeline = material->alphaMode == 0 ? mvGetRawPipelineAsset(&am, "shadow_no_alpha") : mvGetRawPipelineAsset(&am, "shadow_alpha");
 
 
         // pipeline

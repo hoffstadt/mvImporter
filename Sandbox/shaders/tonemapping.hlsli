@@ -34,7 +34,7 @@ float3 linearTosRGB(float3 color)
 // see http://chilliant.blogspot.com/2012/08/srgb-approximations-for-hlsl.html
 float3 sRGBToLinear(float3 srgbIn)
 {
-    return float3(pow(srgbIn.xyz, float3(GAMMA.xxx)));
+    return float3(pow(abs(srgbIn.xyz), float3(GAMMA.xxx)));
 }
 
 
