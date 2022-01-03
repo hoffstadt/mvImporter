@@ -39,6 +39,57 @@ struct MaterialInfo
 //    return info;
 //}
 
+NormalInfo getNormalInfo(VSOut input)
+{
+
+    float2 UV = input.UV;
+    float3 uv_dx = ddx(float3(UV, 0.0));
+    float3 uv_dy = ddy(float3(UV, 0.0));
+
+    float3 t_ = (uv_dy.y * ddx(input.Pos).xyz - uv_dx.y * ddy(input.Pos).xyz) /
+        (uv_dx.x * uv_dy.y - uv_dy.x * uv_dx.y);
+
+    float3 n, t, b, ng;
+
+    // Compute geometrical TBN:
+    // Trivial TBN computation, present as vertex attribute.
+    // Normalize eigenvectors as matrix is linearly interpolated.
+    float3x3 TBN = transpose(input.TBN);
+    t = normalize(TBN[0]);
+    b = normalize(TBN[1]);
+    ng = normalize(TBN[2]);
+
+    // For a back-facing surface, the tangential basis vectors are negated.
+    if (!input.frontFace)
+    {
+        t *= -1.0;
+        b *= -1.0;
+        ng *= -1.0;
+    }
+
+    // Compute normals:
+    NormalInfo normalInfo;
+    normalInfo.ng = ng;
+    normalInfo.n = ng;
+    if (material.useNormalMap && ginfo.useNormalMap)
+    {
+
+        normalInfo.ntex = NormalTexture.Sample(NormalTextureSampler, input.UV).xyz * 2.0 - 1.0;
+        //normalInfo.ntex.y = -normalInfo.ntex.y;
+        //float u_NormalScale = -1.0;
+        //normalInfo.ntex *= float3(u_NormalScale, u_NormalScale, 1.0);
+        normalInfo.ntex = normalize(normalInfo.ntex);
+        normalInfo.n = normalize(mul(input.TBN, normalInfo.ntex));
+        //normalInfo.n = normalize(mul(float3x3(t, b, ng), normalInfo.ntex));
+        //return normalize(mul(input.TBN, tangentNormal));
+
+    }
+
+    normalInfo.t = t;
+    normalInfo.b = b;
+    return normalInfo;
+}
+
 float3 getClearcoatNormal(VSOut input, NormalInfo normalInfo)
 {
     if (material.useClearcoatNormalMap)

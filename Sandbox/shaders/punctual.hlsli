@@ -16,3 +16,11 @@ float getRangeAttenuation(float range, float distance)
 //    float spotAttenuation = 1.0;
 //    return rangeAttenuation * spotAttenuation * light.intensity * light.color;
 //}
+
+float3 getPunctualRadianceClearCoat(float3 clearcoatNormal, float3 v, float3 l, float3 h, float VdotH, float3 f0, float3 f90, float clearcoatRoughness)
+{
+    float NdotL = clampedDot(clearcoatNormal, l);
+    float NdotV = clampedDot(clearcoatNormal, v);
+    float NdotH = clampedDot(clearcoatNormal, h);
+    return NdotL * BRDF_specularGGX(f0, f90, clearcoatRoughness * clearcoatRoughness, 1.0, VdotH, NdotL, NdotV, NdotH);
+}

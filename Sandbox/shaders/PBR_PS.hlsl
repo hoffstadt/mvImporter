@@ -164,57 +164,6 @@ struct VSOut
 #include <ibl.hlsli>
 #include <material_info.hlsli>
 
-NormalInfo getNormalInfo(VSOut input)
-{
-    
-    float2 UV = input.UV;
-    float3 uv_dx = ddx(float3(UV, 0.0));
-    float3 uv_dy = ddy(float3(UV, 0.0));
-
-    float3 t_ = (uv_dy.y * ddx(input.Pos).xyz - uv_dx.y * ddy(input.Pos).xyz) /
-        (uv_dx.x * uv_dy.y - uv_dy.x * uv_dx.y);
-
-    float3 n, t, b, ng;
-
-    // Compute geometrical TBN:
-    // Trivial TBN computation, present as vertex attribute.
-    // Normalize eigenvectors as matrix is linearly interpolated.
-    float3x3 TBN = transpose(input.TBN);
-    t = normalize(TBN[0]);
-    b = normalize(TBN[1]);
-    ng = normalize(TBN[2]);
-    
-    // For a back-facing surface, the tangential basis vectors are negated.
-    if (!input.frontFace)
-    {
-        t *= -1.0;
-        b *= -1.0;
-        ng *= -1.0;
-    }
-
-    // Compute normals:
-    NormalInfo normalInfo;
-    normalInfo.ng = ng;
-    normalInfo.n = ng;
-    if (material.useNormalMap && ginfo.useNormalMap)
-    {
-        
-        normalInfo.ntex = NormalTexture.Sample(NormalTextureSampler, input.UV).xyz * 2.0 - 1.0;
-        //normalInfo.ntex.y = -normalInfo.ntex.y;
-        //float u_NormalScale = -1.0;
-        //normalInfo.ntex *= float3(u_NormalScale, u_NormalScale, 1.0);
-        normalInfo.ntex = normalize(normalInfo.ntex);
-        normalInfo.n = normalize(mul(input.TBN, normalInfo.ntex));
-        //normalInfo.n = normalize(mul(float3x3(t, b, ng), normalInfo.ntex));
-        //return normalize(mul(input.TBN, tangentNormal));
-        
-    }
-
-    normalInfo.t = t;
-    normalInfo.b = b;
-    return normalInfo;
-}
-
 // shadows
 static const float zf = 100.0f;
 static const float zn = 0.5f;
@@ -260,78 +209,6 @@ float filterPCF(const in float2 spos, float depthCheck)
         }
     }
     return shadowLevel / count;
-}
-
-float3 getDiffuseLight(float3 n)
-{
-    n.x = -n.x;
-    //n.z = -n.z;
-    float3 color = IrradianceMap.Sample(IrradianceMapSampler, n).rgb;
-    color = pow(abs(color), float3(0.4545.xxx));
-    return color;
-}
-
-float4 getSpecularSample(float3 reflection, float lod)
-{
-    reflection.x = -reflection.x;
-    //reflection.z = -reflection.z;
-    float4 color = SpecularMap.SampleLevel(SpecularMapSampler, reflection, lod);
-    //color = pow(abs(color), float4(0.4545.xxxx));
-    return color;
-}
-
-float3 getIBLRadianceLambertian(float3 n, float3 v, float roughness, float3 diffuseColor, float3 F0, float specularWeight)
-{
-    float NdotV = clampedDot(n, v);
-    float2 brdfSamplePoint = clamp(float2(NdotV, roughness), float2(0.0, 0.0), float2(1.0, 1.0));
-    float2 f_ab = u_GGXLUT.Sample(u_GGXLUTSampler, brdfSamplePoint).rg;
-    //f_ab = pow(f_ab, float2(0.4545.xx));
-    float3 irradiance = getDiffuseLight(n);
-
-    // see https://bruop.github.io/ibl/#single_scattering_results at Single Scattering Results
-    // Roughness dependent fresnel, from Fdez-Aguera
-
-    float3 Fr = max(float3((1.0 - roughness).xxx), F0) - F0;
-    float3 k_S = F0 + Fr * pow(1.0 - NdotV, 5.0);
-    float3 FssEss = specularWeight * k_S * f_ab.x + f_ab.y; // <--- GGX / specular light contribution (scale it down if the specularWeight is low)
-
-    // Multiple scattering, from Fdez-Aguera
-    float Ems = (1.0 - (f_ab.x + f_ab.y));
-    float3 F_avg = specularWeight * (F0 + (1.0 - F0) / 21.0);
-    float3 FmsEms = Ems * FssEss * F_avg / (1.0 - F_avg * Ems);
-    float3 k_D = diffuseColor * (1.0 - FssEss + FmsEms); // we use +FmsEms as indicated by the formula in the blog post (might be a typo in the implementation)
-
-    return (FmsEms + k_D) * irradiance;
-}
-
-float3 getIBLRadianceGGX(float3 n, float3 v, float roughness, float3 F0, float specularWeight)
-{
-    float NdotV = clampedDot(n, v);
-    float lod = roughness * float(miplevelsoutput - 1); // mip count is 10
-    float3 reflection = normalize(reflect(-v, n));
-
-    float2 brdfSamplePoint = clamp(float2(NdotV, roughness), float2(0.0, 0.0), float2(1.0, 1.0));
-    float2 f_ab = u_GGXLUT.Sample(u_GGXLUTSampler, brdfSamplePoint).rg;
-    //f_ab = pow(f_ab, float2(0.4545.xx));
-    float4 specularSample = getSpecularSample(reflection, lod);
-
-    float3 specularLight = specularSample.rgb;
-
-    // see https://bruop.github.io/ibl/#single_scattering_results at Single Scattering Results
-    // Roughness dependent fresnel, from Fdez-Aguera
-    float3 Fr = max(float3((1.0 - roughness).xxx), F0) - F0;
-    float3 k_S = F0 + Fr * pow(1.0 - NdotV, 5.0);
-    float3 FssEss = k_S * f_ab.x + f_ab.y;
-
-    return specularWeight * specularLight * FssEss;
-}
-
-float3 getPunctualRadianceClearCoat(float3 clearcoatNormal, float3 v, float3 l, float3 h, float VdotH, float3 f0, float3 f90, float clearcoatRoughness)
-{
-    float NdotL = clampedDot(clearcoatNormal, l);
-    float NdotV = clampedDot(clearcoatNormal, v);
-    float NdotH = clampedDot(clearcoatNormal, h);
-    return NdotL * BRDF_specularGGX(f0, f90, clearcoatRoughness * clearcoatRoughness, 1.0, VdotH, NdotL, NdotV, NdotH);
 }
 
 float4 main(VSOut input) : SV_Target
