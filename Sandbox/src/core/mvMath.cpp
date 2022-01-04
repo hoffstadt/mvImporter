@@ -669,6 +669,22 @@ create_matrix(
 	return m;
 }
 
+mvMat4 
+transpose(mvMat4& m)
+{
+	mvMat4 mr{};
+
+	for (i32 i = 0; i < 4; i++)
+	{
+		for (i32 j = 0; j < 4; j++)
+		{
+			mr[i][j] = m[j][i];
+		}
+	}
+
+	return mr;
+}
+
 mvMat4
 rotation_translation_scale(mvVec4& q, mvVec3& t, mvVec3& s)
 {

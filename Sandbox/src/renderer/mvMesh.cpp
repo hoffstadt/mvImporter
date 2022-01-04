@@ -621,6 +621,7 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
             std::vector<f32> bitangentAttributeBuffer;
             std::vector<f32> normalAttributeBuffer;
             std::vector<f32> textureAttributeBuffer;
+            std::vector<f32> colorAttributeBuffer;
 
             std::vector<mvVertexElement> attributes;
             for (u32 i = 0; i < glprimitive.attribute_count; i++)
@@ -646,7 +647,7 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
                     break;
                 case(MV_IMP_COLOR_0):
                     attributes.push_back(mvVertexElement::Color);
-                    mvFillBuffer<f32>(model, model.accessors[attribute.index], textureAttributeBuffer, 4);
+                    mvFillBuffer<f32>(model, model.accessors[attribute.index], colorAttributeBuffer, 4);
                     break;
 
                 case(MV_IMP_WEIGHTS_0):
@@ -664,7 +665,7 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
 
             u32 triangleCount = origIndexBuffer.size() / 3;
 
-            vertexBuffer.reserve(triangleCount * 14 * 3);
+            vertexBuffer.reserve(triangleCount * 16 * 3);
             indexBuffer.reserve(triangleCount * 3);
             if (normalAttributeBuffer.empty()) normalAttributeBuffer.resize(triangleCount * 3 * 3);
             if (textureAttributeBuffer.empty()) textureAttributeBuffer.resize(triangleCount * 3 * 2);
@@ -700,6 +701,8 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
                 combinedVertexBuffer.push_back(0.0f);  // we will calculate
                 combinedVertexBuffer.push_back(0.0f);  // we will calculate
                 combinedVertexBuffer.push_back(0.0f);  // we will calculate
+                combinedVertexBuffer.push_back(0.0f);  // we will calculate
+                combinedVertexBuffer.push_back(0.0f);  // we will calculate
 
                 indexBuffer.push_back(indexBuffer.size());
             }
@@ -712,17 +715,17 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
                 size_t i1 = indexBuffer[i + 1];
                 size_t i2 = indexBuffer[i + 2];
 
-                mvVec3 p0 = *((mvVec3*)&combinedVertexBuffer[i0 * 14]);
-                mvVec3 p1 = *((mvVec3*)&combinedVertexBuffer[i1 * 14]);
-                mvVec3 p2 = *((mvVec3*)&combinedVertexBuffer[i2 * 14]);
+                mvVec3 p0 = *((mvVec3*)&combinedVertexBuffer[i0 * 16]);
+                mvVec3 p1 = *((mvVec3*)&combinedVertexBuffer[i1 * 16]);
+                mvVec3 p2 = *((mvVec3*)&combinedVertexBuffer[i2 * 16]);
 
-                mvVec3 n0 = *((mvVec3*)&combinedVertexBuffer[i0 * 14 + 3]);
-                mvVec3 n1 = *((mvVec3*)&combinedVertexBuffer[i1 * 14 + 3]);
-                mvVec3 n2 = *((mvVec3*)&combinedVertexBuffer[i2 * 14 + 3]);
+                mvVec3 n0 = *((mvVec3*)&combinedVertexBuffer[i0 * 16 + 3]);
+                mvVec3 n1 = *((mvVec3*)&combinedVertexBuffer[i1 * 16 + 3]);
+                mvVec3 n2 = *((mvVec3*)&combinedVertexBuffer[i2 * 16 + 3]);
 
-                mvVec2 tex0 = *((mvVec2*)&combinedVertexBuffer[i0 * 14 + 6]);
-                mvVec2 tex1 = *((mvVec2*)&combinedVertexBuffer[i1 * 14 + 6]);
-                mvVec2 tex2 = *((mvVec2*)&combinedVertexBuffer[i2 * 14 + 6]);
+                mvVec2 tex0 = *((mvVec2*)&combinedVertexBuffer[i0 * 16 + 6]);
+                mvVec2 tex1 = *((mvVec2*)&combinedVertexBuffer[i1 * 16 + 6]);
+                mvVec2 tex2 = *((mvVec2*)&combinedVertexBuffer[i2 * 16 + 6]);
 
                 // calculate normals
                 //mvVec3 n = cNormalize(cCross(p1 - p0, p2 - p0));
@@ -747,28 +750,30 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
                     uv2.y = 0.0f;
                 }
 
-                mvVec3 tangent = {
-                    ((edge1.x * uv2.y) - (edge2.x * uv1.y)) * dirCorrection,
-                    ((edge1.y * uv2.y) - (edge2.y * uv1.y)) * dirCorrection,
-                    ((edge1.z * uv2.y) - (edge2.z * uv1.y)) * dirCorrection
+                mvVec4 tangent = {
+                    ((edge1.x * uv2.y) - (edge2.x * uv1.y))*dirCorrection,
+                    ((edge1.y * uv2.y) - (edge2.y * uv1.y))*dirCorrection,
+                    ((edge1.z * uv2.y) - (edge2.z * uv1.y))*dirCorrection,
+                    dirCorrection
                 };
 
-                mvVec3 bitangent = {
-                    ((edge1.x * uv2.x) - (edge2.x * uv1.x)) * dirCorrection,
-                    ((edge1.y * uv2.x) - (edge2.y * uv1.x)) * dirCorrection,
-                    ((edge1.z * uv2.x) - (edge2.z * uv1.x)) * dirCorrection
+                mvVec4 bitangent = {
+                    ((edge1.x * uv2.x) - (edge2.x * uv1.x))*dirCorrection,
+                    ((edge1.y * uv2.x) - (edge2.y * uv1.x))*dirCorrection,
+                    ((edge1.z * uv2.x) - (edge2.z * uv1.x))*dirCorrection,
+                    dirCorrection
                 };
 
                 // project tangent and bitangent into the plane formed by the vertex' normal
                 //mvVec3 newTangent = cNormalize(tangent - n * (tangent * n));
-                *((mvVec3*)&combinedVertexBuffer[i0 * 14 + 8]) = normalize(tangent - n0 * (tangent * n0));
-                *((mvVec3*)&combinedVertexBuffer[i1 * 14 + 8]) = normalize(tangent - n1 * (tangent * n1));
-                *((mvVec3*)&combinedVertexBuffer[i2 * 14 + 8]) = normalize(tangent - n2 * (tangent * n2));
+                *((mvVec3*)&combinedVertexBuffer[i0 * 16 + 8]) = normalize(tangent.xyz() - n0 * (tangent.xyz() * n0));
+                *((mvVec3*)&combinedVertexBuffer[i1 * 16 + 8]) = normalize(tangent.xyz() - n1 * (tangent.xyz() * n1));
+                *((mvVec3*)&combinedVertexBuffer[i2 * 16 + 8]) = normalize(tangent.xyz() - n2 * (tangent.xyz() * n2));
 
                 //mvVec3 newBitangent = cNormalize(bitangent - n * (bitangent * n));
-                *((mvVec3*)&combinedVertexBuffer[i0 * 14 + 11]) = normalize(bitangent - n0 * (bitangent * n0));
-                *((mvVec3*)&combinedVertexBuffer[i1 * 14 + 11]) = normalize(bitangent - n1 * (bitangent * n1));
-                *((mvVec3*)&combinedVertexBuffer[i2 * 14 + 11]) = normalize(bitangent - n2 * (bitangent * n2));
+                *((mvVec3*)&combinedVertexBuffer[i0 * 16 + 12]) = normalize(bitangent.xyz() - n0 * (bitangent.xyz() * n0));
+                *((mvVec3*)&combinedVertexBuffer[i1 * 16 + 12]) = normalize(bitangent.xyz() - n1 * (bitangent.xyz() * n1));
+                *((mvVec3*)&combinedVertexBuffer[i2 * 16 + 12]) = normalize(bitangent.xyz() - n2 * (bitangent.xyz() * n2));
 
                 // vertex 0
                 vertexBuffer.push_back(p0.x);
@@ -779,12 +784,14 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
                 vertexBuffer.push_back(n0.z);
                 vertexBuffer.push_back(tex0.x);
                 vertexBuffer.push_back(tex0.y);
-                vertexBuffer.push_back(combinedVertexBuffer[i0 * 14 + 8]);
-                vertexBuffer.push_back(combinedVertexBuffer[i0 * 14 + 9]);
-                vertexBuffer.push_back(combinedVertexBuffer[i0 * 14 + 10]);
-                vertexBuffer.push_back(combinedVertexBuffer[i0 * 14 + 11]);
-                vertexBuffer.push_back(combinedVertexBuffer[i0 * 14 + 12]);
-                vertexBuffer.push_back(combinedVertexBuffer[i0 * 14 + 13]);
+                vertexBuffer.push_back(combinedVertexBuffer[i0 * 16 + 8]);
+                vertexBuffer.push_back(combinedVertexBuffer[i0 * 16 + 9]);
+                vertexBuffer.push_back(combinedVertexBuffer[i0 * 16 + 10]);
+                vertexBuffer.push_back(dirCorrection);
+                vertexBuffer.push_back(combinedVertexBuffer[i0 * 16 + 12]);
+                vertexBuffer.push_back(combinedVertexBuffer[i0 * 16 + 13]);
+                vertexBuffer.push_back(combinedVertexBuffer[i0 * 16 + 14]);
+                vertexBuffer.push_back(dirCorrection);
 
                 // vertex 1
                 vertexBuffer.push_back(p1.x);
@@ -795,12 +802,14 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
                 vertexBuffer.push_back(n1.z);
                 vertexBuffer.push_back(tex1.x);
                 vertexBuffer.push_back(tex1.y);
-                vertexBuffer.push_back(combinedVertexBuffer[i1 * 14 + 8]);
-                vertexBuffer.push_back(combinedVertexBuffer[i1 * 14 + 9]);
-                vertexBuffer.push_back(combinedVertexBuffer[i1 * 14 + 10]);
-                vertexBuffer.push_back(combinedVertexBuffer[i1 * 14 + 11]);
-                vertexBuffer.push_back(combinedVertexBuffer[i1 * 14 + 12]);
-                vertexBuffer.push_back(combinedVertexBuffer[i1 * 14 + 13]);
+                vertexBuffer.push_back(combinedVertexBuffer[i1 * 16 + 8]);
+                vertexBuffer.push_back(combinedVertexBuffer[i1 * 16 + 9]);
+                vertexBuffer.push_back(combinedVertexBuffer[i1 * 16 + 10]);
+                vertexBuffer.push_back(dirCorrection);
+                vertexBuffer.push_back(combinedVertexBuffer[i1 * 16 + 12]);
+                vertexBuffer.push_back(combinedVertexBuffer[i1 * 16 + 13]);
+                vertexBuffer.push_back(combinedVertexBuffer[i1 * 16 + 14]);
+                vertexBuffer.push_back(dirCorrection);
 
                 // vertex 2
                 vertexBuffer.push_back(p2.x);
@@ -811,12 +820,14 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
                 vertexBuffer.push_back(n2.z);
                 vertexBuffer.push_back(tex2.x);
                 vertexBuffer.push_back(tex2.y);
-                vertexBuffer.push_back(combinedVertexBuffer[i2 * 14 + 8]);
-                vertexBuffer.push_back(combinedVertexBuffer[i2 * 14 + 9]);
-                vertexBuffer.push_back(combinedVertexBuffer[i2 * 14 + 10]);
-                vertexBuffer.push_back(combinedVertexBuffer[i2 * 14 + 11]);
-                vertexBuffer.push_back(combinedVertexBuffer[i2 * 14 + 12]);
-                vertexBuffer.push_back(combinedVertexBuffer[i2 * 14 + 13]);
+                vertexBuffer.push_back(combinedVertexBuffer[i2 * 16 + 8]);
+                vertexBuffer.push_back(combinedVertexBuffer[i2 * 16 + 9]);
+                vertexBuffer.push_back(combinedVertexBuffer[i2 * 16 + 10]);
+                vertexBuffer.push_back(dirCorrection);
+                vertexBuffer.push_back(combinedVertexBuffer[i2 * 16 + 12]);
+                vertexBuffer.push_back(combinedVertexBuffer[i2 * 16 + 13]);
+                vertexBuffer.push_back(combinedVertexBuffer[i2 * 16 + 14]);
+                vertexBuffer.push_back(dirCorrection);
 
             }
 

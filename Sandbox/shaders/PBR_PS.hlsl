@@ -154,16 +154,46 @@ cbuffer mvMaterialCBuf         : register(b1) { mvMaterial material; };
 cbuffer mvDirectionalLightCBuf : register(b2) { mvDirectionalLight DirectionalLight; };
 cbuffer mvGlobalCBuf           : register(b3) { mvGlobalInfo ginfo; };
 
+//struct VSOut
+//{   
+//    float4 Pos              : SV_Position;
+//    float3 WorldPos         : POSITION0;
+//    float3 WorldNormal      : NORMAL0;
+//    float2 UV               : TEXCOORD0;
+//    float4 dshadowWorldPos  : dshadowPosition; // directional light pos
+//    float4 oshadowWorldPos  : oshadowPosition; // point light pos
+//    float3x3 TBN            : TangentBasis;
+//    bool frontFace          : SV_IsFrontFace;
+//};
+
 struct VSOut
-{   
-    float4 Pos              : SV_Position;
-    float3 WorldPos         : POSITION0;
-    float3 WorldNormal      : NORMAL0;
-    float2 UV               : TEXCOORD0;
-    float4 dshadowWorldPos  : dshadowPosition; // directional light pos
-    float4 oshadowWorldPos  : oshadowPosition; // point light pos
-    float3x3 TBN            : TangentBasis;
-    bool frontFace          : SV_IsFrontFace;
+{
+
+    float4 Pos : SV_Position;
+
+#ifdef HAS_NORMALS
+#ifdef HAS_TANGENTS
+    float3x3 TBN : TangentBasis;
+#else
+    float3 v_Normal: NORMAL0;
+#endif
+#endif
+
+#ifdef HAS_VERTEX_COLOR_VEC3
+    float3 v_color : COLOR0;
+#endif
+
+#ifdef HAS_VERTEX_COLOR_VEC4
+    float4 v_color : COLOR0;
+#endif
+    float3 WorldPos : POSITION0;
+    float3 WorldNormal : NORMAL1;
+    float2 UV0 : TEXCOORD0;
+    float2 UV1 : TEXCOORD1;
+    float4 dshadowWorldPos : dshadowPosition; // light pos
+    float4 oshadowWorldPos : oshadowPosition; // light pos
+    bool frontFace : SV_IsFrontFace;
+
 };
 
 #include <tonemapping.hlsli>

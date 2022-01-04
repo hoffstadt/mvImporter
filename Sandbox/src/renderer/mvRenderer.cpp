@@ -405,6 +405,7 @@ render_job(mvAssetManager& am, mvRenderJob& job, mvMat4 cam, mvMat4 proj)
     transforms.model = job.accumulatedTransform;
     transforms.modelView = cam * transforms.model;
     transforms.modelViewProjection = proj * cam * transforms.model;
+    transforms.normalMatrix = transpose(invert(transforms.model));
 
     D3D11_MAPPED_SUBRESOURCE mappedSubresource;
     device->Map(GContext->graphics.tranformCBuf.Get(), 0u, D3D11_MAP_WRITE_DISCARD, 0u, &mappedSubresource);

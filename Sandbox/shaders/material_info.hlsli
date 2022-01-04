@@ -53,7 +53,7 @@ MaterialInfo getSpecularGlossinessInfo(MaterialInfo info)
 NormalInfo getNormalInfo(VSOut input)
 {
 
-    float2 UV = input.UV;
+    float2 UV = input.UV0;
     float3 uv_dx = ddx(float3(UV, 0.0));
     float3 uv_dy = ddy(float3(UV, 0.0));
 
@@ -83,7 +83,7 @@ NormalInfo getNormalInfo(VSOut input)
     normalInfo.ng = ng;
     normalInfo.n = ng;
 #ifdef HAS_NORMAL_MAP
-    normalInfo.ntex = NormalTexture.Sample(NormalTextureSampler, input.UV).xyz * 2.0 - 1.0;
+    normalInfo.ntex = NormalTexture.Sample(NormalTextureSampler, input.UV0).xyz * 2.0 - 1.0;
     //normalInfo.ntex.y = -normalInfo.ntex.y;
     //float u_NormalScale = -1.0;
     //normalInfo.ntex *= float3(u_NormalScale, u_NormalScale, 1.0);
@@ -104,7 +104,7 @@ NormalInfo getNormalInfo(VSOut input)
 float3 getClearcoatNormal(VSOut input, NormalInfo normalInfo)
 {
 #ifdef HAS_CLEARCOAT_NORMAL_MAP
-        float3 n = ClearCoatNormalTexture.Sample(ClearCoatNormalTextureSampler, input.UV).rgb * 2.0 - float3(1.0.xxx);
+        float3 n = ClearCoatNormalTexture.Sample(ClearCoatNormalTextureSampler, input.UV0).rgb * 2.0 - float3(1.0.xxx);
         n *= float3(material.clearcoatNormalScale, material.clearcoatNormalScale, 1.0);
         n = mul(float3x3(normalInfo.t, normalInfo.b, normalInfo.ng), normalize(n));
         //n = mul(input.TBN, normalize(n));
@@ -153,7 +153,7 @@ MaterialInfo getClearCoatInfo(VSOut input, MaterialInfo info, NormalInfo normalI
     info.clearcoatF90 = float3(1.0.xxx);
 
 #ifdef HAS_CLEARCOAT_MAP
-    float4 clearcoatSample = ClearCoatTexture.Sample(ClearCoatTextureSampler, input.UV);
+    float4 clearcoatSample = ClearCoatTexture.Sample(ClearCoatTextureSampler, input.UV0);
     info.clearcoatFactor *= clearcoatSample.r;
 #endif
 
@@ -175,7 +175,7 @@ MaterialInfo getMetallicRoughnessInfo(VSOut input, MaterialInfo info)
 #ifdef HAS_METALLIC_ROUGHNESS_MAP
     // Roughness is stored in the 'g' channel, metallic is stored in the 'b' channel.
     // This layout intentionally reserves the 'r' channel for (optional) occlusion map data
-    float4 mrSample = MetalRoughnessTexture.Sample(MetalRoughnessTextureSampler, input.UV);
+    float4 mrSample = MetalRoughnessTexture.Sample(MetalRoughnessTextureSampler, input.UV0);
     //mrSample = pow(mrSample, float4(0.4545f.xxx, 1.0f));
     if (ginfo.useRoughness)
     {
@@ -226,7 +226,7 @@ float4 getBaseColor(VSOut input)
 #if defined(MATERIAL_SPECULARGLOSSINESS) && defined(HAS_DIFFUSE_MAP)
     baseColor *= texture(u_DiffuseSampler, getDiffuseUV());
 #elif defined(MATERIAL_METALLICROUGHNESS) && defined(HAS_BASE_COLOR_MAP)
-    base_color *= sRGBToLinear(AlbedoTexture.Sample(AlbedoTextureSampler, input.UV).rgba);
+    base_color *= sRGBToLinear(AlbedoTexture.Sample(AlbedoTextureSampler, input.UV0).rgba);
 #endif
     
     return base_color;

@@ -63,6 +63,7 @@ struct mvTransforms
 	mvMat4 model               = identity_mat4();
 	mvMat4 modelView           = identity_mat4();
 	mvMat4 modelViewProjection = identity_mat4();
+	mvMat4 normalMatrix        = identity_mat4();
 };
 
 mvVec2 operator+(mvVec2 left, mvVec2 right);
@@ -101,6 +102,7 @@ mvMat4 scale         (mvMat4 m, mvVec3 v);
 mvMat4 ortho         (f32 left, f32 right, f32 bottom, f32 top, f32 zNear, f32 zFar);
 mvMat4 perspective   (f32 fovy, f32 aspect, f32 zNear, f32 zFar);
 mvMat4 invert        (mvMat4& m);
+mvMat4 transpose     (mvMat4& m);
 mvMat4 rotation_translation_scale(mvVec4& q, mvVec3& t, mvVec3& s);
 mvMat4 create_matrix(
 	f32 m00, f32 m01, f32 m02, f32 m03,

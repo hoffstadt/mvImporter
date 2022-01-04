@@ -65,6 +65,10 @@ create_material(mvAssetManager& am, const std::string& vs, const std::string& ps
 	if(materialInfo.hasClearcoatMap)pipelineInfo.macros.push_back({ "HAS_CLEARCOAT_MAP", "0" });
 	if(materialInfo.hasClearcoatRoughnessMap)pipelineInfo.macros.push_back({ "HAS_CLEARCOAT_ROUGHNESS_MAP", "0" });
 	if(materialInfo.hasClearcoatNormalMap)pipelineInfo.macros.push_back({ "HAS_CLEARCOAT_NORMAL_MAP", "0" });
+	
+	pipelineInfo.macros.push_back({ "HAS_NORMALS", "0" });
+	pipelineInfo.macros.push_back({ "HAS_TANGENTS", "0" });
+	pipelineInfo.macros.push_back({ "HAS_UV_SET1", "0" });
 	pipelineInfo.macros.push_back({ NULL, NULL });
 
 	pipelineInfo.layout = create_vertex_layout(

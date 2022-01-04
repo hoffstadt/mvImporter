@@ -60,7 +60,7 @@ finalize_pipeline(mvPipelineInfo& info)
         pipeline.pixelBlob = pixelShader.blob;
     }
 
-    mvVertexShader vertexShader = create_vertex_shader(GContext->IO.shaderDirectory + info.vertexShader, info.layout);
+    mvVertexShader vertexShader = create_vertex_shader(GContext->IO.shaderDirectory + info.vertexShader, info.layout, info.macros.empty() ? nullptr : &info.macros);
 
     pipeline.vertexShader = vertexShader.shader;
     pipeline.vertexBlob = vertexShader.blob;
