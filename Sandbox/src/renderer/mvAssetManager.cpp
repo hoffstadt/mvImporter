@@ -18,6 +18,7 @@ mvInitializeAssetManager(mvAssetManager* manager)
 	manager->pipelines = new mvPipelineAsset[manager->maxPipelineCount];
 	manager->targetViews = new mvTargetViewAsset[manager->maxTargetViewCount];
 	manager->depthViews = new mvDepthViewAsset[manager->maxDepthViewCount];
+	manager->animations = new mvAnimationAsset[manager->maxAnimationCount];
 
 	manager->freetextures = new b8[manager->maxTextureCount];
 	for (i32 i = 0; i < manager->maxTextureCount; i++)
@@ -129,6 +130,11 @@ mvCleanupAssetManager(mvAssetManager* manager)
 		}
 	}
 
+	for (int i = 0; i < manager->animationCount; i++)
+	{
+		delete[] manager->animations[i].asset.channels;
+	}
+
 
 
 	// assets
@@ -145,6 +151,7 @@ mvCleanupAssetManager(mvAssetManager* manager)
 	delete[] manager->cbuffers;
 	delete[] manager->targetViews;
 	delete[] manager->depthViews;
+	delete[] manager->animations;
 	
 	// free slots
 	delete[] manager->freetextures;
@@ -213,6 +220,45 @@ reload_materials(mvAssetManager* manager)
 }
 
 //-----------------------------------------------------------------------------
+// animations
+//-----------------------------------------------------------------------------
+
+mvAssetID
+register_asset(mvAssetManager* manager, const std::string& tag, mvAnimation asset)
+{
+	manager->animations[manager->animationCount].asset = asset;
+	manager->animations[manager->animationCount].hash = tag;
+	manager->animationCount++;
+	return manager->animationCount - 1;
+}
+
+mvAssetID
+mvGetAnimationAssetID(mvAssetManager* manager, const std::string& tag)
+{
+	for (s32 i = 0; i < manager->animationCount; i++)
+	{
+		if (manager->animations[i].hash == tag)
+			return i;
+	}
+
+	return -1;
+}
+
+mvAnimation*
+mvGetRawAnimationAsset(mvAssetManager* manager, const std::string& tag)
+{
+	for (s32 i = 0; i < manager->animationCount; i++)
+	{
+		if (manager->animations[i].hash == tag)
+			return &manager->animations[i].asset;
+	}
+
+	return nullptr;
+}
+
+
+
+//-----------------------------------------------------------------------------
 // render target views
 //-----------------------------------------------------------------------------
 
@@ -252,6 +298,7 @@ mvGetRawTargetViewAsset(mvAssetManager* manager, const std::string& tag)
 //-----------------------------------------------------------------------------
 // depth views
 //-----------------------------------------------------------------------------
+
 mvAssetID
 register_asset(mvAssetManager* manager, const std::string& tag, ID3D11DepthStencilView* asset)
 {

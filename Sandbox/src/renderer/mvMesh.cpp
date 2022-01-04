@@ -432,7 +432,7 @@ mvVerifyBufferViewStride(mvGLTFModel& model, mvGLTFAccessor& accessor)
     u8 actualItemCompCount = mvGetAccessorItemCompCount(accessor);
 
     // calculate stride if not available
-    if (bufferview.byte_stride == -1)
+    //if (bufferview.byte_stride == -1)
     {
         switch (accessor.component_type)
         {
@@ -644,6 +644,13 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
                     attributes.push_back(mvVertexElement::Texture2D);
                     mvFillBuffer<f32>(model, model.accessors[attribute.index], textureAttributeBuffer, 2);
                     break;
+                case(MV_IMP_COLOR_0):
+                    attributes.push_back(mvVertexElement::Color);
+                    mvFillBuffer<f32>(model, model.accessors[attribute.index], textureAttributeBuffer, 4);
+                    break;
+
+                case(MV_IMP_WEIGHTS_0):
+                case(MV_IMP_JOINTS_0):
                 default:
                     assert(false && "Undefined attribute type");
                     break;
@@ -1118,8 +1125,6 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
                 }
             }
 
-            auto blah = newMesh.primitives.back();
-
             newMesh.primitives.back().indexBuffer = mvGetBufferAssetID(&assetManager,
                 std::string(glmesh.name) + std::to_string(currentPrimitive) + "_indexbuffer",
                 indexBuffer.data(),
@@ -1176,40 +1181,93 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
         }
         else
         {
-
-            float x2 = newNode.rotation.x * newNode.rotation.x;
-            float xy = newNode.rotation.x * newNode.rotation.y;
-            float xz = newNode.rotation.x * newNode.rotation.z;
-            float xw = newNode.rotation.x * newNode.rotation.w;
-            float y2 = newNode.rotation.y * newNode.rotation.y;
-            float yz = newNode.rotation.y * newNode.rotation.z;
-            float yw = newNode.rotation.y * newNode.rotation.w;
-            float z2 = newNode.rotation.z * newNode.rotation.z;
-            float zw = newNode.rotation.z * newNode.rotation.w;
-            float w2 = newNode.rotation.w * newNode.rotation.w;
-            float m00 = x2 - y2 - z2 + w2;
-            float m01 = 2.0f * (xy - zw);
-            float m02 = 2.0f * (xz + yw);
-            float m10 = 2.0f * (xy + zw);
-            float m11 = -x2 + y2 - z2 + w2;
-            float m12 = 2.0f * (yz - xw);
-            float m20 = 2.0f * (xz - yw);
-            float m21 = 2.0f * (yz + xw);
-            float m22 = -x2 - y2 + z2 + w2;
-
-            mvMat4 rotationMat = create_matrix(
-                m00, m01, m02, 0.0f,
-                m10, m11, m12, 0.0f,
-                m20, m21, m22, 0.0f,
-                0.0f, 0.0f, 0.0f, 1.0f);
-
-            newNode.matrix = translate(identity_mat4(), newNode.translation) * rotationMat * scale(identity_mat4(), newNode.scale);
+            newNode.matrix = rotation_translation_scale(newNode.rotation, newNode.translation, newNode.scale);
         }
 
         nodeMapping[currentNode] = register_asset(&assetManager, "node_" + std::to_string(currentNode), newNode);
     }
 
-    // update childre for actual offset
+    for (u32 currentAnimation = 0u; currentAnimation < model.animation_count; currentAnimation++)
+    {
+        mvGLTFAnimation& glanimation = model.animations[currentAnimation];
+
+        mvAnimation animation{};
+        animation.channels = new mvAnimationChannel[glanimation.channel_count];
+        animation.channelCount = glanimation.channel_count;
+
+        for (u32 channel_index = 0u; channel_index < glanimation.channel_count; channel_index++)
+        {
+            mvGLTFAnimationChannel& glchannel = glanimation.channels[channel_index];
+            mvGLTFAnimationSampler& glsampler = glanimation.samplers[glchannel.sampler];
+            mvAnimationChannel& channel = animation.channels[channel_index];
+            channel.node = nodeMapping[glchannel.target.node];
+            assetManager.nodes[channel.node].asset.animated = true;
+            channel.path = glchannel.target.path;
+            channel.interpolation = glsampler.interpolation;
+            
+            mvGLTFAccessor& inputaccessor = model.accessors[glsampler.input];
+            mvGLTFAccessor& outputaccessor = model.accessors[glsampler.output];
+            mvFillBuffer<f32>(model, inputaccessor, channel.inputdata, 1);
+            //mvFillBuffer<u32>(model, outputaccessor, channel.outputdata, 4);
+
+            mvGLTFComponentType indexCompType = outputaccessor.component_type;
+
+            if (channel.path == "translation" || channel.path == "scale")
+            {
+                mvFillBuffer<u32>(model, outputaccessor, channel.outputdata, 3);
+            }
+
+            if (channel.path == "rotation")
+            {
+                switch (indexCompType)
+                {
+                case MV_IMP_BYTE:
+                case MV_IMP_UNSIGNED_BYTE:
+                    mvFillBuffer<u8>(model, outputaccessor, channel.outputdata, 4);
+                    break;
+
+                case MV_IMP_SHORT:
+                case MV_IMP_UNSIGNED_SHORT:
+                    mvFillBuffer<u16>(model, outputaccessor, channel.outputdata, 4);
+                    break;
+
+                case MV_IMP_FLOAT:
+                    mvFillBuffer<u32>(model, outputaccessor, channel.outputdata, 4);
+                    break;
+
+                default:
+                    assert(false && "Unknown index compenent type");
+                }
+            }
+
+            if (channel.path == "weights")
+            {
+                switch (indexCompType)
+                {
+                case MV_IMP_BYTE:
+                case MV_IMP_UNSIGNED_BYTE:
+                    mvFillBuffer<u8>(model, outputaccessor, channel.outputdata, 1);
+                    break;
+
+                case MV_IMP_SHORT:
+                case MV_IMP_UNSIGNED_SHORT:
+                    mvFillBuffer<u16>(model, outputaccessor, channel.outputdata, 1);
+                    break;
+
+                case MV_IMP_FLOAT:
+                    mvFillBuffer<u32>(model, outputaccessor, channel.outputdata, 1);
+                    break;
+
+                default:
+                    assert(false && "Unknown index compenent type");
+                }
+            }
+        }
+
+        register_asset(&assetManager, model.name + "_animation_" + std::to_string(currentAnimation), animation);
+    }
+
+    // update children for actual offset
     for (u32 currentNode = 0u; currentNode < model.node_count; currentNode++)
     {
 

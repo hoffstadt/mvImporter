@@ -7,14 +7,21 @@
 struct mvNode
 {
     std::string name;
-    mvAssetID   mesh = -1;
+    mvAssetID   mesh   = -1;
     mvAssetID   camera = -1;
     mvAssetID   children[256];
     u32         childCount = 0u;
-    mvMat4      matrix      = identity_mat4();
-    mvVec3      translation = { 0.0f, 0.0f, 0.0f };
-    mvVec4      rotation    = { 0.0f, 0.0f, 0.0f, 1.0f };
-    mvVec3      scale       = { 1.0f, 1.0f, 1.0f };
+    mvMat4      matrix               = identity_mat4();
+    mvVec3      translation          = { 0.0f, 0.0f, 0.0f };
+    mvVec4      rotation             = { 0.0f, 0.0f, 0.0f, 1.0f };
+    mvVec3      scale                = { 1.0f, 1.0f, 1.0f };
+    mvVec3      animationTranslation = { 0.0f, 0.0f, 0.0f };
+    mvVec4      animationRotation    = { 0.0f, 0.0f, 0.0f, 1.0f };
+    mvVec3      animationScale       = { 1.0f, 1.0f, 1.0f };
+    b8          translationAnimated = false;
+    b8          rotationAnimated = false;
+    b8          scaleAnimated = false;
+    b8          animated = false;
 };
 
 struct mvScene

@@ -6,6 +6,16 @@
 static constexpr f32 PI = 3.14159265f;
 static constexpr f64 PI_D = 3.1415926535897932;
 
+template<typename T>
+T clamp(T value, T minvalue, T maxvalue)
+{
+	if (value < minvalue)
+		return minvalue;
+	if (value > maxvalue)
+		return maxvalue;
+	return value;
+}
+
 struct mvVec2
 {
 	union { f32 x, r, u; };
@@ -76,10 +86,12 @@ mvMat4 operator*(mvMat4 left, f32 right);
 
 mvVec2 normalize(mvVec2 v);
 mvVec3 normalize(mvVec3 v);
+mvVec4 normalize(mvVec4 v);
 mvVec3 cross    (mvVec3 v1, mvVec3 v2);
 f32    dot      (mvVec3 v1, mvVec3 v2);
 f32    radians  (f32 degrees);
 
+mvVec4 slerpQuat(mvVec4 q1, mvVec4 q2, f32 t);
 mvMat4 yaw_pitch_roll(f32 yaw, f32 pitch, f32 roll);
 mvMat4 lookat        (mvVec3 eye, mvVec3 center, mvVec3 up); // world space eye, center, up
 mvMat4 fps           (mvVec3 eye, float pitch, float yaw);   // world space eye, center, up
@@ -89,6 +101,7 @@ mvMat4 scale         (mvMat4 m, mvVec3 v);
 mvMat4 ortho         (f32 left, f32 right, f32 bottom, f32 top, f32 zNear, f32 zFar);
 mvMat4 perspective   (f32 fovy, f32 aspect, f32 zNear, f32 zFar);
 mvMat4 invert        (mvMat4& m);
+mvMat4 rotation_translation_scale(mvVec4& q, mvVec3& t, mvVec3& s);
 mvMat4 create_matrix(
 	f32 m00, f32 m01, f32 m02, f32 m03,
 	f32 m10, f32 m11, f32 m12, f32 m13,

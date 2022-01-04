@@ -11,6 +11,7 @@
 #include "mvImporter.h"
 #include "mvTimer.h"
 #include "gltf_scene_info.h"
+#include "mvAnimation.h"
 
 // TODO: make most of these runtime options
 #define MODEL_CACHE_SIZE 5
@@ -92,12 +93,14 @@ int main()
     int activeScene = -1;
     int modelIndex = 0;
     int activeEnv = -1;
-    int envMapIndex = 8;
+    int envMapIndex = 0;
     int envCacheIndex = 0;
     bool blur = true;
+    f32 currentTime = 0.0f;
     while (true)
     {
         const auto dt = timer.mark() * 1.0f;
+        currentTime += dt;
 
         static f32 scale0 = 1.0f;
         static mvVec3 translate0 = { 0.0f, 0.0f, 0.0f };
@@ -237,6 +240,26 @@ int main()
             }
 
             changeScene = false;
+        }
+
+        //-----------------------------------------------------------------------------
+        // update animations
+        //-----------------------------------------------------------------------------
+        for (i32 i = 0; i < am.animationCount; i++)
+        {
+            advance(am, am.animations[i].asset, currentTime);
+        }
+
+        for (i32 i = 0; i < am.nodeCount; i++)
+        {
+            mvNode& node = am.nodes[i].asset;
+            if (node.animated)
+            {
+                mvVec3& trans = node.translationAnimated ? node.animationTranslation : node.translation;
+                mvVec3& scal = node.scaleAnimated ? node.animationScale : node.scale;
+                mvVec4& rot = node.rotationAnimated ? node.animationRotation : node.rotation;
+                node.matrix = rotation_translation_scale(rot, trans, scal);
+            }
         }
 
         //-----------------------------------------------------------------------------
