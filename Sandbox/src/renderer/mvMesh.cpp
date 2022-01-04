@@ -1118,6 +1118,8 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
                 }
             }
 
+            auto blah = newMesh.primitives.back();
+
             newMesh.primitives.back().indexBuffer = mvGetBufferAssetID(&assetManager,
                 std::string(glmesh.name) + std::to_string(currentPrimitive) + "_indexbuffer",
                 indexBuffer.data(),

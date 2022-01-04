@@ -423,6 +423,39 @@ render_job(mvAssetManager& am, mvRenderJob& job, mvMat4 cam, mvMat4 proj)
     device->DrawIndexed(am.buffers[primitive.indexBuffer].asset.size / sizeof(u32), 0u, 0u);
 }
 
+static void
+render_wireframe_job(mvAssetManager& am, mvRenderJob& job, mvMat4 cam, mvMat4 proj)
+{
+
+    auto device = GContext->graphics.imDeviceContext;
+    mvPipeline* pipeline = mvGetRawPipelineAsset(&am, "solid_wireframe");
+
+    set_pipeline_state(*pipeline);
+
+    mvMeshPrimitive& primitive = *job.meshPrimitive;
+
+    mvTransforms transforms{};
+    transforms.model = job.accumulatedTransform;
+    transforms.modelView = cam * transforms.model;
+    transforms.modelViewProjection = proj * cam * transforms.model;
+
+    D3D11_MAPPED_SUBRESOURCE mappedSubresource;
+    device->Map(GContext->graphics.tranformCBuf.Get(), 0u, D3D11_MAP_WRITE_DISCARD, 0u, &mappedSubresource);
+    memcpy(mappedSubresource.pData, &transforms, sizeof(mvTransforms));
+    device->Unmap(GContext->graphics.tranformCBuf.Get(), 0u);
+
+    // mesh
+    static const UINT offset = 0u;
+    device->VSSetConstantBuffers(0u, 1u, GContext->graphics.tranformCBuf.GetAddressOf());
+    device->IASetIndexBuffer(am.buffers[primitive.indexBuffer].asset.buffer, DXGI_FORMAT_R32_UINT, 0u);
+    device->IASetVertexBuffers(0u, 1u,
+        &am.buffers[primitive.vertexBuffer].asset.buffer,
+        &pipeline->info.layout.size, &offset);
+
+    // draw
+    device->DrawIndexed(am.buffers[primitive.indexBuffer].asset.size / sizeof(u32), 0u, 0u);
+}
+
 void 
 render_jobs(mvAssetManager& am, mvRendererContext& ctx, mvMat4 cam, mvMat4 proj)
 {
@@ -436,7 +469,7 @@ render_jobs(mvAssetManager& am, mvRendererContext& ctx, mvMat4 cam, mvMat4 proj)
 
     // wireframe objects
     for (int i = 0; i < ctx.wireframeJobCount; i++)
-        render_job(am, ctx.wireframeJobs[i], cam, proj);
+        render_wireframe_job(am, ctx.wireframeJobs[i], cam, proj);
 
     // reset
     ctx.opaqueJobCount = 0u;
