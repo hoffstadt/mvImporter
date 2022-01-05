@@ -65,23 +65,14 @@ create_material(mvAssetManager& am, const std::string& vs, const std::string& ps
 	if(materialInfo.hasClearcoatMap)pipelineInfo.macros.push_back({ "HAS_CLEARCOAT_MAP", "0" });
 	if(materialInfo.hasClearcoatRoughnessMap)pipelineInfo.macros.push_back({ "HAS_CLEARCOAT_ROUGHNESS_MAP", "0" });
 	if(materialInfo.hasClearcoatNormalMap)pipelineInfo.macros.push_back({ "HAS_CLEARCOAT_NORMAL_MAP", "0" });
-	
-	pipelineInfo.macros.push_back({ "HAS_NORMALS", "0" });
-	pipelineInfo.macros.push_back({ "HAS_TANGENTS", "0" });
-	pipelineInfo.macros.push_back({ "HAS_UV_SET1", "0" });
+
+	for (auto& macro : materialInfo.extramacros)
+		pipelineInfo.macros.push_back(macro);
+
 	pipelineInfo.macros.push_back({ NULL, NULL });
 
-	pipelineInfo.layout = create_vertex_layout(
-		{
-			mvVertexElement::Position3D,
-			mvVertexElement::Normal,
-			mvVertexElement::Texture2D,
-			mvVertexElement::Tangent,
-			mvVertexElement::Bitangent
-		}
-	);
-
 	std::string hash = hash_material(material, ps, vs);
+	pipelineInfo.layout = material.layout;
 
 	material.pipeline = mvGetMaterialAssetID(&am, hash);
 	if (material.pipeline == -1)

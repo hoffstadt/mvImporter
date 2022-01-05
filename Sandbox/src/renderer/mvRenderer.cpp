@@ -28,8 +28,7 @@ mvSetupCommonAssets(mvAssetManager& am)
                 mvVertexElement::Position3D,
                 mvVertexElement::Normal,
                 mvVertexElement::Texture2D,
-                mvVertexElement::Tangent,
-                mvVertexElement::Bitangent
+                mvVertexElement::Tangent
             }
         );
 
@@ -50,8 +49,7 @@ mvSetupCommonAssets(mvAssetManager& am)
                 mvVertexElement::Position3D,
                 mvVertexElement::Normal,
                 mvVertexElement::Texture2D,
-                mvVertexElement::Tangent,
-                mvVertexElement::Bitangent
+                mvVertexElement::Tangent
             }
         );
 

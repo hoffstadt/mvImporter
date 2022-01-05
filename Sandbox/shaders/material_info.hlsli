@@ -63,12 +63,25 @@ NormalInfo getNormalInfo(VSOut input)
     float3 n, t, b, ng;
 
     // Compute geometrical TBN:
+#ifdef HAS_NORMAL_VEC3
+#ifdef HAS_TANGENT_VEC4
     // Trivial TBN computation, present as vertex attribute.
     // Normalize eigenvectors as matrix is linearly interpolated.
     float3x3 TBN = transpose(input.TBN);
     t = normalize(TBN[0]);
     b = normalize(TBN[1]);
     ng = normalize(TBN[2]);
+#else
+    // Normals are either present as vertex attributes or approximated.
+    ng = normalize(input.v_Normal);
+    t = normalize(t_ - ng * dot(ng, t_));
+    b = cross(ng, t);
+#endif
+#else
+    ng = normalize(cross(ddx(input.Pos), ddy(input.Pos)));
+    t = normalize(t_ - ng * dot(ng, t_));
+    b = cross(ng, t);
+#endif
 
     // For a back-facing surface, the tangential basis vectors are negated.
     if (!input.frontFace)
@@ -81,10 +94,10 @@ NormalInfo getNormalInfo(VSOut input)
     // Compute normals:
     NormalInfo normalInfo;
     normalInfo.ng = ng;
-    normalInfo.n = ng;
+    //normalInfo.n = ng;
 #ifdef HAS_NORMAL_MAP
     normalInfo.ntex = NormalTexture.Sample(NormalTextureSampler, input.UV0).xyz * 2.0 - 1.0;
-    //normalInfo.ntex.y = -normalInfo.ntex.y;
+    normalInfo.ntex.y = -normalInfo.ntex.y;
     //float u_NormalScale = -1.0;
     //normalInfo.ntex *= float3(u_NormalScale, u_NormalScale, 1.0);
     normalInfo.ntex = normalize(normalInfo.ntex);

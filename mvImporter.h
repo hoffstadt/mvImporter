@@ -101,17 +101,6 @@ enum mvGLTFPrimMode
 	MV_IMP_TRIANGLES = 4
 };
 
-enum mvGLTFPrimAttrType
-{
-	MV_IMP_POSITION  = 0,
-	MV_IMP_TANGENT   = 1,
-	MV_IMP_NORMAL    = 2,
-	MV_IMP_TEXTCOORD = 3,
-	MV_IMP_JOINTS_0  = 4,
-	MV_IMP_WEIGHTS_0 = 5,
-	MV_IMP_COLOR_0   = 6
-};
-
 enum mvGLTFAccessorType
 {
 	MV_IMP_SCALAR,
@@ -157,8 +146,8 @@ enum mvGLTFCameraType
 
 struct mvGLTFAttribute
 {
-	mvGLTFPrimAttrType type;
-	mvS32              index = -1; // accessor index
+	std::string semantic;
+	mvS32       index = -1; // accessor index
 };
 
 struct mvGLTFAccessor
@@ -1491,52 +1480,24 @@ namespace mvImp {
 
 					if (jprimitive.doesMemberExist("attributes"))
 					{
-						mvU32 attrCount = jprimitive["attributes"].members.size();
+						mvJsonObject jattributes = jprimitive["attributes"];
+						mvU32 attrCount = jattributes.members.size();
 						primitive.attributes = new mvGLTFAttribute[attrCount];
+						
 
-						if (jprimitive["attributes"].doesMemberExist("POSITION"))
+						for (int k = 0; k < attrCount; k++)
 						{
-							primitive.attributes[primitive.attribute_count] = { MV_IMP_POSITION , jprimitive["attributes"].getMember("POSITION") };
+							mvJsonMember m = jattributes.members[k];
+							
+							primitive.attributes[primitive.attribute_count] = { m.name , (int)m };
 							primitive.attribute_count++;
 						}
 
-
-						if (jprimitive["attributes"].doesMemberExist("TANGENT"))
-						{
-							primitive.attributes[primitive.attribute_count] = { MV_IMP_TANGENT , jprimitive["attributes"].getMember("TANGENT") };
-							primitive.attribute_count++;
-						}
-
-						if (jprimitive["attributes"].doesMemberExist("NORMAL"))
-						{
-							primitive.attributes[primitive.attribute_count] = { MV_IMP_NORMAL , jprimitive["attributes"].getMember("NORMAL") };
-							primitive.attribute_count++;
-						}
-
-						if (jprimitive["attributes"].doesMemberExist("TEXCOORD_0"))
-						{
-							primitive.attributes[primitive.attribute_count] = { MV_IMP_TEXTCOORD , jprimitive["attributes"].getMember("TEXCOORD_0") };
-							primitive.attribute_count++;
-						}
-
-						if (jprimitive["attributes"].doesMemberExist("JOINTS_0"))
-						{
-							primitive.attributes[primitive.attribute_count] = { MV_IMP_JOINTS_0 , jprimitive["attributes"].getMember("JOINTS_0") };
-							primitive.attribute_count++;
-						}
-
-						if (jprimitive["attributes"].doesMemberExist("WEIGHTS_0"))
-						{
-							primitive.attributes[primitive.attribute_count] = { MV_IMP_WEIGHTS_0 , jprimitive["attributes"].getMember("WEIGHTS_0") };
-							primitive.attribute_count++;
-						}
-
-
-						if (jprimitive["attributes"].doesMemberExist("COLOR_0"))
-						{
-							primitive.attributes[primitive.attribute_count] = { MV_IMP_COLOR_0 , jprimitive["attributes"].getMember("COLOR_0") };
-							primitive.attribute_count++;
-						}
+						//if (jprimitive["attributes"].doesMemberExist("POSITION"))
+						//{
+						//	primitive.attributes[primitive.attribute_count] = { MV_IMP_POSITION , jprimitive["attributes"].getMember("POSITION") };
+						//	primitive.attribute_count++;
+						//}
 					}
 
 

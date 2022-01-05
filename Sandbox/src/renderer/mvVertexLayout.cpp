@@ -26,7 +26,7 @@ mvGetVertexElementInfo(mvVertexElement element)
 		newelement.format = DXGI_FORMAT_R32G32_FLOAT;
 		newelement.itemCount = 2;
 		newelement.normalize = false;
-		newelement.size = sizeof(f32) * 2;
+		newelement.size = sizeof(f32) * newelement.itemCount;
 		newelement.semantic = "Position";
 		break;
 
@@ -34,7 +34,7 @@ mvGetVertexElementInfo(mvVertexElement element)
 		newelement.format = DXGI_FORMAT_R32G32B32_FLOAT;
 		newelement.itemCount = 3;
 		newelement.normalize = false;
-		newelement.size = sizeof(f32) * 3;
+		newelement.size = sizeof(f32) * newelement.itemCount;
 		newelement.semantic = "Position";
 		break;
 
@@ -42,7 +42,7 @@ mvGetVertexElementInfo(mvVertexElement element)
 		newelement.format = DXGI_FORMAT_R32G32_FLOAT;
 		newelement.itemCount = 2;
 		newelement.normalize = false;
-		newelement.size = sizeof(f32) * 2;
+		newelement.size = sizeof(f32) * newelement.itemCount;
 		newelement.semantic = "Texcoord";
 		break;
 
@@ -50,7 +50,7 @@ mvGetVertexElementInfo(mvVertexElement element)
 		newelement.format = DXGI_FORMAT_R32G32B32A32_FLOAT;
 		newelement.itemCount = 4;
 		newelement.normalize = false;
-		newelement.size = sizeof(f32) * 4;
+		newelement.size = sizeof(f32) * newelement.itemCount;
 		newelement.semantic = "Color";
 		break;
 
@@ -58,24 +58,16 @@ mvGetVertexElementInfo(mvVertexElement element)
 		newelement.format = DXGI_FORMAT_R32G32B32_FLOAT;
 		newelement.itemCount = 3;
 		newelement.normalize = false;
-		newelement.size = sizeof(f32) * 3;
+		newelement.size = sizeof(f32) * newelement.itemCount;
 		newelement.semantic = "Normal";
 		break;
 
 	case mvVertexElement::Tangent:
-		newelement.format = DXGI_FORMAT_R32G32B32_FLOAT;
-		newelement.itemCount = 3;
+		newelement.format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+		newelement.itemCount = 4;
 		newelement.normalize = false;
-		newelement.size = sizeof(f32) * 3;
+		newelement.size = sizeof(f32) * newelement.itemCount;
 		newelement.semantic = "Tangent";
-		break;
-
-	case mvVertexElement::Bitangent:
-		newelement.format = DXGI_FORMAT_R32G32B32_FLOAT;
-		newelement.itemCount = 3;
-		newelement.normalize = false;
-		newelement.size = sizeof(f32) * 3;
-		newelement.semantic = "Bitangent";
 		break;
 
 	}
@@ -88,7 +80,7 @@ mvVertexLayout
 create_vertex_layout(std::vector<mvVertexElement> elements)
 {
     mvVertexLayout layout{};
-
+	
 	std::vector<mvVertexElementTemp> newelements;
 
 	uint32_t stride = 0u;
@@ -102,6 +94,7 @@ create_vertex_layout(std::vector<mvVertexElement> elements)
 		layout.formats.push_back(newelements.back().format);
 		stride += newelements.back().size;
 		size += newelements.back().size;
+		layout.elementCount += newelements.back().itemCount;
 	}
 
 	layout.size = size;

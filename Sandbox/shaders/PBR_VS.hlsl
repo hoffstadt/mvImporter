@@ -18,11 +18,11 @@ struct VSIn
     float4 tan: Tangent;
 #endif
 
-#ifdef HAS_UV_SET1
+#ifdef HAS_TEXCOORD_0_VEC2
     float2 tc : Texcoord;
 #endif
 
-#ifdef HAS_UV_SET2
+#ifdef HAS_TEXCOORD_1_VEC2
     float2 tc : Texcoord;
 #endif
 
@@ -33,7 +33,6 @@ struct VSIn
 #ifdef HAS_VERTEX_COLOR_VEC4
     float4 a_color : Color;
 #endif
-    float3 b : Bitangent;
 };
 
 struct VSOut
@@ -56,6 +55,7 @@ struct VSOut
 #ifdef HAS_VERTEX_COLOR_VEC4
     float4 v_color : COLOR0;
 #endif
+
     float3 WorldPos : POSITION0;
     float3 WorldNormal : NORMAL1;
     float2 UV0 : TEXCOORD0;
@@ -143,18 +143,16 @@ VSOut main(VSIn input)
     VSOut output;
     float3 locPos = mul(model, getPosition(input)).xyz;
     output.WorldPos = locPos;
-#ifdef HAS_NORMALS
-    output.WorldNormal = mul((float3x3)model, getNormal(input));
-#endif
-    float3 WorldTangent = mul((float3x3) model, input.tan.xyz);
-    float3 WorldBitangent = mul((float3x3) model, input.b);
-    output.TBN = transpose(float3x3(WorldTangent, WorldBitangent, output.WorldNormal));
-    
+
     output.UV0 = float2(0.0, 0.0);
     output.UV1 = float2(0.0, 0.0);
 
-#ifdef HAS_UV_SET1
+    #ifdef HAS_TEXCOORD_0_VEC2
         output.UV0 =input.tc;
+    #endif
+
+    #ifdef HAS_TEXCOORD_1_VEC2
+        output.UV1 =input.tc;
     #endif
 
     output.Pos = mul(modelViewProj, float4(input.pos, 1.0f));
@@ -163,14 +161,15 @@ VSOut main(VSIn input)
 
 
     #ifdef HAS_NORMALS
+        output.WorldNormal = mul((float3x3)model, getNormal(input));
     #ifdef HAS_TANGENTS
-    float3 tangent = getTangent(input);
-    float3 normalW = normalize(float4(mul(normalMatrix, float4(getNormal(input), 0.0))));
-    float3 tangentW = normalize(float3(mul(model, float4(tangent, 0.0)).xyz));
-    float3 bitangentW = cross(normalW, tangentW) * input.tan.w;
-    //output.TBN = transpose(float3x3(tangentW, bitangentW, normalW));
+        float3 tangent = getTangent(input);
+        float3 normalW = normalize(float4(mul(normalMatrix, float4(getNormal(input), 0.0))));
+        float3 tangentW = normalize(float3(mul(model, float4(tangent, 0.0)).xyz));
+        float3 bitangentW = cross(normalW, tangentW) * input.tan.w;
+        output.TBN = transpose(float3x3(tangentW, bitangentW, normalW));
     #else // !HAS_TANGENTS
-        output.v_Normal = normalize(vec3(u_NormalMatrix * vec4(getNormal(), 0.0)));
+        output.v_Normal = normalize(float3(mul(normalMatrix, float4(getNormal(input), 0.0)).xyz));
     #endif
     #endif // !HAS_NORMALS
 

@@ -47,6 +47,8 @@ struct mvMaterial
     mvMaterialData                data;
     mvAssetID                     pipeline; 
     std::vector<D3D_SHADER_MACRO> macros;
+    std::vector<D3D_SHADER_MACRO> extramacros;
+    mvVertexLayout                layout;
 
     i32 alphaMode = 0;
     b8 hasNormalMap = false;
@@ -70,4 +72,5 @@ struct mvMaterial
     b8 hasClearcoatMap = false;
     b8 hasClearcoatNormalMap = false;
     b8 hasClearcoatRoughnessMap = false;
+
 };

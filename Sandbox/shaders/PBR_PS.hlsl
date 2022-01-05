@@ -186,6 +186,7 @@ struct VSOut
 #ifdef HAS_VERTEX_COLOR_VEC4
     float4 v_color : COLOR0;
 #endif
+
     float3 WorldPos : POSITION0;
     float3 WorldNormal : NORMAL1;
     float2 UV0 : TEXCOORD0;
@@ -385,7 +386,7 @@ float4 main(VSOut input) : SV_Target
     float ao = 1.0;
     // Apply optional PBR terms for additional (optional) shading
 #ifdef HAS_OCCLUSION_MAP
-    ao = OcclusionTexture.Sample(OcclusionTextureSampler, input.UV).r;
+    ao = OcclusionTexture.Sample(OcclusionTextureSampler, input.UV0).r;
         
     f_diffuse = lerp(f_diffuse, f_diffuse * ao, material.occlusionStrength);
     // apply ambient occlusion to all lighting that is not punctual
@@ -541,7 +542,7 @@ float4 main(VSOut input) : SV_Target
 
     f_emissive = material.emisiveFactor;
 #ifdef HAS_EMISSIVE_MAP
-    f_emissive *= pow(abs(EmmissiveTexture.Sample(EmmissiveTextureSampler, input.UV).rgb), float3(2.2, 2.2, 2.2));
+    f_emissive *= pow(abs(EmmissiveTexture.Sample(EmmissiveTextureSampler, input.UV0).rgb), float3(2.2, 2.2, 2.2));
 #endif
 
     float3 color = float3(0.0.xxx);
