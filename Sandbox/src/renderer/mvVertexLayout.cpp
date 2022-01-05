@@ -46,7 +46,15 @@ mvGetVertexElementInfo(mvVertexElement element)
 		newelement.semantic = "Texcoord";
 		break;
 
-	case mvVertexElement::Color:
+	case mvVertexElement::Color3:
+		newelement.format = DXGI_FORMAT_R32G32B32_FLOAT;
+		newelement.itemCount = 3;
+		newelement.normalize = false;
+		newelement.size = sizeof(f32) * newelement.itemCount;
+		newelement.semantic = "Color";
+		break;
+
+	case mvVertexElement::Color4:
 		newelement.format = DXGI_FORMAT_R32G32B32A32_FLOAT;
 		newelement.itemCount = 4;
 		newelement.normalize = false;

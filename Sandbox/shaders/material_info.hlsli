@@ -234,6 +234,20 @@ MaterialInfo getSheenInfo(MaterialInfo info)
 }
 #endif
 
+float4 getVertexColor(VSOut input)
+{
+    float4 color = float4(1.0.xxxx);
+
+#ifdef HAS_VERTEX_COLOR_VEC3
+    color.rgb = input.v_color.rgb;
+#endif
+#ifdef HAS_VERTEX_COLOR_VEC4
+    color = input.v_color;
+#endif
+
+    return color;
+}
+
 float4 getBaseColor(VSOut input)
 {
     float4 base_color = float4(1.0.xxxx);
@@ -251,7 +265,7 @@ float4 getBaseColor(VSOut input)
     //base_color *= AlbedoTexture.Sample(AlbedoTextureSampler, input.UV0).rgba;
 #endif
     
-    return base_color;
+    return base_color * getVertexColor(input);
 }
 
 #ifdef MATERIAL_IOR

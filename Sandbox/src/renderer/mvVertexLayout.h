@@ -16,7 +16,8 @@ enum class mvVertexElement
 	Position2D,
 	Position3D,
 	Texture2D,
-	Color,
+	Color3,
+	Color4,
 	Normal,
 	Tangent
 };

@@ -661,6 +661,8 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
             b8 calculateNormals = true;
             b8 calculateTangents = true;
             b8 hasTexCoord0 = false;
+            b8 hasColorVec3 = false;
+            b8 hasColorVec4 = false;
 
             std::vector<mvVertexElement> attributes;
             for (u32 i = 0; i < glprimitive.attribute_count; i++)
@@ -691,8 +693,24 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
                 }
                 else if (strcmp(attribute.semantic.c_str(), "COLOR_0") == 0)
                 {
-                    attributes.push_back(mvVertexElement::Color);
-                    mvFillBuffer<f32>(model, model.accessors[attribute.index], colorAttributeBuffer, 4);
+                    mvGLTFAccessor& accessor = model.accessors[attribute.index];
+                    if (accessor.type == MV_IMP_VEC3)
+                    {
+                        hasColorVec3 = true;
+                        attributes.push_back(mvVertexElement::Color3);
+                        mvFillBuffer<f32>(model, model.accessors[attribute.index], colorAttributeBuffer, 3);
+                    }
+                    else if (accessor.type == MV_IMP_VEC4)
+                    {
+                        hasColorVec4 = true;
+                        attributes.push_back(mvVertexElement::Color4);
+                        mvFillBuffer<f32>(model, model.accessors[attribute.index], colorAttributeBuffer, 4);
+                    }
+                    else
+                    {
+                        assert(false && "Undefined attribute type");
+                    }
+
                 }
                 else
                 {
@@ -796,15 +814,20 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
                     }
                     else if (strcmp(semantic.c_str(), "Color") == 0)
                     {
+
                         f32 r0 = colorAttributeBuffer[i0 * 3];
                         f32 g0 = colorAttributeBuffer[i0 * 3 + 1];
                         f32 b0 = colorAttributeBuffer[i0 * 3 + 2];
-                        f32 a0 = colorAttributeBuffer[i0 * 3 + 3];
-
+                        
                         combinedVertexBuffer.push_back(r0);  // we will calculate
                         combinedVertexBuffer.push_back(g0);  // we will calculate
                         combinedVertexBuffer.push_back(b0);  // we will calculate
-                        combinedVertexBuffer.push_back(a0);  // we will calculate
+
+                        if (modifiedLayout.formats[j] == DXGI_FORMAT_R32G32B32A32_FLOAT)
+                        {
+                            f32 a0 = colorAttributeBuffer[i0 * 3 + 3];
+                            combinedVertexBuffer.push_back(a0);  // we will calculate
+                        }
                     }
                 }
 
@@ -901,9 +924,16 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
                             color[k].r = combinedVertexBuffer[indices[k] * modifiedLayout.elementCount + currentLocation];
                             color[k].g = combinedVertexBuffer[indices[k] * modifiedLayout.elementCount + currentLocation + 1];
                             color[k].b = combinedVertexBuffer[indices[k] * modifiedLayout.elementCount + currentLocation + 2];
-                            color[k].a = combinedVertexBuffer[indices[k] * modifiedLayout.elementCount + currentLocation + 3];
+
+                            if (modifiedLayout.formats[j] == DXGI_FORMAT_R32G32B32A32_FLOAT)
+                            {
+                                color[k].a = combinedVertexBuffer[indices[k] * modifiedLayout.elementCount + currentLocation + 3];
+                            }
                         }
-                        currentLocation += 4u;
+                        if (modifiedLayout.formats[j] == DXGI_FORMAT_R32G32B32A32_FLOAT)
+                            currentLocation += 4u;
+                        else
+                            currentLocation += 3u;
 
                     }
                 }
@@ -1002,7 +1032,11 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
                             vertexBuffer.push_back(color[k].x);
                             vertexBuffer.push_back(color[k].y);
                             vertexBuffer.push_back(color[k].z);
-                            vertexBuffer.push_back(color[k].w);
+
+                            if (modifiedLayout.formats[j] == DXGI_FORMAT_R32G32B32A32_FLOAT)
+                            {
+                                vertexBuffer.push_back(color[k].w);
+                            }
                         }
                     }
                 }
@@ -1023,6 +1057,8 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
                 materialData.extramacros.push_back({ "HAS_NORMALS", "0" });
                 materialData.extramacros.push_back({ "HAS_TANGENTS", "0" });
                 if(hasTexCoord0) materialData.extramacros.push_back({ "HAS_TEXCOORD_0_VEC2", "0" });
+                if(hasColorVec3) materialData.extramacros.push_back({ "HAS_VERTEX_COLOR_VEC3", "0" });
+                if(hasColorVec4) materialData.extramacros.push_back({ "HAS_VERTEX_COLOR_VEC4", "0" });
                 materialData.data.albedo = *(mvVec4*)material.base_color_factor;
                 materialData.data.metalness = material.metallic_factor;
                 materialData.data.roughness = material.roughness_factor;
@@ -1066,6 +1102,8 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
                 materialData.extramacros.push_back({ "HAS_NORMALS", "0" });
                 materialData.extramacros.push_back({ "HAS_TANGENTS", "0" });
                 if (hasTexCoord0) materialData.extramacros.push_back({ "HAS_TEXCOORD_0_VEC2", "0" });
+                if (hasColorVec3) materialData.extramacros.push_back({ "HAS_VERTEX_COLOR_VEC3", "0" });
+                if (hasColorVec4) materialData.extramacros.push_back({ "HAS_VERTEX_COLOR_VEC4", "0" });
                 materialData.data.albedo = { 0.45f, 0.45f, 0.85f, 1.0f };
                 materialData.data.metalness = 0.0f;
                 materialData.data.roughness = 0.5f;

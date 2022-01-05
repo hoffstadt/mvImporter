@@ -173,7 +173,7 @@ VSOut main(VSIn input)
     #endif // !HAS_NORMALS
 
     #if defined(HAS_VERTEX_COLOR_VEC3) || defined(HAS_VERTEX_COLOR_VEC4)
-        output.v_Color = input.a_Color;
+        output.v_color = input.a_color;
     #endif
 
     return output;

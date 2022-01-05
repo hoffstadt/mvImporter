@@ -261,11 +261,14 @@ float4 main(VSOut input) : SV_Target
     baseColor.a = 1.0;
 #endif
 
+#ifdef MATERIAL_UNLIT
 #if ALPHAMODE == 1
     if (baseColor.a < material.alphaCutoff)
     {
         discard;
     }
+#endif
+    finalColor = (float4(linearTosRGB(baseColor.rgb), baseColor.a));
 #endif
 
     float3 v = normalize(ginfo.camPos - input.WorldPos);
@@ -585,6 +588,16 @@ float4 main(VSOut input) : SV_Target
 #else
     //finalColor = float4(pow(abs(color.rgb), float3(0.4545, 0.4545, 0.4545)), baseColor.a);
     finalColor = float4(toneMap(color.rgb), baseColor.a);
+#endif
+
+#ifdef HAS_VERTEX_COLOR_VEC4
+    //finalColor = float4(1.0.xxxx);
+    //finalColor= getBaseColor(input);
+    //finalColor = input.v_color*sRGBToLinear(AlbedoTexture.Sample(AlbedoTextureSampler, input.UV0).rgba);
+    //finalColor = input.v_color;
+    //finalColor.a = 1.0f;
+    //finalColor= input.v_color;
+    //finalColor.a = 1.0f;
 #endif
 
     return finalColor;
