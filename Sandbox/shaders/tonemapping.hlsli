@@ -88,9 +88,9 @@ float3 toneMap(float3 color)
 {
     color *= u_Exposure;
 
-//#ifdef TONEMAP_ACES_NARKOWICZ
+#ifdef TONEMAP_ACES_NARKOWICZ
     color = toneMapACES_Narkowicz(color);
-//#endif
+#endif
 
 #ifdef TONEMAP_ACES_HILL
     color = toneMapACES_Hill(color);

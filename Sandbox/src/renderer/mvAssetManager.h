@@ -8,6 +8,7 @@
 #include "mvMesh.h"
 #include "mvScene.h"
 #include "mvCamera.h"
+#include "mvAnimation.h"
 
 struct mvTargetViewAsset;
 struct mvDepthViewAsset;
@@ -22,6 +23,7 @@ struct mvSceneAsset;
 struct mvNodeAsset;
 struct mvCameraAsset;
 struct mvPipelineAsset;
+struct mvAnimationAsset;
 struct mvAssetManager;
 
 void mvInitializeAssetManager(mvAssetManager* manager);
@@ -42,6 +44,7 @@ mvAssetID register_asset(mvAssetManager* manager, const std::string& tag, mvCame
 mvAssetID register_asset(mvAssetManager* manager, const std::string& tag, mvPipeline asset);
 mvAssetID register_asset(mvAssetManager* manager, const std::string& tag, ID3D11RenderTargetView* asset);
 mvAssetID register_asset(mvAssetManager* manager, const std::string& tag, ID3D11DepthStencilView* asset);
+mvAssetID register_asset(mvAssetManager* manager, const std::string& tag, mvAnimation asset);
 
 // unregistering
 b8 unregister_texture_asset (mvAssetManager* manager, mvAssetID asset);
@@ -65,20 +68,22 @@ mvAssetID mvGetCameraAssetID     (mvAssetManager* manager, const std::string& ta
 mvAssetID mvGetPipelineAssetID   (mvAssetManager* manager, const std::string& tag);
 mvAssetID mvGetTargetViewAssetID (mvAssetManager* manager, const std::string& tag);
 mvAssetID mvGetDepthViewAssetID  (mvAssetManager* manager, const std::string& tag);
+mvAssetID mvGetAnimationAssetID  (mvAssetManager* manager, const std::string& tag);
 
 // asset retrieval
-mvPipeline*             mvGetRawPipelineAsset(mvAssetManager* manager, const std::string& tag);
-mvScene*                mvGetRawSceneAsset   (mvAssetManager* manager, const std::string& tag);
-mvTexture*              mvGetRawTextureAsset (mvAssetManager* manager, const std::string& tag);
-mvMesh*                 mvGetRawMeshAsset    (mvAssetManager* manager, const std::string& tag);
-mvBuffer*               mvGetRawBufferAsset  (mvAssetManager* manager, const std::string& tag);
-mvConstBuffer*          mvGetRawCBufferAsset  (mvAssetManager* manager, const std::string& tag);
-mvMaterial*             mvGetRawMaterialAsset(mvAssetManager* manager, const std::string& tag);
-mvNode*                 mvGetRawNodeAsset    (mvAssetManager* manager, const std::string& tag);
-ID3D11SamplerState*     mvGetRawSamplerAsset (mvAssetManager* manager, const std::string& tag);
-mvCamera*               mvGetRawCameraAsset  (mvAssetManager* manager, const std::string& tag);
-ID3D11RenderTargetView* mvGetRawTargetViewAsset  (mvAssetManager* manager, const std::string& tag);
-ID3D11DepthStencilView* mvGetRawDepthViewAsset  (mvAssetManager* manager, const std::string& tag);
+mvPipeline*             mvGetRawPipelineAsset  (mvAssetManager* manager, const std::string& tag);
+mvScene*                mvGetRawSceneAsset     (mvAssetManager* manager, const std::string& tag);
+mvTexture*              mvGetRawTextureAsset   (mvAssetManager* manager, const std::string& tag);
+mvMesh*                 mvGetRawMeshAsset      (mvAssetManager* manager, const std::string& tag);
+mvBuffer*               mvGetRawBufferAsset    (mvAssetManager* manager, const std::string& tag);
+mvConstBuffer*          mvGetRawCBufferAsset   (mvAssetManager* manager, const std::string& tag);
+mvMaterial*             mvGetRawMaterialAsset  (mvAssetManager* manager, const std::string& tag);
+mvNode*                 mvGetRawNodeAsset      (mvAssetManager* manager, const std::string& tag);
+ID3D11SamplerState*     mvGetRawSamplerAsset   (mvAssetManager* manager, const std::string& tag);
+mvCamera*               mvGetRawCameraAsset    (mvAssetManager* manager, const std::string& tag);
+ID3D11RenderTargetView* mvGetRawTargetViewAsset(mvAssetManager* manager, const std::string& tag);
+ID3D11DepthStencilView* mvGetRawDepthViewAsset (mvAssetManager* manager, const std::string& tag);
+mvAnimation*            mvGetRawAnimationAsset (mvAssetManager* manager, const std::string& tag);
 
 struct mvAssetManager
 {
@@ -145,7 +150,7 @@ struct mvAssetManager
 	b8*                 freescenes = nullptr;
 
 	// cameras
-	u32                 maxCameraCount = 5u;
+	u32                 maxCameraCount = 25u;
 	u32                 cameraCount = 0u;
 	mvCameraAsset*      cameras = nullptr;
 	b8*                 freecameras = nullptr;
@@ -154,6 +159,11 @@ struct mvAssetManager
 	u32                 maxPipelineCount = 1000u;
 	u32                 pipelineCount = 0u;
 	mvPipelineAsset*    pipelines = nullptr;
+
+	// animations
+	u32                 maxAnimationCount = 100u;
+	u32                 animationCount = 0u;
+	mvAnimationAsset*   animations = nullptr;
 };
 
 struct mvDepthViewAsset
@@ -232,4 +242,10 @@ struct mvCameraAsset
 {
 	std::string hash;
 	mvCamera asset;
+};
+
+struct mvAnimationAsset
+{
+	std::string hash;
+	mvAnimation asset;
 };

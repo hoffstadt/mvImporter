@@ -154,16 +154,47 @@ cbuffer mvMaterialCBuf         : register(b1) { mvMaterial material; };
 cbuffer mvDirectionalLightCBuf : register(b2) { mvDirectionalLight DirectionalLight; };
 cbuffer mvGlobalCBuf           : register(b3) { mvGlobalInfo ginfo; };
 
+//struct VSOut
+//{   
+//    float4 Pos              : SV_Position;
+//    float3 WorldPos         : POSITION0;
+//    float3 WorldNormal      : NORMAL0;
+//    float2 UV               : TEXCOORD0;
+//    float4 dshadowWorldPos  : dshadowPosition; // directional light pos
+//    float4 oshadowWorldPos  : oshadowPosition; // point light pos
+//    float3x3 TBN            : TangentBasis;
+//    bool frontFace          : SV_IsFrontFace;
+//};
+
 struct VSOut
-{   
-    float4 Pos              : SV_Position;
-    float3 WorldPos         : POSITION0;
-    float3 WorldNormal      : NORMAL0;
-    float2 UV               : TEXCOORD0;
-    float4 dshadowWorldPos  : dshadowPosition; // directional light pos
-    float4 oshadowWorldPos  : oshadowPosition; // point light pos
-    float3x3 TBN            : TangentBasis;
-    bool frontFace          : SV_IsFrontFace;
+{
+
+    float4 Pos : SV_Position;
+
+#ifdef HAS_NORMALS
+#ifdef HAS_TANGENTS
+    float3x3 TBN : TangentBasis;
+#else
+    float3 v_Normal: NORMAL0;
+#endif
+#endif
+
+#ifdef HAS_VERTEX_COLOR_VEC3
+    float3 v_color : COLOR0;
+#endif
+
+#ifdef HAS_VERTEX_COLOR_VEC4
+    float4 v_color : COLOR0;
+#endif
+
+    float3 WorldPos : POSITION0;
+    float3 WorldNormal : NORMAL1;
+    float2 UV0 : TEXCOORD0;
+    float2 UV1 : TEXCOORD1;
+    float4 dshadowWorldPos : dshadowPosition; // light pos
+    float4 oshadowWorldPos : oshadowPosition; // light pos
+    bool frontFace : SV_IsFrontFace;
+
 };
 
 #include <tonemapping.hlsli>
@@ -355,7 +386,7 @@ float4 main(VSOut input) : SV_Target
     float ao = 1.0;
     // Apply optional PBR terms for additional (optional) shading
 #ifdef HAS_OCCLUSION_MAP
-    ao = OcclusionTexture.Sample(OcclusionTextureSampler, input.UV).r;
+    ao = OcclusionTexture.Sample(OcclusionTextureSampler, input.UV0).r;
         
     f_diffuse = lerp(f_diffuse, f_diffuse * ao, material.occlusionStrength);
     // apply ambient occlusion to all lighting that is not punctual
@@ -467,7 +498,10 @@ float4 main(VSOut input) : SV_Target
                 {
                     shadowLevel = DirectionalShadowMap.SampleCmpLevelZero(DirectionalShadowMapSampler, projectTexCoord, lightDepthValue);
                 }
+
+                
             }
+
                 
             // Calculation of analytical light
             // https://github.com/KhronosGroup/glTF/tree/master/specification/2.0#acknowledgments AppendixB
@@ -511,7 +545,8 @@ float4 main(VSOut input) : SV_Target
 
     f_emissive = material.emisiveFactor;
 #ifdef HAS_EMISSIVE_MAP
-    f_emissive *= pow(abs(EmmissiveTexture.Sample(EmmissiveTextureSampler, input.UV).rgb), float3(2.2, 2.2, 2.2));
+    f_emissive *= sRGBToLinear(EmmissiveTexture.Sample(EmmissiveTextureSampler, input.UV0).rgb);
+    //f_emissive *= EmmissiveTexture.Sample(EmmissiveTextureSampler, input.UV0).rgb;
 #endif
 
     float3 color = float3(0.0.xxx);
@@ -548,7 +583,8 @@ float4 main(VSOut input) : SV_Target
 #ifdef LINEAR_OUTPUT
     finalColor = float4(color.rgb, baseColor.a);
 #else
-    finalColor = float4(pow(abs(color.rgb), float3(0.4545, 0.4545, 0.4545)), baseColor.a);
+    //finalColor = float4(pow(abs(color.rgb), float3(0.4545, 0.4545, 0.4545)), baseColor.a);
+    finalColor = float4(toneMap(color.rgb), baseColor.a);
 #endif
 
     return finalColor;

@@ -42,6 +42,7 @@ struct mvGLTFCamera;                 // GLTF -> "cameras"
 struct mvGLTFPerspective;            // GLTF -> "perspective"
 struct mvGLTFOrthographic;           // GLTF -> "orthographic"
 struct mvGLTFNode;                   // GLTF -> "nodes"
+struct mvGLTFSkin;                   // GLTF -> "skins"
 struct mvGLTFScene;                  // GLTF -> "scenes"
 struct mvGLTFMeshPrimitive;          // GLTF -> "meshPrimitives"
 struct mvGLTFMesh;                   // GLTF -> "meshes"
@@ -100,14 +101,6 @@ enum mvGLTFPrimMode
 	MV_IMP_TRIANGLES = 4
 };
 
-enum mvGLTFPrimAttrType
-{
-	MV_IMP_POSITION  = 0,
-	MV_IMP_TANGENT   = 1,
-	MV_IMP_NORMAL    = 2,
-	MV_IMP_TEXTCOORD = 3,
-};
-
 enum mvGLTFAccessorType
 {
 	MV_IMP_SCALAR,
@@ -153,8 +146,8 @@ enum mvGLTFCameraType
 
 struct mvGLTFAttribute
 {
-	mvGLTFPrimAttrType type;
-	mvS32              index = -1; // accessor index
+	std::string semantic;
+	mvS32       index = -1; // accessor index
 };
 
 struct mvGLTFAccessor
@@ -333,6 +326,15 @@ struct mvGLTFScene
 	mvU32  node_count = 0u;
 };
 
+struct mvGLTFSkin
+{
+	std::string name;
+	mvS32       inverseBindMatrices = -1;
+	mvS32       skeleton = -1;
+	mvU32*      joints = nullptr;
+	mvU32       joints_count = 0u;
+};
+
 struct mvGLTFModel
 {
 	std::string       root;
@@ -349,6 +351,7 @@ struct mvGLTFModel
 	mvGLTFAccessor*   accessors   = nullptr;
 	mvGLTFCamera*     cameras     = nullptr;
 	mvGLTFAnimation*  animations  = nullptr;
+	mvGLTFSkin*       skins       = nullptr;
 	std::string*      extensions  = nullptr;
 
 	mvS32 scene            = -1;
@@ -364,6 +367,7 @@ struct mvGLTFModel
 	mvU32 accessor_count   = 0u;
 	mvU32 camera_count     = 0u;
 	mvU32 animation_count  = 0u;
+	mvU32 skin_count       = 0u;
 	mvU32 extension_count  = 0u;
 };
 
@@ -1174,6 +1178,7 @@ namespace mvImp {
 			{
 				mvU32 samplerCount = janimation["samplers"].members.size();
 				animation.samplers = new mvGLTFAnimationSampler[samplerCount];
+				animation.sampler_count = samplerCount;
 
 				for (int i = 0; i < samplerCount; i++)
 				{
@@ -1201,6 +1206,7 @@ namespace mvImp {
 			{
 				mvU32 channelCount = janimation["channels"].members.size();
 				animation.channels = new mvGLTFAnimationChannel[channelCount];
+				animation.channel_count = channelCount;
 
 				for (int i = 0; i < channelCount; i++)
 				{
@@ -1474,33 +1480,24 @@ namespace mvImp {
 
 					if (jprimitive.doesMemberExist("attributes"))
 					{
-						mvU32 attrCount = jprimitive["attributes"].members.size();
+						mvJsonObject jattributes = jprimitive["attributes"];
+						mvU32 attrCount = jattributes.members.size();
 						primitive.attributes = new mvGLTFAttribute[attrCount];
+						
 
-						if (jprimitive["attributes"].doesMemberExist("POSITION"))
+						for (int k = 0; k < attrCount; k++)
 						{
-							primitive.attributes[primitive.attribute_count] = { MV_IMP_POSITION , jprimitive["attributes"].getMember("POSITION") };
+							mvJsonMember m = jattributes.members[k];
+							
+							primitive.attributes[primitive.attribute_count] = { m.name , (int)m };
 							primitive.attribute_count++;
 						}
 
-
-						if (jprimitive["attributes"].doesMemberExist("TANGENT"))
-						{
-							primitive.attributes[primitive.attribute_count] = { MV_IMP_TANGENT , jprimitive["attributes"].getMember("TANGENT") };
-							primitive.attribute_count++;
-						}
-
-						if (jprimitive["attributes"].doesMemberExist("NORMAL"))
-						{
-							primitive.attributes[primitive.attribute_count] = { MV_IMP_NORMAL , jprimitive["attributes"].getMember("NORMAL") };
-							primitive.attribute_count++;
-						}
-
-						if (jprimitive["attributes"].doesMemberExist("TEXCOORD_0"))
-						{
-							primitive.attributes[primitive.attribute_count] = { MV_IMP_TEXTCOORD , jprimitive["attributes"].getMember("TEXCOORD_0") };
-							primitive.attribute_count++;
-						}
+						//if (jprimitive["attributes"].doesMemberExist("POSITION"))
+						//{
+						//	primitive.attributes[primitive.attribute_count] = { MV_IMP_POSITION , jprimitive["attributes"].getMember("POSITION") };
+						//	primitive.attribute_count++;
+						//}
 					}
 
 
@@ -1895,6 +1892,48 @@ namespace mvImp {
 		return accessors;
 	}
 
+	static mvGLTFSkin*
+	_LoadSkins(mvJsonContext& j, mvU32& size)
+	{
+		if (!j.doesMemberExist("skins"))
+			return nullptr;
+
+		mvU32 count = j["skins"].members.size();
+		mvGLTFSkin* skins = new mvGLTFSkin[count];
+
+		for (int i = 0; i < count; i++)
+		{
+			mvJsonObject& jnode = j["skins"][i];
+			mvGLTFSkin& skin = skins[size];
+
+			if (jnode.doesMemberExist("name"))
+				skin.name = jnode.getMember("name");
+
+			if (jnode.doesMemberExist("inverseBindMatrices"))
+				skin.inverseBindMatrices = jnode.getMember("inverseBindMatrices");
+
+			if (jnode.doesMemberExist("skeleton"))
+				skin.skeleton = jnode.getMember("skeleton");
+
+			if (jnode.doesMemberExist("joints"))
+			{
+				mvU32 childCount = jnode["joints"].members.size();
+				skin.joints = new mvU32[childCount];
+
+				for (int j = 0; j < childCount; j++)
+				{
+					mvU32 child = jnode["joints"][j];
+					skin.joints[skin.joints_count] = child;
+					skin.joints_count++;
+				}
+			}
+
+			size++;
+		}
+
+		return skins;
+	}
+
 	static char*
 	_ReadFile(const char* file, mvU32& size, const char* mode)
 	{
@@ -1990,6 +2029,7 @@ mvLoadBinaryGLTF(const char* root, const char* file)
 	model.cameras = mvImp::_LoadCameras(context, model.camera_count);
 	model.animations = mvImp::_LoadAnimations(context, model.animation_count);
 	model.extensions = mvImp::_LoadExtensions(context, model.extension_count);
+	model.skins = mvImp::_LoadSkins(context, model.skin_count);
 
 	if (chunkLength + 20 != length)
 	{
@@ -2118,6 +2158,7 @@ mvLoadGLTF(const char* root, const char* file)
 	model.cameras = mvImp::_LoadCameras(context, model.camera_count);
 	model.animations = mvImp::_LoadAnimations(context, model.animation_count);
 	model.extensions = mvImp::_LoadExtensions(context, model.extension_count);
+	model.skins = mvImp::_LoadSkins(context, model.skin_count);
 
 	for (mvU32 i = 0; i < model.image_count; i++)
 	{
@@ -2200,6 +2241,12 @@ mvCleanupGLTF(mvGLTFModel& model)
 			delete[] model.animations[i].channels;
 	}
 
+	for (mvU32 i = 0; i < model.skin_count; i++)
+	{
+		if (model.skins[i].joints_count > 0)
+			delete[] model.skins[i].joints;
+	}
+
 	delete[] model.scenes;
 	delete[] model.nodes;
 	delete[] model.meshes;
@@ -2213,6 +2260,7 @@ mvCleanupGLTF(mvGLTFModel& model)
 	delete[] model.cameras;
 	delete[] model.animations;
 	delete[] model.extensions;
+	delete[] model.skins;
 
 	model.scenes = nullptr;
 	model.nodes = nullptr;
@@ -2227,6 +2275,7 @@ mvCleanupGLTF(mvGLTFModel& model)
 	model.cameras = nullptr;
 	model.animations = nullptr;
 	model.extensions = nullptr;
+	model.skins = nullptr;
 
 	model.scene_count = 0u;
 	model.node_count = 0u;
@@ -2241,6 +2290,7 @@ mvCleanupGLTF(mvGLTFModel& model)
 	model.camera_count = 0u;
 	model.animation_count = 0u;
 	model.extension_count = 0u;
+	model.skin_count = 0u;
 }
 
 #endif

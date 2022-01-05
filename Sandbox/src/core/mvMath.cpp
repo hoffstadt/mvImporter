@@ -386,6 +386,18 @@ normalize(mvVec3 v)
 	return result;
 }
 
+mvVec4
+normalize(mvVec4 v)
+{
+	f32 length = sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2] + v[3] * v[3]);
+	mvVec4 result{};
+	result.x = v.x / length;
+	result.y = v.y / length;
+	result.z = v.z / length;
+	result.w = v.w / length;
+	return result;
+}
+
 mvVec3 
 cross(mvVec3 v1, mvVec3 v2)
 {
@@ -553,6 +565,73 @@ construct_mat4(mvVec4 c0, mvVec4 c1, mvVec4 c2, mvVec4 c3)
 	return result;
 }
 
+mvVec4
+slerpQuat(mvVec4 q1, mvVec4 q2, f32 t)
+{
+
+	// from https://glmatrix.net/docs/quat.js.html
+	mvVec4 qn1 = normalize(q1);
+	mvVec4 qn2 = normalize(q2);
+
+	mvVec4 qresult{};
+
+	f32 ax = qn1.x;
+	f32 ay = qn1.y;
+	f32 az = qn1.z;
+	f32 aw = qn1.w;
+
+	f32 bx = qn2.x;
+	f32 by = qn2.y;
+	f32 bz = qn2.z;
+	f32 bw = qn2.w;
+
+	f32 omega = 0.0f;
+	f32 cosom = 0.0f;
+	f32 sinom = 0.0f;
+	f32 scale0 = 0.0f;
+	f32 scale1 = 0.0f;
+
+	// calc cosine
+	cosom = ax * bx + ay * by + az * bz + aw * bw;
+
+	// adjust signs (if necessary)
+	if (cosom < 0.0f) 
+	{
+		cosom = -cosom;
+		bx = -bx;
+		by = -by;
+		bz = -bz;
+		bw = -bw;
+	}
+
+	// calculate coefficients
+	if (1.0f - cosom > 0.000001f)
+	{
+		// standard case (slerp)
+		omega = acos(cosom);
+		sinom = sin(omega);
+		scale0 = sin((1.0f - t) * omega) / sinom;
+		scale1 = sin(t * omega) / sinom;
+	}
+	else 
+	{
+		// "from" and "to" quaternions are very close
+		//  ... so we can do a linear interpolation
+		scale0 = 1.0f - t;
+		scale1 = t;
+	}
+
+	// calculate final values
+	qresult[0] = scale0 * ax + scale1 * bx;
+	qresult[1] = scale0 * ay + scale1 * by;
+	qresult[2] = scale0 * az + scale1 * bz;
+	qresult[3] = scale0 * aw + scale1 * bw;
+
+	qresult = normalize(qresult);
+
+	return qresult;
+}
+
 mvMat4 
 create_matrix(
 	f32 m00, f32 m01, f32 m02, f32 m03,
@@ -586,6 +665,71 @@ create_matrix(
 	m[3][1] = m13;
 	m[3][2] = m23;
 	m[3][3] = m33;
+
+	return m;
+}
+
+mvMat4 
+transpose(mvMat4& m)
+{
+	mvMat4 mr{};
+
+	for (i32 i = 0; i < 4; i++)
+	{
+		for (i32 j = 0; j < 4; j++)
+		{
+			mr[i][j] = m[j][i];
+		}
+	}
+
+	return mr;
+}
+
+mvMat4
+rotation_translation_scale(mvVec4& q, mvVec3& t, mvVec3& s)
+{
+	//mvMat4 m{};
+
+	// Quaternion math
+	f32 x = q[0];
+	f32 y = q[1];
+	f32 z = q[2];
+	f32 w = q[3];
+	f32 x2 = x + x;
+	f32 y2 = y + y;
+	f32 z2 = z + z;
+	f32 xx = x * x2;
+	f32 xy = x * y2;
+	f32 xz = x * z2;
+	f32 yy = y * y2;
+	f32 yz = y * z2;
+	f32 zz = z * z2;
+	f32 wx = w * x2;
+	f32 wy = w * y2;
+	f32 wz = w * z2;
+	f32 sx = s[0];
+	f32 sy = s[1];
+	f32 sz = s[2];
+
+	mvMat4 m = create_matrix(
+		(1.0f - (yy + zz)) * sx,
+		(xy - wz) * sy,
+		(xz + wy) * sz,
+		t[0],
+		(xy + wz) * sx,
+		(1 - (xx + zz)) * sy,
+		(yz - wx) * sz,
+		t[1],
+		(xz - wy) * sx,
+		(yz + wx) * sy,
+		(1.0f - (xx + yy)) * sz,
+		t[2],
+		0.0f,
+		0.0f,
+		0.0f,
+		1.0f
+	);
+
 
 	return m;
 }

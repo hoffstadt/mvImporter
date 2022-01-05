@@ -18,6 +18,7 @@ mvInitializeAssetManager(mvAssetManager* manager)
 	manager->pipelines = new mvPipelineAsset[manager->maxPipelineCount];
 	manager->targetViews = new mvTargetViewAsset[manager->maxTargetViewCount];
 	manager->depthViews = new mvDepthViewAsset[manager->maxDepthViewCount];
+	manager->animations = new mvAnimationAsset[manager->maxAnimationCount];
 
 	manager->freetextures = new b8[manager->maxTextureCount];
 	for (i32 i = 0; i < manager->maxTextureCount; i++)
@@ -129,6 +130,11 @@ mvCleanupAssetManager(mvAssetManager* manager)
 		}
 	}
 
+	for (int i = 0; i < manager->animationCount; i++)
+	{
+		delete[] manager->animations[i].asset.channels;
+	}
+
 
 
 	// assets
@@ -145,6 +151,7 @@ mvCleanupAssetManager(mvAssetManager* manager)
 	delete[] manager->cbuffers;
 	delete[] manager->targetViews;
 	delete[] manager->depthViews;
+	delete[] manager->animations;
 	
 	// free slots
 	delete[] manager->freetextures;
@@ -190,6 +197,7 @@ reload_materials(mvAssetManager* manager)
 			pipeline.info.macros.clear();
 			if (GContext->IO.imageBasedLighting) pipeline.info.macros.push_back({ "USE_IBL", "0" });
 			if (GContext->IO.punctualLighting) pipeline.info.macros.push_back({ "USE_PUNCTUAL", "0" });
+
 			if (material.extensionClearcoat && GContext->IO.clearcoat) pipeline.info.macros.push_back({ "MATERIAL_CLEARCOAT", "0" });
 			if (material.pbrMetallicRoughness) pipeline.info.macros.push_back({ "MATERIAL_METALLICROUGHNESS", "0" });
 			if (material.alphaMode == 0) pipeline.info.macros.push_back({ "ALPHAMODE", "0" });
@@ -203,6 +211,10 @@ reload_materials(mvAssetManager* manager)
 			if (material.hasClearcoatMap)pipeline.info.macros.push_back({ "HAS_CLEARCOAT_MAP", "0" });
 			if (material.hasClearcoatRoughnessMap)pipeline.info.macros.push_back({ "HAS_CLEARCOAT_ROUGHNESS_MAP", "0" });
 			if (material.hasClearcoatNormalMap)pipeline.info.macros.push_back({ "HAS_CLEARCOAT_NORMAL_MAP", "0" });
+
+			for (auto& macro : material.extramacros)
+				pipeline.info.macros.push_back(macro);
+
 			pipeline.info.macros.push_back({ NULL, NULL });
 
 			manager->pipelines[material.pipeline].asset = finalize_pipeline(pipeline.info);
@@ -211,6 +223,44 @@ reload_materials(mvAssetManager* manager)
 
 
 }
+
+//-----------------------------------------------------------------------------
+// animations
+//-----------------------------------------------------------------------------
+
+mvAssetID
+register_asset(mvAssetManager* manager, const std::string& tag, mvAnimation asset)
+{
+	manager->animations[manager->animationCount].asset = asset;
+	manager->animations[manager->animationCount].hash = tag;
+	manager->animationCount++;
+	return manager->animationCount - 1;
+}
+
+mvAssetID
+mvGetAnimationAssetID(mvAssetManager* manager, const std::string& tag)
+{
+	for (s32 i = 0; i < manager->animationCount; i++)
+	{
+		if (manager->animations[i].hash == tag)
+			return i;
+	}
+
+	return -1;
+}
+
+mvAnimation*
+mvGetRawAnimationAsset(mvAssetManager* manager, const std::string& tag)
+{
+	for (s32 i = 0; i < manager->animationCount; i++)
+	{
+		if (manager->animations[i].hash == tag)
+			return &manager->animations[i].asset;
+	}
+
+	return nullptr;
+}
+
 
 //-----------------------------------------------------------------------------
 // render target views
@@ -252,6 +302,7 @@ mvGetRawTargetViewAsset(mvAssetManager* manager, const std::string& tag)
 //-----------------------------------------------------------------------------
 // depth views
 //-----------------------------------------------------------------------------
+
 mvAssetID
 register_asset(mvAssetManager* manager, const std::string& tag, ID3D11DepthStencilView* asset)
 {

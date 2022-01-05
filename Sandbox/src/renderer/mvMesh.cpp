@@ -81,42 +81,41 @@ create_textured_cube(mvAssetManager& assetManager, f32 size)
             mvVertexElement::Position3D,
             mvVertexElement::Normal,
             mvVertexElement::Texture2D,
-            mvVertexElement::Tangent,
-            mvVertexElement::Bitangent
+            mvVertexElement::Tangent
         }
     );
 
     const float side = size;
     auto vertices = std::vector<f32>{
-        -side, -side, -side, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f,  // 0 near side
-         side, -side, -side, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f,  // 1
-        -side,  side, -side, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  // 2
-         side,  side, -side, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f,  // 3
+        -side, -side, -side, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  // 0 near side
+         side, -side, -side, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  // 1
+        -side,  side, -side, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  // 2
+         side,  side, -side, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  // 3
 
-        -side, -side,  side, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f,  // 4 far side
-         side, -side,  side, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f,  // 5
-        -side,  side,  side, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f,  // 6
-         side,  side,  side, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  // 7
+        -side, -side,  side, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  // 4 far side
+         side, -side,  side, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  // 5
+        -side,  side,  side, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  // 6
+         side,  side,  side, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  // 7
 
-        -side, -side, -side, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f,  // 8 left side
-        -side,  side, -side, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f,  // 9
-        -side, -side,  side, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f,  // 10
-        -side,  side,  side, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  // 11
+        -side, -side, -side, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  // 8 left side
+        -side,  side, -side, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  // 9
+        -side, -side,  side, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  // 10
+        -side,  side,  side, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  // 11
 
-         side, -side, -side, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f,  // 12 right side
-         side,  side, -side, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  // 13
-         side, -side,  side, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f,  // 14
-         side,  side,  side, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f,  // 15
+         side, -side, -side, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  // 12 right side
+         side,  side, -side, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  // 13
+         side, -side,  side, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  // 14
+         side,  side,  side, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  // 15
 
-        -side, -side, -side, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  // 16 bottom side
-         side, -side, -side, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f,  // 17
-        -side, -side,  side, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f,  // 18
-         side, -side,  side, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f,  // 19
+        -side, -side, -side, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  // 16 bottom side
+         side, -side, -side, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  // 17
+        -side, -side,  side, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  // 18
+         side, -side,  side, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  // 19
 
-        -side,  side, -side, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f,  // 20 top side
-         side,  side, -side, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f,  // 21
-        -side,  side,  side, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  // 22
-         side,  side,  side, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f   // 23
+        -side,  side, -side, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  // 20 top side
+         side,  side, -side, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  // 21
+        -side,  side,  side, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,  // 22
+         side,  side,  side, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f   // 23
     };
 
     static auto indices = std::vector<u32>{
@@ -131,20 +130,20 @@ create_textured_cube(mvAssetManager& assetManager, f32 size)
     for (size_t i = 0; i < indices.size(); i += 3)
     {
 
-        mvVec3 p0 = { vertices[14 * indices[i]], vertices[14 * indices[i] + 1], vertices[14 * indices[i] + 2] };
-        mvVec3 p1 = { vertices[14 * indices[i+1]], vertices[14 * indices[i + 1] + 1], vertices[14 * indices[i + 1] + 2] };
-        mvVec3 p2 = { vertices[14 * indices[i+2]], vertices[14 * indices[i + 2] + 1], vertices[14 * indices[i + 2] + 2] };
+        mvVec3 p0 = { vertices[11 * indices[i]], vertices[14 * indices[i] + 1], vertices[14 * indices[i] + 2] };
+        mvVec3 p1 = { vertices[11 * indices[i+1]], vertices[14 * indices[i + 1] + 1], vertices[14 * indices[i + 1] + 2] };
+        mvVec3 p2 = { vertices[11 * indices[i+2]], vertices[14 * indices[i + 2] + 1], vertices[14 * indices[i + 2] + 2] };
 
         mvVec3 n = normalize(cross(p1 - p0, p2 - p0));
-        vertices[14 * indices[i] + 3] = n[0];
-        vertices[14 * indices[i] + 4] = n[1];
-        vertices[14 * indices[i] + 5] = n[2];
-        vertices[14 * indices[i + 1] + 3] = n[0];
-        vertices[14 * indices[i + 1] + 4] = n[1];
-        vertices[14 * indices[i + 1] + 5] = n[2];
-        vertices[14 * indices[i + 2] + 3] = n[0];
-        vertices[14 * indices[i + 2] + 4] = n[1];
-        vertices[14 * indices[i + 2] + 5] = n[2];
+        vertices[11 * indices[i] + 3] = n[0];
+        vertices[11 * indices[i] + 4] = n[1];
+        vertices[11 * indices[i] + 5] = n[2];
+        vertices[11 * indices[i + 1] + 3] = n[0];
+        vertices[11 * indices[i + 1] + 4] = n[1];
+        vertices[11 * indices[i + 1] + 5] = n[2];
+        vertices[11 * indices[i + 2] + 3] = n[0];
+        vertices[11 * indices[i + 2] + 4] = n[1];
+        vertices[11 * indices[i + 2] + 5] = n[2];
     }
 
     mvMesh mesh{};
@@ -174,17 +173,16 @@ create_textured_quad(mvAssetManager& assetManager, f32 size)
             mvVertexElement::Position3D,
             mvVertexElement::Normal,
             mvVertexElement::Texture2D,
-            mvVertexElement::Tangent,
-            mvVertexElement::Bitangent
+            mvVertexElement::Tangent
         }
     );
 
     const float side = size;
     auto vertices = std::vector<f32>{
-        -side,  side, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
-         side, -side, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f,
-        -side, -side, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f,
-         side,  side, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f,
+        -side,  side, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
+         side, -side, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
+        -side, -side, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
+         side,  side, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
     };
 
     static auto indices = std::vector<u32>{
@@ -194,20 +192,20 @@ create_textured_quad(mvAssetManager& assetManager, f32 size)
 
     for (size_t i = 0; i < indices.size(); i += 3)
     {
-        mvVec3 p0 = { vertices[14 * indices[i]], vertices[14 * indices[i] + 1], vertices[14 * indices[i] + 2] };
-        mvVec3 p1 = { vertices[14 * indices[i + 1]], vertices[14 * indices[i + 1] + 1], vertices[14 * indices[i + 1] + 2] };
-        mvVec3 p2 = { vertices[14 * indices[i + 2]], vertices[14 * indices[i + 2] + 1], vertices[14 * indices[i + 2] + 2] };
+        mvVec3 p0 = { vertices[11 * indices[i]], vertices[11 * indices[i] + 1], vertices[11 * indices[i] + 2] };
+        mvVec3 p1 = { vertices[11 * indices[i + 1]], vertices[11 * indices[i + 1] + 1], vertices[11 * indices[i + 1] + 2] };
+        mvVec3 p2 = { vertices[11 * indices[i + 2]], vertices[11 * indices[i + 2] + 1], vertices[11 * indices[i + 2] + 2] };
 
         mvVec3 n = normalize(cross(p1 - p0, p2 - p0));
-        vertices[14 * indices[i] + 3] = n[0];
-        vertices[14 * indices[i] + 4] = n[1];
-        vertices[14 * indices[i] + 5] = n[2];
-        vertices[14 * indices[i + 1] + 3] = n[0];
-        vertices[14 * indices[i + 1] + 4] = n[1];
-        vertices[14 * indices[i + 1] + 5] = n[2];
-        vertices[14 * indices[i + 2] + 3] = n[0];
-        vertices[14 * indices[i + 2] + 4] = n[1];
-        vertices[14 * indices[i + 2] + 5] = n[2];
+        vertices[11 * indices[i] + 3] = n[0];
+        vertices[11 * indices[i] + 4] = n[1];
+        vertices[11 * indices[i] + 5] = n[2];
+        vertices[11 * indices[i + 1] + 3] = n[0];
+        vertices[11 * indices[i + 1] + 4] = n[1];
+        vertices[11 * indices[i + 1] + 5] = n[2];
+        vertices[11 * indices[i + 2] + 3] = n[0];
+        vertices[11 * indices[i + 2] + 4] = n[1];
+        vertices[11 * indices[i + 2] + 5] = n[2];
     }
 
     mvMesh mesh{};
@@ -432,7 +430,7 @@ mvVerifyBufferViewStride(mvGLTFModel& model, mvGLTFAccessor& accessor)
     u8 actualItemCompCount = mvGetAccessorItemCompCount(accessor);
 
     // calculate stride if not available
-    if (bufferview.byte_stride == -1)
+    //if (bufferview.byte_stride == -1)
     {
         switch (accessor.component_type)
         {
@@ -508,7 +506,7 @@ get_address_mode(mvS32 address)
 static D3D11_FILTER
 get_filter_mode(mvS32 minFilter, mvS32 magFilter)
 {
-    return D3D11_FILTER_MIN_MAG_MIP_POINT;
+    //return D3D11_FILTER_MIN_MAG_MIP_POINT;
     if (magFilter == MV_IMP_FILTER_LINEAR)
     {
         switch (minFilter)
@@ -538,6 +536,44 @@ get_filter_mode(mvS32 minFilter, mvS32 magFilter)
         default:                                   return D3D11_FILTER_MIN_MAG_MIP_POINT;
         }
     }
+}
+
+static mvAssetID
+setup_texture(mvAssetManager& assetManager, mvGLTFModel& model, u32 currentPrimitive, mvS32 textureID, b8& flag, std::string& name, std::string suffix)
+{
+    if (textureID == -1)
+        return -1;
+    mvGLTFTexture& texture = model.textures[textureID];
+    std::string uri = model.images[texture.image_index].uri;
+    mvAssetID resultID = -1;
+    if (model.images[texture.image_index].embedded)
+    {
+        resultID = mvGetTextureAssetID(&assetManager, model.root + name + std::to_string(currentPrimitive) + uri + suffix, model.images[texture.image_index].data);
+    }
+    else
+        resultID = mvGetTextureAssetID(&assetManager, model.root + name + std::to_string(currentPrimitive) + uri + suffix, model.root + uri);
+    flag = true;
+    if (texture.sampler_index > -1)
+    {
+        mvGLTFSampler& sampler = model.samplers[texture.sampler_index];
+        mvTexture& newTexture = assetManager.textures[resultID].asset;
+
+        // Create Sampler State
+        D3D11_SAMPLER_DESC samplerDesc{};
+        samplerDesc.AddressU = get_address_mode(sampler.wrap_s);
+        samplerDesc.AddressV = get_address_mode(sampler.wrap_t);
+        samplerDesc.AddressW = samplerDesc.AddressV;
+        samplerDesc.Filter = get_filter_mode(sampler.min_filter, sampler.mag_filter);
+        samplerDesc.BorderColor[0] = 0.0f;
+        samplerDesc.MaxAnisotropy = D3D11_REQ_MAXANISOTROPY;
+        samplerDesc.MinLOD = -FLT_MAX;
+        samplerDesc.MaxLOD = FLT_MAX;
+
+        HRESULT hResult = GContext->graphics.device->CreateSamplerState(&samplerDesc, &newTexture.sampler);
+        assert(SUCCEEDED(hResult));
+    }
+
+    return resultID;
 }
 
 mvAssetID
@@ -618,49 +654,74 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
 
             std::vector<f32> positionAttributeBuffer;
             std::vector<f32> tangentAttributeBuffer;
-            std::vector<f32> bitangentAttributeBuffer;
             std::vector<f32> normalAttributeBuffer;
             std::vector<f32> textureAttributeBuffer;
+            std::vector<f32> colorAttributeBuffer;
+
+            b8 calculateNormals = true;
+            b8 calculateTangents = true;
+            b8 hasTexCoord0 = false;
 
             std::vector<mvVertexElement> attributes;
             for (u32 i = 0; i < glprimitive.attribute_count; i++)
             {
                 auto& attribute = glprimitive.attributes[i];
-                switch (attribute.type)
+                if (strcmp(attribute.semantic.c_str(), "POSITION") == 0)
                 {
-                case(MV_IMP_POSITION):
                     attributes.push_back(mvVertexElement::Position3D);
                     mvFillBuffer<f32>(model, model.accessors[attribute.index], positionAttributeBuffer);
-                    break;
-                case(MV_IMP_TANGENT):
+                }
+                else if (strcmp(attribute.semantic.c_str(), "TANGENT") == 0)
+                {
+                    calculateTangents = false;
                     attributes.push_back(mvVertexElement::Tangent);
-                    mvFillBuffer<f32>(model, model.accessors[attribute.index], tangentAttributeBuffer, 3);
-                    break;
-                case(MV_IMP_NORMAL):
+                    mvFillBuffer<f32>(model, model.accessors[attribute.index], tangentAttributeBuffer, 4);
+                }
+                else if (strcmp(attribute.semantic.c_str(), "NORMAL") == 0)
+                {
+                    calculateNormals = false;
                     attributes.push_back(mvVertexElement::Normal);
                     mvFillBuffer<f32>(model, model.accessors[attribute.index], normalAttributeBuffer);
-                    break;
-                case(MV_IMP_TEXTCOORD):
+                }
+                else if (strcmp(attribute.semantic.c_str(), "TEXCOORD_0") == 0)
+                {
+                    hasTexCoord0 = true;
                     attributes.push_back(mvVertexElement::Texture2D);
                     mvFillBuffer<f32>(model, model.accessors[attribute.index], textureAttributeBuffer, 2);
-                    break;
-                default:
+                }
+                else if (strcmp(attribute.semantic.c_str(), "COLOR_0") == 0)
+                {
+                    attributes.push_back(mvVertexElement::Color);
+                    mvFillBuffer<f32>(model, model.accessors[attribute.index], colorAttributeBuffer, 4);
+                }
+                else
+                {
+                    //case(MV_IMP_WEIGHTS_0):
+                    //case(MV_IMP_JOINTS_0):
                     assert(false && "Undefined attribute type");
-                    break;
                 }
             }
-
-            mvVertexLayout currentlayout = create_vertex_layout(attributes);
 
             std::vector<u32> indexBuffer;
             std::vector<f32> vertexBuffer;
 
             u32 triangleCount = origIndexBuffer.size() / 3;
 
-            vertexBuffer.reserve(triangleCount * 14 * 3);
+            //vertexBuffer.reserve(triangleCount * 12 * 3);
+
+            if (calculateNormals)
+            {
+                attributes.push_back(mvVertexElement::Normal);
+            }
+            if (calculateTangents)
+            {
+                attributes.push_back(mvVertexElement::Tangent);
+            }
+
+            mvVertexLayout modifiedLayout = create_vertex_layout(attributes);
+
+            vertexBuffer.reserve(triangleCount * modifiedLayout.size * 3);
             indexBuffer.reserve(triangleCount * 3);
-            if (normalAttributeBuffer.empty()) normalAttributeBuffer.resize(triangleCount * 3 * 3);
-            if (textureAttributeBuffer.empty()) textureAttributeBuffer.resize(triangleCount * 3 * 2);
 
             std::vector<f32> combinedVertexBuffer;
 
@@ -668,69 +729,194 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
             {
                 size_t i0 = origIndexBuffer[i];
 
-                f32 x0 = positionAttributeBuffer[i0 * 3];
-                f32 y0 = positionAttributeBuffer[i0 * 3 + 1];
-                f32 z0 = positionAttributeBuffer[i0 * 3 + 2];
+                for (size_t j = 0; j < modifiedLayout.semantics.size(); j++)
+                {
+                    std::string semantic = modifiedLayout.semantics[j];
 
-                f32 nx0 = normalAttributeBuffer[i0 * 3];
-                f32 ny0 = normalAttributeBuffer[i0 * 3 + 1];
-                f32 nz0 = normalAttributeBuffer[i0 * 3 + 2];
+                    if (strcmp(semantic.c_str(), "Position") == 0)
+                    {
+                        f32 x0 = positionAttributeBuffer[i0 * 3];
+                        f32 y0 = positionAttributeBuffer[i0 * 3 + 1];
+                        f32 z0 = positionAttributeBuffer[i0 * 3 + 2];
 
-                f32 u0 = textureAttributeBuffer[i0 * 2];
-                f32 v0 = textureAttributeBuffer[i0 * 2 + 1];
+                        // position
+                        combinedVertexBuffer.push_back(x0);
+                        combinedVertexBuffer.push_back(y0);
+                        combinedVertexBuffer.push_back(z0);
+                    }
+                    else if (strcmp(semantic.c_str(), "Normal") == 0)
+                    {
+                        if (calculateNormals)
+                        {
+                            combinedVertexBuffer.push_back(0.0f);  // we will calculate
+                            combinedVertexBuffer.push_back(0.0f);  // we will calculate
+                            combinedVertexBuffer.push_back(0.0f);  // we will calculate
+                        }
+                        else
+                        {
+                            f32 nx0 = normalAttributeBuffer[i0 * 3];
+                            f32 ny0 = normalAttributeBuffer[i0 * 3 + 1];
+                            f32 nz0 = normalAttributeBuffer[i0 * 3 + 2];
 
-                combinedVertexBuffer.push_back(x0);
-                combinedVertexBuffer.push_back(y0);
-                combinedVertexBuffer.push_back(z0);
-                combinedVertexBuffer.push_back(nx0);  // we will calculate
-                combinedVertexBuffer.push_back(ny0);  // we will calculate
-                combinedVertexBuffer.push_back(nz0);  // we will calculate
-                combinedVertexBuffer.push_back(u0);
-                combinedVertexBuffer.push_back(v0);
-                combinedVertexBuffer.push_back(0.0f);  // we will calculate
-                combinedVertexBuffer.push_back(0.0f);  // we will calculate
-                combinedVertexBuffer.push_back(0.0f);  // we will calculate
-                combinedVertexBuffer.push_back(0.0f);  // we will calculate
-                combinedVertexBuffer.push_back(0.0f);  // we will calculate
-                combinedVertexBuffer.push_back(0.0f);  // we will calculate
+                            combinedVertexBuffer.push_back(nx0);
+                            combinedVertexBuffer.push_back(ny0);
+                            combinedVertexBuffer.push_back(nz0);
+                        }
+                    }
+                    else if (strcmp(semantic.c_str(), "Tangent") == 0)
+                    {
+                        if (calculateTangents)
+                        {
+                            combinedVertexBuffer.push_back(0.0f);  // we will calculate
+                            combinedVertexBuffer.push_back(0.0f);  // we will calculate
+                            combinedVertexBuffer.push_back(0.0f);  // we will calculate
+                            combinedVertexBuffer.push_back(0.0f);  // we will calculate
+                        }
+                        else
+                        {
+                            f32 tx0 = tangentAttributeBuffer[i0 * 3];
+                            f32 ty0 = tangentAttributeBuffer[i0 * 3 + 1];
+                            f32 tz0 = tangentAttributeBuffer[i0 * 3 + 2];
+                            //f32 tw0 = round(tangentAttributeBuffer[i0 * 3 + 3]);
+                            f32 tw0 = tangentAttributeBuffer[i0 * 3 + 3];
+                            //f32 tw1 = tw0 == 0.0 ? 1.0 : tw0;
+
+                            combinedVertexBuffer.push_back(tx0);
+                            combinedVertexBuffer.push_back(ty0);
+                            combinedVertexBuffer.push_back(tz0);
+                            combinedVertexBuffer.push_back(tw0);
+                        }
+                    }
+                    else if (strcmp(semantic.c_str(), "Texcoord") == 0)
+                    {
+                        f32 u0 = textureAttributeBuffer[i0 * 2];
+                        f32 v0 = textureAttributeBuffer[i0 * 2 + 1];
+                        combinedVertexBuffer.push_back(u0);
+                        combinedVertexBuffer.push_back(v0);
+                    }
+                    else if (strcmp(semantic.c_str(), "Color") == 0)
+                    {
+                        f32 r0 = colorAttributeBuffer[i0 * 3];
+                        f32 g0 = colorAttributeBuffer[i0 * 3 + 1];
+                        f32 b0 = colorAttributeBuffer[i0 * 3 + 2];
+                        f32 a0 = colorAttributeBuffer[i0 * 3 + 3];
+
+                        combinedVertexBuffer.push_back(r0);  // we will calculate
+                        combinedVertexBuffer.push_back(g0);  // we will calculate
+                        combinedVertexBuffer.push_back(b0);  // we will calculate
+                        combinedVertexBuffer.push_back(a0);  // we will calculate
+                    }
+                }
+
+                //if (calculateNormals)
+                //{
+                //    combinedVertexBuffer.push_back(0.0f);  // we will calculate
+                //    combinedVertexBuffer.push_back(0.0f);  // we will calculate
+                //    combinedVertexBuffer.push_back(0.0f);  // we will calculate
+                //}
+
+                //if (calculateTangents)
+                //{
+                //    combinedVertexBuffer.push_back(0.0f);  // we will calculate
+                //    combinedVertexBuffer.push_back(0.0f);  // we will calculate
+                //    combinedVertexBuffer.push_back(0.0f);  // we will calculate
+                //    combinedVertexBuffer.push_back(0.0f);  // we will calculate
+                //}
 
                 indexBuffer.push_back(indexBuffer.size());
             }
 
-            // calculate normals, tangents, bitangents
+            // calculate normals, tangents
             for (size_t i = 0; i < indexBuffer.size() - 2; i += 3)
             {
 
-                size_t i0 = indexBuffer[i];
-                size_t i1 = indexBuffer[i + 1];
-                size_t i2 = indexBuffer[i + 2];
+                size_t indices[3];
+                indices[0] = indexBuffer[i];
+                indices[1] = indexBuffer[i+1];
+                indices[2] = indexBuffer[i+2];
 
-                mvVec3 p0 = *((mvVec3*)&combinedVertexBuffer[i0 * 14]);
-                mvVec3 p1 = *((mvVec3*)&combinedVertexBuffer[i1 * 14]);
-                mvVec3 p2 = *((mvVec3*)&combinedVertexBuffer[i2 * 14]);
+                mvVec3 p[3];
+                mvVec3 n[3];
+                mvVec4 tan[3];
+                mvVec2 tex[3];
+                mvVec4 color[3];
 
-                mvVec3 n0 = *((mvVec3*)&combinedVertexBuffer[i0 * 14 + 3]);
-                mvVec3 n1 = *((mvVec3*)&combinedVertexBuffer[i1 * 14 + 3]);
-                mvVec3 n2 = *((mvVec3*)&combinedVertexBuffer[i2 * 14 + 3]);
+                u32 currentLocation = 0u;
+                for (size_t j = 0; j < modifiedLayout.semantics.size(); j++)
+                {
+                    std::string semantic = modifiedLayout.semantics[j];
 
-                mvVec2 tex0 = *((mvVec2*)&combinedVertexBuffer[i0 * 14 + 6]);
-                mvVec2 tex1 = *((mvVec2*)&combinedVertexBuffer[i1 * 14 + 6]);
-                mvVec2 tex2 = *((mvVec2*)&combinedVertexBuffer[i2 * 14 + 6]);
+                    if (strcmp(semantic.c_str(), "Position") == 0)
+                    {
+
+                        for (size_t k = 0; k < 3; k++)
+                        {
+                            p[k].x = combinedVertexBuffer[indices[k] * modifiedLayout.elementCount + currentLocation];
+                            p[k].y = combinedVertexBuffer[indices[k] * modifiedLayout.elementCount + currentLocation + 1];
+                            p[k].z = combinedVertexBuffer[indices[k] * modifiedLayout.elementCount + currentLocation + 2];
+                        }
+                        currentLocation += 3u;
+                    }
+                    else if (strcmp(semantic.c_str(), "Normal") == 0)
+                    {
+
+                        for (size_t k = 0; k < 3; k++)
+                        {
+                            n[k].x = combinedVertexBuffer[indices[k] * modifiedLayout.elementCount + currentLocation];
+                            n[k].y = combinedVertexBuffer[indices[k] * modifiedLayout.elementCount + currentLocation + 1];
+                            n[k].z = combinedVertexBuffer[indices[k] * modifiedLayout.elementCount + currentLocation + 2];
+                        }
+                        currentLocation += 3u;
+
+                    }
+                    else if (strcmp(semantic.c_str(), "Tangent") == 0)
+                    {
+
+                        for (size_t k = 0; k < 3; k++)
+                        {
+                            tan[k].x = combinedVertexBuffer[indices[k] * modifiedLayout.elementCount + currentLocation];
+                            tan[k].y = combinedVertexBuffer[indices[k] * modifiedLayout.elementCount + currentLocation + 1];
+                            tan[k].z = combinedVertexBuffer[indices[k] * modifiedLayout.elementCount + currentLocation + 2];
+                            tan[k].w = combinedVertexBuffer[indices[k] * modifiedLayout.elementCount + currentLocation + 3];
+                        }
+                        currentLocation += 4u;
+
+                    }
+                    else if (strcmp(semantic.c_str(), "Texcoord") == 0)
+                    {
+
+                        for (size_t k = 0; k < 3; k++)
+                        {
+                            tex[k].x = combinedVertexBuffer[indices[k] * modifiedLayout.elementCount + currentLocation];
+                            tex[k].y = combinedVertexBuffer[indices[k] * modifiedLayout.elementCount + currentLocation + 1];
+                        }
+                        currentLocation += 2u;
+
+                    }
+                    else if (strcmp(semantic.c_str(), "Color") == 0)
+                    {
+
+                        for (size_t k = 0; k < 3; k++)
+                        {
+                            color[k].r = combinedVertexBuffer[indices[k] * modifiedLayout.elementCount + currentLocation];
+                            color[k].g = combinedVertexBuffer[indices[k] * modifiedLayout.elementCount + currentLocation + 1];
+                            color[k].b = combinedVertexBuffer[indices[k] * modifiedLayout.elementCount + currentLocation + 2];
+                            color[k].a = combinedVertexBuffer[indices[k] * modifiedLayout.elementCount + currentLocation + 3];
+                        }
+                        currentLocation += 4u;
+
+                    }
+                }
 
                 // calculate normals
-                //mvVec3 n = cNormalize(cCross(p1 - p0, p2 - p0));
-                //*((mvVec3*)&combinedVertexBuffer[i0 * 14 + 3]) = n;
-                //*((mvVec3*)&combinedVertexBuffer[i1 * 14 + 3]) = n;
-                //*((mvVec3*)&combinedVertexBuffer[i2 * 14 + 3]) = n;
 
-                // calculate tangents
-                mvVec3 edge1 = p1 - p0;
-                mvVec3 edge2 = p2 - p0;
 
-                mvVec2 uv1 = tex1 - tex0;
-                mvVec2 uv2 = tex2 - tex0;
+                 //calculate tangents
+                mvVec3 edge1 = p[1] - p[0];
+                mvVec3 edge2 = p[2] - p[0];
 
-                float dirCorrection = (uv1.x * uv2.y - uv1.y * uv2.x) < 0.0f ? -1.0f : 1.0f;
+                mvVec2 uv1 = tex[1] - tex[0];
+                mvVec2 uv2 = tex[2] - tex[0];
 
                 if (uv1.x * uv2.y == uv1.y * uv2.x)
                 {
@@ -740,89 +926,91 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
                     uv2.y = 0.0f;
                 }
 
-                mvVec3 tangent = {
-                    ((edge1.x * uv2.y) - (edge2.x * uv1.y)) * dirCorrection,
-                    ((edge1.y * uv2.y) - (edge2.y * uv1.y)) * dirCorrection,
-                    ((edge1.z * uv2.y) - (edge2.z * uv1.y)) * dirCorrection
+                float dirCorrection = (uv1.x * uv2.y - uv1.y * uv2.x) < 0.0f ? -1.0f : 1.0f;
+
+                mvVec4 tangent = {
+                    ((edge1.x * uv2.y) - (edge2.x * uv1.y))*dirCorrection,
+                    ((edge1.y * uv2.y) - (edge2.y * uv1.y))*dirCorrection,
+                    ((edge1.z * uv2.y) - (edge2.z * uv1.y))*dirCorrection,
+                    dirCorrection
                 };
 
-                mvVec3 bitangent = {
-                    ((edge1.x * uv2.x) - (edge2.x * uv1.x)) * dirCorrection,
-                    ((edge1.y * uv2.x) - (edge2.y * uv1.x)) * dirCorrection,
-                    ((edge1.z * uv2.x) - (edge2.z * uv1.x)) * dirCorrection
-                };
+                if (calculateNormals)
+                {
+                    //mvVec3 nn = {
+                    //    ((edge1.x * uv2.y) - (edge2.x * uv1.y)),
+                    //    ((edge1.y * uv2.y) - (edge2.y * uv1.y)),
+                    //    ((edge1.z * uv2.y) - (edge2.z * uv1.y))
+                    //};
+                    mvVec3 nn = normalize(cross(edge1, edge2));
+                    n[0] = nn;
+                    n[1] = nn;
+                    n[2] = nn;
+                }
 
                 // project tangent and bitangent into the plane formed by the vertex' normal
                 //mvVec3 newTangent = cNormalize(tangent - n * (tangent * n));
-                *((mvVec3*)&combinedVertexBuffer[i0 * 14 + 8]) = normalize(tangent - n0 * (tangent * n0));
-                *((mvVec3*)&combinedVertexBuffer[i1 * 14 + 8]) = normalize(tangent - n1 * (tangent * n1));
-                *((mvVec3*)&combinedVertexBuffer[i2 * 14 + 8]) = normalize(tangent - n2 * (tangent * n2));
+                mvVec4 tanf[3];
+                for (size_t k = 0; k < 3; k++)
+                {
+                    if (calculateTangents)
+                    {
+                        mvVec3 interTan = normalize(tangent.xyz() - n[k] * (tangent.xyz() * n[k]));
+                        tanf[k].x = interTan.x;
+                        tanf[k].y = interTan.y;
+                        tanf[k].z = interTan.z;
+                        tanf[k].w = dirCorrection;
+                    }
+                    else
+                    {
+                        tanf[k] = tan[k];
+                    }
+                }
 
-                //mvVec3 newBitangent = cNormalize(bitangent - n * (bitangent * n));
-                *((mvVec3*)&combinedVertexBuffer[i0 * 14 + 11]) = normalize(bitangent - n0 * (bitangent * n0));
-                *((mvVec3*)&combinedVertexBuffer[i1 * 14 + 11]) = normalize(bitangent - n1 * (bitangent * n1));
-                *((mvVec3*)&combinedVertexBuffer[i2 * 14 + 11]) = normalize(bitangent - n2 * (bitangent * n2));
+                for (size_t k = 0; k < 3; k++)
+                {
+                    for (size_t j = 0; j < modifiedLayout.semantics.size(); j++)
+                    {
+                        std::string semantic = modifiedLayout.semantics[j];
 
-                // vertex 0
-                vertexBuffer.push_back(p0.x);
-                vertexBuffer.push_back(p0.y);
-                vertexBuffer.push_back(p0.z);
-                vertexBuffer.push_back(n0.x);
-                vertexBuffer.push_back(n0.y);
-                vertexBuffer.push_back(n0.z);
-                vertexBuffer.push_back(tex0.x);
-                vertexBuffer.push_back(tex0.y);
-                vertexBuffer.push_back(combinedVertexBuffer[i0 * 14 + 8]);
-                vertexBuffer.push_back(combinedVertexBuffer[i0 * 14 + 9]);
-                vertexBuffer.push_back(combinedVertexBuffer[i0 * 14 + 10]);
-                vertexBuffer.push_back(combinedVertexBuffer[i0 * 14 + 11]);
-                vertexBuffer.push_back(combinedVertexBuffer[i0 * 14 + 12]);
-                vertexBuffer.push_back(combinedVertexBuffer[i0 * 14 + 13]);
-
-                // vertex 1
-                vertexBuffer.push_back(p1.x);
-                vertexBuffer.push_back(p1.y);
-                vertexBuffer.push_back(p1.z);
-                vertexBuffer.push_back(n1.x);
-                vertexBuffer.push_back(n1.y);
-                vertexBuffer.push_back(n1.z);
-                vertexBuffer.push_back(tex1.x);
-                vertexBuffer.push_back(tex1.y);
-                vertexBuffer.push_back(combinedVertexBuffer[i1 * 14 + 8]);
-                vertexBuffer.push_back(combinedVertexBuffer[i1 * 14 + 9]);
-                vertexBuffer.push_back(combinedVertexBuffer[i1 * 14 + 10]);
-                vertexBuffer.push_back(combinedVertexBuffer[i1 * 14 + 11]);
-                vertexBuffer.push_back(combinedVertexBuffer[i1 * 14 + 12]);
-                vertexBuffer.push_back(combinedVertexBuffer[i1 * 14 + 13]);
-
-                // vertex 2
-                vertexBuffer.push_back(p2.x);
-                vertexBuffer.push_back(p2.y);
-                vertexBuffer.push_back(p2.z);
-                vertexBuffer.push_back(n2.x);
-                vertexBuffer.push_back(n2.y);
-                vertexBuffer.push_back(n2.z);
-                vertexBuffer.push_back(tex2.x);
-                vertexBuffer.push_back(tex2.y);
-                vertexBuffer.push_back(combinedVertexBuffer[i2 * 14 + 8]);
-                vertexBuffer.push_back(combinedVertexBuffer[i2 * 14 + 9]);
-                vertexBuffer.push_back(combinedVertexBuffer[i2 * 14 + 10]);
-                vertexBuffer.push_back(combinedVertexBuffer[i2 * 14 + 11]);
-                vertexBuffer.push_back(combinedVertexBuffer[i2 * 14 + 12]);
-                vertexBuffer.push_back(combinedVertexBuffer[i2 * 14 + 13]);
+                        if (strcmp(semantic.c_str(), "Position") == 0)
+                        {
+                            vertexBuffer.push_back(p[k].x);
+                            vertexBuffer.push_back(p[k].y);
+                            vertexBuffer.push_back(p[k].z);
+                        }
+                        else if (strcmp(semantic.c_str(), "Normal") == 0)
+                        {
+                            vertexBuffer.push_back(n[k].x);
+                            vertexBuffer.push_back(n[k].y);
+                            vertexBuffer.push_back(n[k].z);
+                        }
+                        else if (strcmp(semantic.c_str(), "Tangent") == 0)
+                        {
+                            vertexBuffer.push_back(tanf[k].x);
+                            vertexBuffer.push_back(tanf[k].y);
+                            vertexBuffer.push_back(tanf[k].z);
+                            vertexBuffer.push_back(tanf[k].w);
+                        }
+                        else if (strcmp(semantic.c_str(), "Texcoord") == 0)
+                        {
+                            vertexBuffer.push_back(tex[k].x);
+                            vertexBuffer.push_back(tex[k].y);
+                        }
+                        else if (strcmp(semantic.c_str(), "Color") == 0)
+                        {
+                            vertexBuffer.push_back(color[k].x);
+                            vertexBuffer.push_back(color[k].y);
+                            vertexBuffer.push_back(color[k].z);
+                            vertexBuffer.push_back(color[k].w);
+                        }
+                    }
+                }
 
             }
 
             newMesh.primitives.push_back({});
-            newMesh.primitives.back().layout = create_vertex_layout(
-                {
-                    mvVertexElement::Position3D,
-                    mvVertexElement::Normal,
-                    mvVertexElement::Texture2D,
-                    mvVertexElement::Tangent,
-                    mvVertexElement::Bitangent
-                }
-            );
+            newMesh.primitives.back().layout = modifiedLayout;
 
             // upload index buffer
 
@@ -832,6 +1020,9 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
                 mvGLTFMaterial& material = model.materials[glprimitive.material_index];
 
                 mvMaterial materialData{};
+                materialData.extramacros.push_back({ "HAS_NORMALS", "0" });
+                materialData.extramacros.push_back({ "HAS_TANGENTS", "0" });
+                if(hasTexCoord0) materialData.extramacros.push_back({ "HAS_TEXCOORD_0_VEC2", "0" });
                 materialData.data.albedo = *(mvVec4*)material.base_color_factor;
                 materialData.data.metalness = material.metallic_factor;
                 materialData.data.roughness = material.roughness_factor;
@@ -845,252 +1036,20 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
                 materialData.extensionClearcoat = material.clearcoat_extension;
                 materialData.pbrMetallicRoughness = material.pbrMetallicRoughness;
                 materialData.alphaMode = material.alphaMode;
+                materialData.layout = modifiedLayout;
                 if (materialData.alphaMode == 1)
                     materialData.data.alphaCutoff = material.alphaCutoff;
                     
-
-
-                if (material.base_color_texture != -1)
-                {
-                    mvGLTFTexture& texture = model.textures[material.base_color_texture];
-                    std::string uri = model.images[texture.image_index].uri;
-                    if (model.images[texture.image_index].embedded)
-                    {
-                        newMesh.primitives.back().albedoTexture = mvGetTextureAssetID(&assetManager, model.root + newMesh.name + std::to_string(currentPrimitive) + uri + "_a", model.images[texture.image_index].data);
-                    }
-                    else
-                        newMesh.primitives.back().albedoTexture = mvGetTextureAssetID(&assetManager, model.root + newMesh.name + std::to_string(currentPrimitive) + uri + "_a", model.root + uri);
-                    materialData.hasAlbedoMap = true;
-                    if (texture.sampler_index > -1)
-                    {
-                        mvGLTFSampler& sampler = model.samplers[texture.sampler_index];
-                        mvTexture& newTexture = assetManager.textures[newMesh.primitives.back().albedoTexture].asset;
-
-                        // Create Sampler State
-                        D3D11_SAMPLER_DESC samplerDesc{};
-                        samplerDesc.AddressU = get_address_mode(sampler.wrap_s);
-                        samplerDesc.AddressV = get_address_mode(sampler.wrap_t);
-                        samplerDesc.AddressW = samplerDesc.AddressV;
-                        samplerDesc.Filter = get_filter_mode(sampler.min_filter, sampler.mag_filter);
-                        samplerDesc.BorderColor[0] = 0.0f;
-                        samplerDesc.MaxAnisotropy = D3D11_REQ_MAXANISOTROPY;
-
-                        HRESULT hResult = GContext->graphics.device->CreateSamplerState(&samplerDesc, &newTexture.sampler);
-                        assert(SUCCEEDED(hResult));
-                    }
-                }
-
-                if (material.normal_texture != -1)
-                {
-                    mvGLTFTexture& texture = model.textures[material.normal_texture];
-                    std::string uri = model.images[texture.image_index].uri;
-                    if (model.images[texture.image_index].embedded)
-                    {
-                        newMesh.primitives.back().normalTexture = mvGetTextureAssetID(&assetManager, model.root + newMesh.name + std::to_string(currentPrimitive) + uri + "_n", model.images[texture.image_index].data);
-                    }
-                    else
-                        newMesh.primitives.back().normalTexture = mvGetTextureAssetID(&assetManager, model.root + newMesh.name + std::to_string(currentPrimitive) + uri + "_n", model.root + uri);
-                    materialData.hasNormalMap = true;
-                    if (texture.sampler_index > -1)
-                    {
-                        mvGLTFSampler& sampler = model.samplers[texture.sampler_index];
-                        mvTexture& newTexture = assetManager.textures[newMesh.primitives.back().normalTexture].asset;
-
-                        // Create Sampler State
-                        D3D11_SAMPLER_DESC samplerDesc{};
-                        samplerDesc.AddressU = get_address_mode(sampler.wrap_s);
-                        samplerDesc.AddressV = get_address_mode(sampler.wrap_t);
-                        samplerDesc.AddressW = samplerDesc.AddressU;
-                        samplerDesc.Filter = get_filter_mode(sampler.min_filter, sampler.mag_filter);
-                        samplerDesc.BorderColor[0] = 0.0f;
-                        samplerDesc.MaxAnisotropy = D3D11_REQ_MAXANISOTROPY;
-
-                        HRESULT hResult = GContext->graphics.device->CreateSamplerState(&samplerDesc, &newTexture.sampler);
-                        assert(SUCCEEDED(hResult));
-                    }
-                }
-
-                if (material.metallic_roughness_texture != -1)
-                {
-                    mvGLTFTexture& texture = model.textures[material.metallic_roughness_texture];
-                    std::string uri = model.images[texture.image_index].uri;
-                    if (model.images[texture.image_index].embedded)
-                    {
-                        newMesh.primitives.back().metalRoughnessTexture = mvGetTextureAssetID(&assetManager, model.root + newMesh.name + std::to_string(currentPrimitive) + uri + "_m", model.images[texture.image_index].data);
-                    }
-                    else
-                        newMesh.primitives.back().metalRoughnessTexture = mvGetTextureAssetID(&assetManager, model.root + newMesh.name + std::to_string(currentPrimitive) + uri + "_m", model.root + uri);
-                    materialData.hasMetallicRoughnessMap = true;
-                    if (texture.sampler_index > -1)
-                    {
-                        mvGLTFSampler& sampler = model.samplers[texture.sampler_index];
-                        mvTexture& newTexture = assetManager.textures[newMesh.primitives.back().metalRoughnessTexture].asset;
-
-                        // Create Sampler State
-                        D3D11_SAMPLER_DESC samplerDesc{};
-                        samplerDesc.AddressU = get_address_mode(sampler.wrap_s);
-                        samplerDesc.AddressV = get_address_mode(sampler.wrap_t);
-                        samplerDesc.AddressW = samplerDesc.AddressU;
-                        samplerDesc.Filter = get_filter_mode(sampler.min_filter, sampler.mag_filter);
-                        samplerDesc.BorderColor[0] = 0.0f;
-                        samplerDesc.MaxAnisotropy = D3D11_REQ_MAXANISOTROPY;
-
-                        HRESULT hResult = GContext->graphics.device->CreateSamplerState(&samplerDesc, &newTexture.sampler);
-                        assert(SUCCEEDED(hResult));
-                    }
-                }
-
-                if (material.emissive_texture != -1)
-                {
-                    mvGLTFTexture& texture = model.textures[material.emissive_texture];
-                    std::string uri = model.images[texture.image_index].uri;
-                    if (model.images[texture.image_index].embedded)
-                    {
-                        newMesh.primitives.back().emissiveTexture = mvGetTextureAssetID(&assetManager, model.root + newMesh.name + std::to_string(currentPrimitive) + uri + "_e", model.images[texture.image_index].data);
-                    }
-                    else
-                        newMesh.primitives.back().emissiveTexture = mvGetTextureAssetID(&assetManager, model.root + newMesh.name + std::to_string(currentPrimitive) + uri + "_e", model.root + uri);
-                    materialData.hasEmmissiveMap = true;
-                    if (texture.sampler_index > -1)
-                    {
-                        mvGLTFSampler& sampler = model.samplers[texture.sampler_index];
-                        mvTexture& newTexture = assetManager.textures[newMesh.primitives.back().emissiveTexture].asset;
-
-                        // Create Sampler State
-                        D3D11_SAMPLER_DESC samplerDesc{};
-                        samplerDesc.AddressU = get_address_mode(sampler.wrap_s);
-                        samplerDesc.AddressV = get_address_mode(sampler.wrap_t);
-                        samplerDesc.AddressW = samplerDesc.AddressU;
-                        samplerDesc.Filter = get_filter_mode(sampler.min_filter, sampler.mag_filter);
-                        samplerDesc.BorderColor[0] = 0.0f;
-                        samplerDesc.MaxAnisotropy = D3D11_REQ_MAXANISOTROPY;
-
-                        HRESULT hResult = GContext->graphics.device->CreateSamplerState(&samplerDesc, &newTexture.sampler);
-                        assert(SUCCEEDED(hResult));
-                    }
-                }
-
-                if (material.occlusion_texture != -1)
-                {
-                    mvGLTFTexture& texture = model.textures[material.occlusion_texture];
-                    std::string uri = model.images[texture.image_index].uri;
-                    if (model.images[texture.image_index].embedded)
-                    {
-                        newMesh.primitives.back().occlusionTexture = mvGetTextureAssetID(&assetManager, model.root + newMesh.name + std::to_string(currentPrimitive) + uri + "_o", model.images[texture.image_index].data);
-                    }
-                    else
-                        newMesh.primitives.back().occlusionTexture = mvGetTextureAssetID(&assetManager, model.root + newMesh.name + std::to_string(currentPrimitive) + uri + "_o", model.root + uri);
-                    materialData.hasOcculusionMap = true;
-                    if (texture.sampler_index > -1)
-                    {
-                        mvGLTFSampler& sampler = model.samplers[texture.sampler_index];
-                        mvTexture& newTexture = assetManager.textures[newMesh.primitives.back().occlusionTexture].asset;
-
-                        // Create Sampler State
-                        D3D11_SAMPLER_DESC samplerDesc{};
-                        samplerDesc.AddressU = get_address_mode(sampler.wrap_s);
-                        samplerDesc.AddressV = get_address_mode(sampler.wrap_t);
-                        samplerDesc.AddressW = samplerDesc.AddressU;
-                        samplerDesc.Filter = get_filter_mode(sampler.min_filter, sampler.mag_filter);
-                        samplerDesc.BorderColor[0] = 0.0f;
-                        samplerDesc.MaxAnisotropy = D3D11_REQ_MAXANISOTROPY;
-
-                        HRESULT hResult = GContext->graphics.device->CreateSamplerState(&samplerDesc, &newTexture.sampler);
-                        assert(SUCCEEDED(hResult));
-                    }
-                }
-
-                if (material.clearcoat_texture != -1)
-                {
-                    mvGLTFTexture& texture = model.textures[material.clearcoat_texture];
-                    std::string uri = model.images[texture.image_index].uri;
-                    if (model.images[texture.image_index].embedded)
-                    {
-                        newMesh.primitives.back().clearcoatTexture = mvGetTextureAssetID(&assetManager, model.root + newMesh.name + std::to_string(currentPrimitive) + uri + "_cc", model.images[texture.image_index].data);
-                    }
-                    else
-                        newMesh.primitives.back().clearcoatTexture = mvGetTextureAssetID(&assetManager, model.root + newMesh.name + std::to_string(currentPrimitive) + uri + "_cc", model.root + uri);
-                    materialData.hasClearcoatMap = true;
-                    if (texture.sampler_index > -1)
-                    {
-                        mvGLTFSampler& sampler = model.samplers[texture.sampler_index];
-                        mvTexture& newTexture = assetManager.textures[newMesh.primitives.back().clearcoatTexture].asset;
-
-                        // Create Sampler State
-                        D3D11_SAMPLER_DESC samplerDesc{};
-                        samplerDesc.AddressU = get_address_mode(sampler.wrap_s);
-                        samplerDesc.AddressV = get_address_mode(sampler.wrap_t);
-                        samplerDesc.AddressW = samplerDesc.AddressU;
-                        samplerDesc.Filter = get_filter_mode(sampler.min_filter, sampler.mag_filter);
-                        samplerDesc.BorderColor[0] = 0.0f;
-                        samplerDesc.MaxAnisotropy = D3D11_REQ_MAXANISOTROPY;
-
-                        HRESULT hResult = GContext->graphics.device->CreateSamplerState(&samplerDesc, &newTexture.sampler);
-                        assert(SUCCEEDED(hResult));
-                    }
-                }
-
-                if (material.clearcoat_roughness_texture != -1)
-                {
-                    mvGLTFTexture& texture = model.textures[material.clearcoat_roughness_texture];
-                    std::string uri = model.images[texture.image_index].uri;
-                    if (model.images[texture.image_index].embedded)
-                    {
-                        newMesh.primitives.back().clearcoatRoughnessTexture = mvGetTextureAssetID(&assetManager, model.root + newMesh.name + std::to_string(currentPrimitive) + uri + "_ccr", model.images[texture.image_index].data);
-                    }
-                    else
-                        newMesh.primitives.back().clearcoatRoughnessTexture = mvGetTextureAssetID(&assetManager, model.root + newMesh.name + std::to_string(currentPrimitive) + uri + "_ccr", model.root + uri);
-                    materialData.hasClearcoatRoughnessMap = true;
-                    if (texture.sampler_index > -1)
-                    {
-                        mvGLTFSampler& sampler = model.samplers[texture.sampler_index];
-                        mvTexture& newTexture = assetManager.textures[newMesh.primitives.back().clearcoatRoughnessTexture].asset;
-
-                        // Create Sampler State
-                        D3D11_SAMPLER_DESC samplerDesc{};
-                        samplerDesc.AddressU = get_address_mode(sampler.wrap_s);
-                        samplerDesc.AddressV = get_address_mode(sampler.wrap_t);
-                        samplerDesc.AddressW = samplerDesc.AddressU;
-                        samplerDesc.Filter = get_filter_mode(sampler.min_filter, sampler.mag_filter);
-                        samplerDesc.BorderColor[0] = 0.0f;
-                        samplerDesc.MaxAnisotropy = D3D11_REQ_MAXANISOTROPY;
-
-                        HRESULT hResult = GContext->graphics.device->CreateSamplerState(&samplerDesc, &newTexture.sampler);
-                        assert(SUCCEEDED(hResult));
-                    }
-                }
-
-                if (material.clearcoat_normal_texture != -1)
-                {
-                    mvGLTFTexture& texture = model.textures[material.clearcoat_normal_texture];
-                    std::string uri = model.images[texture.image_index].uri;
-                    if (model.images[texture.image_index].embedded)
-                    {
-                        newMesh.primitives.back().clearcoatNormalTexture = mvGetTextureAssetID(&assetManager, model.root + newMesh.name + std::to_string(currentPrimitive) + uri + "_ccn", model.images[texture.image_index].data);
-                    }
-                    else
-                        newMesh.primitives.back().clearcoatNormalTexture = mvGetTextureAssetID(&assetManager, model.root + newMesh.name + std::to_string(currentPrimitive) + uri + "_ccn", model.root + uri);
-                    materialData.hasClearcoatNormalMap = true;
-                    if (texture.sampler_index > -1)
-                    {
-                        mvGLTFSampler& sampler = model.samplers[texture.sampler_index];
-                        mvTexture& newTexture = assetManager.textures[newMesh.primitives.back().clearcoatNormalTexture].asset;
-
-                        // Create Sampler State
-                        D3D11_SAMPLER_DESC samplerDesc{};
-                        samplerDesc.AddressU = get_address_mode(sampler.wrap_s);
-                        samplerDesc.AddressV = get_address_mode(sampler.wrap_t);
-                        samplerDesc.AddressW = samplerDesc.AddressU;
-                        samplerDesc.Filter = get_filter_mode(sampler.min_filter, sampler.mag_filter);
-                        samplerDesc.BorderColor[0] = 0.0f;
-                        samplerDesc.MaxAnisotropy = D3D11_REQ_MAXANISOTROPY;
-
-                        HRESULT hResult = GContext->graphics.device->CreateSamplerState(&samplerDesc, &newTexture.sampler);
-                        assert(SUCCEEDED(hResult));
-                    }
-                }
-
-                std::string hash = hash_material(materialData, std::string("PBR_PS.hlsl"), std::string("PBR_VS.hlsl"));
+                newMesh.primitives.back().albedoTexture = setup_texture(assetManager, model, currentPrimitive, material.base_color_texture, materialData.hasAlbedoMap, newMesh.name, "_a");
+                newMesh.primitives.back().normalTexture = setup_texture(assetManager, model, currentPrimitive, material.normal_texture, materialData.hasNormalMap, newMesh.name, "_n");
+                newMesh.primitives.back().metalRoughnessTexture = setup_texture(assetManager, model, currentPrimitive, material.metallic_roughness_texture, materialData.hasMetallicRoughnessMap, newMesh.name, "_m");
+                newMesh.primitives.back().emissiveTexture = setup_texture(assetManager, model, currentPrimitive, material.emissive_texture, materialData.hasEmmissiveMap, newMesh.name, "_e");
+                newMesh.primitives.back().occlusionTexture = setup_texture(assetManager, model, currentPrimitive, material.occlusion_texture, materialData.hasOcculusionMap, newMesh.name, "_o");
+                newMesh.primitives.back().clearcoatTexture = setup_texture(assetManager, model, currentPrimitive, material.clearcoat_texture, materialData.hasClearcoatMap, newMesh.name, "_cc");
+                newMesh.primitives.back().clearcoatRoughnessTexture = setup_texture(assetManager, model, currentPrimitive, material.clearcoat_roughness_texture, materialData.hasClearcoatRoughnessMap, newMesh.name, "_ccr");
+                newMesh.primitives.back().clearcoatNormalTexture = setup_texture(assetManager, model, currentPrimitive, material.clearcoat_normal_texture, materialData.hasClearcoatNormalMap, newMesh.name, "_ccn");
+               
+                std::string hash = hash_material(materialData, modifiedLayout, std::string("PBR_PS.hlsl"), std::string("PBR_VS.hlsl"));
 
                 newMesh.primitives.back().materialID = mvGetMaterialAssetID(&assetManager, hash);
                 if (newMesh.primitives.back().materialID == -1)
@@ -1104,12 +1063,16 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
 
 
                 mvMaterial materialData{};
+                materialData.extramacros.push_back({ "HAS_NORMALS", "0" });
+                materialData.extramacros.push_back({ "HAS_TANGENTS", "0" });
+                if (hasTexCoord0) materialData.extramacros.push_back({ "HAS_TEXCOORD_0_VEC2", "0" });
                 materialData.data.albedo = { 0.45f, 0.45f, 0.85f, 1.0f };
                 materialData.data.metalness = 0.0f;
                 materialData.data.roughness = 0.5f;
                 materialData.data.alphaCutoff = 0.5f;
                 materialData.data.doubleSided = false;
-                std::string hash = hash_material(materialData, std::string("PBR_PS.hlsl"), std::string("PBR_VS.hlsl"));
+                materialData.layout = modifiedLayout;
+                std::string hash = hash_material(materialData, modifiedLayout, std::string("PBR_PS.hlsl"), std::string("PBR_VS.hlsl"));
 
                 newMesh.primitives.back().materialID = mvGetMaterialAssetID(&assetManager, hash);
                 if (newMesh.primitives.back().materialID == -1)
@@ -1118,15 +1081,13 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
                 }
             }
 
-            auto blah = newMesh.primitives.back();
-
             newMesh.primitives.back().indexBuffer = mvGetBufferAssetID(&assetManager,
-                std::string(glmesh.name) + std::to_string(currentPrimitive) + "_indexbuffer",
+                model.name + std::string(glmesh.name) + std::to_string(currentMesh) + std::to_string(currentPrimitive) + "_indexbuffer",
                 indexBuffer.data(),
                 indexBuffer.size() * sizeof(u32),
                 D3D11_BIND_INDEX_BUFFER);
             newMesh.primitives.back().vertexBuffer = mvGetBufferAssetID(&assetManager,
-                std::string(glmesh.name) + std::to_string(currentPrimitive) + "_vertexBuffer",
+                model.name + std::string(glmesh.name) + std::to_string(currentMesh) + std::to_string(currentPrimitive) + "_vertexBuffer",
                 vertexBuffer.data(),
                 vertexBuffer.size() * sizeof(f32),
                 D3D11_BIND_VERTEX_BUFFER);
@@ -1176,40 +1137,93 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
         }
         else
         {
-
-            float x2 = newNode.rotation.x * newNode.rotation.x;
-            float xy = newNode.rotation.x * newNode.rotation.y;
-            float xz = newNode.rotation.x * newNode.rotation.z;
-            float xw = newNode.rotation.x * newNode.rotation.w;
-            float y2 = newNode.rotation.y * newNode.rotation.y;
-            float yz = newNode.rotation.y * newNode.rotation.z;
-            float yw = newNode.rotation.y * newNode.rotation.w;
-            float z2 = newNode.rotation.z * newNode.rotation.z;
-            float zw = newNode.rotation.z * newNode.rotation.w;
-            float w2 = newNode.rotation.w * newNode.rotation.w;
-            float m00 = x2 - y2 - z2 + w2;
-            float m01 = 2.0f * (xy - zw);
-            float m02 = 2.0f * (xz + yw);
-            float m10 = 2.0f * (xy + zw);
-            float m11 = -x2 + y2 - z2 + w2;
-            float m12 = 2.0f * (yz - xw);
-            float m20 = 2.0f * (xz - yw);
-            float m21 = 2.0f * (yz + xw);
-            float m22 = -x2 - y2 + z2 + w2;
-
-            mvMat4 rotationMat = create_matrix(
-                m00, m01, m02, 0.0f,
-                m10, m11, m12, 0.0f,
-                m20, m21, m22, 0.0f,
-                0.0f, 0.0f, 0.0f, 1.0f);
-
-            newNode.matrix = translate(identity_mat4(), newNode.translation) * rotationMat * scale(identity_mat4(), newNode.scale);
+            newNode.matrix = rotation_translation_scale(newNode.rotation, newNode.translation, newNode.scale);
         }
 
         nodeMapping[currentNode] = register_asset(&assetManager, "node_" + std::to_string(currentNode), newNode);
     }
 
-    // update childre for actual offset
+    for (u32 currentAnimation = 0u; currentAnimation < model.animation_count; currentAnimation++)
+    {
+        mvGLTFAnimation& glanimation = model.animations[currentAnimation];
+
+        mvAnimation animation{};
+        animation.channels = new mvAnimationChannel[glanimation.channel_count];
+        animation.channelCount = glanimation.channel_count;
+
+        for (u32 channel_index = 0u; channel_index < glanimation.channel_count; channel_index++)
+        {
+            mvGLTFAnimationChannel& glchannel = glanimation.channels[channel_index];
+            mvGLTFAnimationSampler& glsampler = glanimation.samplers[glchannel.sampler];
+            mvAnimationChannel& channel = animation.channels[channel_index];
+            channel.node = nodeMapping[glchannel.target.node];
+            assetManager.nodes[channel.node].asset.animated = true;
+            channel.path = glchannel.target.path;
+            channel.interpolation = glsampler.interpolation;
+            
+            mvGLTFAccessor& inputaccessor = model.accessors[glsampler.input];
+            mvGLTFAccessor& outputaccessor = model.accessors[glsampler.output];
+            mvFillBuffer<f32>(model, inputaccessor, channel.inputdata, 1);
+            //mvFillBuffer<u32>(model, outputaccessor, channel.outputdata, 4);
+
+            mvGLTFComponentType indexCompType = outputaccessor.component_type;
+
+            if (channel.path == "translation" || channel.path == "scale")
+            {
+                mvFillBuffer<u32>(model, outputaccessor, channel.outputdata, 3);
+            }
+
+            if (channel.path == "rotation")
+            {
+                switch (indexCompType)
+                {
+                case MV_IMP_BYTE:
+                case MV_IMP_UNSIGNED_BYTE:
+                    mvFillBuffer<u8>(model, outputaccessor, channel.outputdata, 4);
+                    break;
+
+                case MV_IMP_SHORT:
+                case MV_IMP_UNSIGNED_SHORT:
+                    mvFillBuffer<u16>(model, outputaccessor, channel.outputdata, 4);
+                    break;
+
+                case MV_IMP_FLOAT:
+                    mvFillBuffer<u32>(model, outputaccessor, channel.outputdata, 4);
+                    break;
+
+                default:
+                    assert(false && "Unknown index compenent type");
+                }
+            }
+
+            if (channel.path == "weights")
+            {
+                switch (indexCompType)
+                {
+                case MV_IMP_BYTE:
+                case MV_IMP_UNSIGNED_BYTE:
+                    mvFillBuffer<u8>(model, outputaccessor, channel.outputdata, 1);
+                    break;
+
+                case MV_IMP_SHORT:
+                case MV_IMP_UNSIGNED_SHORT:
+                    mvFillBuffer<u16>(model, outputaccessor, channel.outputdata, 1);
+                    break;
+
+                case MV_IMP_FLOAT:
+                    mvFillBuffer<u32>(model, outputaccessor, channel.outputdata, 1);
+                    break;
+
+                default:
+                    assert(false && "Unknown index compenent type");
+                }
+            }
+        }
+
+        register_asset(&assetManager, model.name + "_animation_" + std::to_string(currentAnimation), animation);
+    }
+
+    // update children for actual offset
     for (u32 currentNode = 0u; currentNode < model.node_count; currentNode++)
     {
 

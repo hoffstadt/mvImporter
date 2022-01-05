@@ -24,6 +24,7 @@ target_sources(mvimporter_sandbox
 
 		# renderer
 		"src/renderer/mvAssetManager.cpp"
+		"src/renderer/mvAnimation.cpp"
 		"src/renderer/mvGraphics.cpp"
 		"src/renderer/mvBuffers.cpp"
 		"src/renderer/mvRenderer.cpp"

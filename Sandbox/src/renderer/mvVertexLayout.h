@@ -18,12 +18,12 @@ enum class mvVertexElement
 	Texture2D,
 	Color,
 	Normal,
-	Tangent,
-	Bitangent
+	Tangent
 };
 
 struct mvVertexLayout
 {
+	u32                                   elementCount;
 	u32                                   size;
 	std::vector<std::string>              semantics;
 	std::vector<DXGI_FORMAT>              formats;

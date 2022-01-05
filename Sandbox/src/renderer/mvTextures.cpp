@@ -90,19 +90,19 @@ create_texture(const std::string& path)
         return texture;
     }
 
-	f32 gamma = 1.0f;
+	f32 gamma = 2.2f;
 	f32 gamma_scale = 1.0f;
 
-	//if (stbi_is_hdr(path.c_str()))
-	//{
-	//	stbi_hdr_to_ldr_gamma(gamma);
-	//	stbi_hdr_to_ldr_scale(gamma_scale);
-	//}
-	//else
-	//{
-	//	stbi_ldr_to_hdr_gamma(gamma);
-	//	stbi_ldr_to_hdr_scale(gamma_scale);
-	//}
+	if (stbi_is_hdr(path.c_str()))
+	{
+		stbi_hdr_to_ldr_gamma(gamma);
+		stbi_hdr_to_ldr_scale(gamma_scale);
+	}
+	else
+	{
+		stbi_ldr_to_hdr_gamma(gamma);
+		stbi_ldr_to_hdr_scale(gamma_scale);
+	}
 
     // Load Image
     i32 texWidth, texHeight, texNumChannels;

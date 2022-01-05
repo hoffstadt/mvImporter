@@ -14,49 +14,6 @@ namespace Renderer{
 void 
 mvSetupCommonAssets(mvAssetManager& am)
 {
-    {
-        mvPipelineInfo pipelineInfo{};
-        pipelineInfo.pixelShader = "Shadow_PS.hlsl";
-        pipelineInfo.vertexShader = "Shadow_VS.hlsl";
-        pipelineInfo.depthBias = 50;
-        pipelineInfo.slopeBias = 2.0f;
-        pipelineInfo.clamp = 0.1f;
-        pipelineInfo.cull = false;
-
-        pipelineInfo.layout = create_vertex_layout(
-            {
-                mvVertexElement::Position3D,
-                mvVertexElement::Normal,
-                mvVertexElement::Texture2D,
-                mvVertexElement::Tangent,
-                mvVertexElement::Bitangent
-            }
-        );
-
-        register_asset(&am, "shadow_alpha", finalize_pipeline(pipelineInfo));
-    }
-
-    {
-        mvPipelineInfo pipelineInfo{};
-        pipelineInfo.pixelShader = "";
-        pipelineInfo.vertexShader = "Shadow_VS.hlsl";
-        pipelineInfo.depthBias = 50;
-        pipelineInfo.slopeBias = 2.0f;
-        pipelineInfo.clamp = 0.1f;
-        pipelineInfo.cull = false;
-
-        pipelineInfo.layout = create_vertex_layout(
-            {
-                mvVertexElement::Position3D,
-                mvVertexElement::Normal,
-                mvVertexElement::Texture2D,
-                mvVertexElement::Tangent,
-                mvVertexElement::Bitangent
-            }
-        );
-
-        register_asset(&am, "shadow_no_alpha", finalize_pipeline(pipelineInfo));
-    }
 
     {
         mvPipeline pipeline{};
@@ -642,8 +599,7 @@ render_mesh_shadow(mvAssetManager& am, mvMesh& mesh, mvMat4 transform, mvMat4 ca
         mvMaterial* material = &am.materials[primitive.materialID].asset;
         mvTexture* albedoMap = primitive.albedoTexture == -1 ? nullptr : &am.textures[primitive.albedoTexture].asset;
 
-        mvPipeline* pipeline = material->alphaMode == 0 ? mvGetRawPipelineAsset(&am, "shadow_no_alpha") : mvGetRawPipelineAsset(&am, "shadow_alpha");
-
+        mvPipeline* pipeline = &am.pipelines[material->spipeline].asset;
 
         // pipeline
         device->IASetPrimitiveTopology(pipeline->topology);
