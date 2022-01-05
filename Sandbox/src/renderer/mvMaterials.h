@@ -9,9 +9,10 @@
 struct mvAssetManager;
 struct mvMaterial;
 struct mvMaterialData;
+struct mvVertexLayout;
 
 mvMaterial  create_material(mvAssetManager& am, const std::string& vs, const std::string& ps, mvMaterial materialInfo);
-std::string hash_material (const mvMaterial& materialInfo, const std::string& pixelShader, const std::string& vertexShader);
+std::string hash_material (const mvMaterial& materialInfo, const mvVertexLayout& layout, const std::string& pixelShader, const std::string& vertexShader);
 
 struct mvMaterialData
 {
@@ -46,6 +47,7 @@ struct mvMaterial
     mvConstBuffer                 buffer;
     mvMaterialData                data;
     mvAssetID                     pipeline; 
+    mvAssetID                     spipeline; 
     std::vector<D3D_SHADER_MACRO> macros;
     std::vector<D3D_SHADER_MACRO> extramacros;
     mvVertexLayout                layout;

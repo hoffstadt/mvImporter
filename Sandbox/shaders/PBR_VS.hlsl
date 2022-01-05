@@ -4,7 +4,6 @@ cbuffer TransformCBuf : register(b0)
     matrix model;
     matrix modelView;
     matrix modelViewProj;
-    matrix normalMatrix;
 };
 
 struct VSIn
@@ -164,10 +163,10 @@ VSOut main(VSIn input)
         output.WorldNormal = mul((float3x3)model, getNormal(input));
     #ifdef HAS_TANGENTS
         float3 tangent = getTangent(input);
-        float3 normalW = normalize(float4(mul(normalMatrix, float4(getNormal(input), 0.0))));
-        float3 tangentW = normalize(float3(mul(model, float4(tangent, 0.0)).xyz));
-        float3 bitangentW = cross(normalW, tangentW) * input.tan.w;
-        output.TBN = transpose(float3x3(tangentW, bitangentW, normalW));
+        float3 WorldTangent = mul((float3x3) model, tangent);
+        float3 WorldBitangent = cross(getNormal(input), tangent)*input.tan.w;
+        WorldBitangent = mul((float3x3) model, WorldBitangent);
+        output.TBN = transpose(float3x3(WorldTangent, WorldBitangent, output.WorldNormal));
     #else // !HAS_TANGENTS
         output.v_Normal = normalize(float3(mul(normalMatrix, float4(getNormal(input), 0.0)).xyz));
     #endif

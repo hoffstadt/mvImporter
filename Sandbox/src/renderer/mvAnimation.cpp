@@ -71,7 +71,7 @@ interpolate_quat(mvAnimationChannel& channel, f32 tcurrent, f32 tmax)
                 result[i] = ((2 * tCub - 3 * tSq + 1) * v0) + ((tCub - 2 * tSq + tn) * b) + ((-2 * tCub + 3 * tSq) * v1) + ((tCub - tSq) * a);
             }
 
-            return result;
+            return normalize(result);
         }
         else
         {

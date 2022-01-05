@@ -281,14 +281,9 @@ int main()
         ImGui_ImplWin32_NewFrame();
         ImGui::NewFrame();
 
-        ID3D11ShaderResourceView* const pSRV[6] = { NULL };
-        ctx->PSSetShaderResources(0, 1, pSRV);
-        ctx->PSSetShaderResources(1, 1, pSRV);
-        ctx->PSSetShaderResources(2, 1, pSRV);
-        ctx->PSSetShaderResources(3, 6, pSRV); // depth map
-        ctx->PSSetShaderResources(4, 6, pSRV); // depth map
-        ctx->PSSetShaderResources(5, 6, pSRV); // depth map
-        ctx->PSSetShaderResources(6, 1, pSRV); // depth map
+        ID3D11ShaderResourceView* const pSRV[12] = { NULL };
+        for(int i = 0; i < 12; i++)
+            ctx->PSSetShaderResources(0, i, pSRV);
 
         //-----------------------------------------------------------------------------
         // directional shadow pass

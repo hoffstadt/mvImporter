@@ -498,7 +498,10 @@ float4 main(VSOut input) : SV_Target
                 {
                     shadowLevel = DirectionalShadowMap.SampleCmpLevelZero(DirectionalShadowMapSampler, projectTexCoord, lightDepthValue);
                 }
+
+                
             }
+
                 
             // Calculation of analytical light
             // https://github.com/KhronosGroup/glTF/tree/master/specification/2.0#acknowledgments AppendixB
@@ -542,7 +545,8 @@ float4 main(VSOut input) : SV_Target
 
     f_emissive = material.emisiveFactor;
 #ifdef HAS_EMISSIVE_MAP
-    f_emissive *= pow(abs(EmmissiveTexture.Sample(EmmissiveTextureSampler, input.UV0).rgb), float3(2.2, 2.2, 2.2));
+    f_emissive *= sRGBToLinear(EmmissiveTexture.Sample(EmmissiveTextureSampler, input.UV0).rgb);
+    //f_emissive *= EmmissiveTexture.Sample(EmmissiveTextureSampler, input.UV0).rgb;
 #endif
 
     float3 color = float3(0.0.xxx);
@@ -579,7 +583,8 @@ float4 main(VSOut input) : SV_Target
 #ifdef LINEAR_OUTPUT
     finalColor = float4(color.rgb, baseColor.a);
 #else
-    finalColor = float4(pow(abs(color.rgb), float3(0.4545, 0.4545, 0.4545)), baseColor.a);
+    //finalColor = float4(pow(abs(color.rgb), float3(0.4545, 0.4545, 0.4545)), baseColor.a);
+    finalColor = float4(toneMap(color.rgb), baseColor.a);
 #endif
 
     return finalColor;

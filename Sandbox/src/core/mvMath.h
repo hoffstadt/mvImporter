@@ -63,7 +63,6 @@ struct mvTransforms
 	mvMat4 model               = identity_mat4();
 	mvMat4 modelView           = identity_mat4();
 	mvMat4 modelViewProjection = identity_mat4();
-	mvMat4 normalMatrix        = identity_mat4();
 };
 
 mvVec2 operator+(mvVec2 left, mvVec2 right);

@@ -63,8 +63,8 @@ NormalInfo getNormalInfo(VSOut input)
     float3 n, t, b, ng;
 
     // Compute geometrical TBN:
-#ifdef HAS_NORMAL_VEC3
-#ifdef HAS_TANGENT_VEC4
+#ifdef HAS_NORMALS
+#ifdef HAS_TANGENTS
     // Trivial TBN computation, present as vertex attribute.
     // Normalize eigenvectors as matrix is linearly interpolated.
     float3x3 TBN = transpose(input.TBN);
@@ -97,9 +97,17 @@ NormalInfo getNormalInfo(VSOut input)
     //normalInfo.n = ng;
 #ifdef HAS_NORMAL_MAP
     normalInfo.ntex = NormalTexture.Sample(NormalTextureSampler, input.UV0).xyz * 2.0 - 1.0;
-    normalInfo.ntex.y = -normalInfo.ntex.y;
-    //float u_NormalScale = -1.0;
-    //normalInfo.ntex *= float3(u_NormalScale, u_NormalScale, 1.0);
+    if (!input.frontFace) // backface
+    {
+        normalInfo.ntex.x = -normalInfo.ntex.x;
+        normalInfo.ntex.z = -normalInfo.ntex.z;
+        //normalInfo.ntex.y = -normalInfo.ntex.y;
+    }
+    else // front face
+    {
+        normalInfo.ntex.y = -normalInfo.ntex.y;
+    }
+
     normalInfo.ntex = normalize(normalInfo.ntex);
     normalInfo.n = normalize(mul(input.TBN, normalInfo.ntex));
     //normalInfo.n = normalize(mul(float3x3(t, b, ng), normalInfo.ntex));
@@ -171,7 +179,7 @@ MaterialInfo getClearCoatInfo(VSOut input, MaterialInfo info, NormalInfo normalI
 #endif
 
 #ifdef HAS_CLEARCOAT_ROUGHNESS_MAP
-    float4 clearcoatSampleRoughness = ClearCoatRoughnessTexture.Sample(ClearCoatRoughnessTextureSampler, input.UV);
+    float4 clearcoatSampleRoughness = ClearCoatRoughnessTexture.Sample(ClearCoatRoughnessTextureSampler, input.UV0);
     info.clearcoatRoughness *= clearcoatSampleRoughness.g;
 #endif
 
@@ -240,6 +248,7 @@ float4 getBaseColor(VSOut input)
     baseColor *= texture(u_DiffuseSampler, getDiffuseUV());
 #elif defined(MATERIAL_METALLICROUGHNESS) && defined(HAS_BASE_COLOR_MAP)
     base_color *= sRGBToLinear(AlbedoTexture.Sample(AlbedoTextureSampler, input.UV0).rgba);
+    //base_color *= AlbedoTexture.Sample(AlbedoTextureSampler, input.UV0).rgba;
 #endif
     
     return base_color;

@@ -14,47 +14,6 @@ namespace Renderer{
 void 
 mvSetupCommonAssets(mvAssetManager& am)
 {
-    {
-        mvPipelineInfo pipelineInfo{};
-        pipelineInfo.pixelShader = "Shadow_PS.hlsl";
-        pipelineInfo.vertexShader = "Shadow_VS.hlsl";
-        pipelineInfo.depthBias = 50;
-        pipelineInfo.slopeBias = 2.0f;
-        pipelineInfo.clamp = 0.1f;
-        pipelineInfo.cull = false;
-
-        pipelineInfo.layout = create_vertex_layout(
-            {
-                mvVertexElement::Position3D,
-                mvVertexElement::Normal,
-                mvVertexElement::Texture2D,
-                mvVertexElement::Tangent
-            }
-        );
-
-        register_asset(&am, "shadow_alpha", finalize_pipeline(pipelineInfo));
-    }
-
-    {
-        mvPipelineInfo pipelineInfo{};
-        pipelineInfo.pixelShader = "";
-        pipelineInfo.vertexShader = "Shadow_VS.hlsl";
-        pipelineInfo.depthBias = 50;
-        pipelineInfo.slopeBias = 2.0f;
-        pipelineInfo.clamp = 0.1f;
-        pipelineInfo.cull = false;
-
-        pipelineInfo.layout = create_vertex_layout(
-            {
-                mvVertexElement::Position3D,
-                mvVertexElement::Normal,
-                mvVertexElement::Texture2D,
-                mvVertexElement::Tangent
-            }
-        );
-
-        register_asset(&am, "shadow_no_alpha", finalize_pipeline(pipelineInfo));
-    }
 
     {
         mvPipeline pipeline{};
@@ -403,7 +362,6 @@ render_job(mvAssetManager& am, mvRenderJob& job, mvMat4 cam, mvMat4 proj)
     transforms.model = job.accumulatedTransform;
     transforms.modelView = cam * transforms.model;
     transforms.modelViewProjection = proj * cam * transforms.model;
-    transforms.normalMatrix = transpose(invert(transforms.model));
 
     D3D11_MAPPED_SUBRESOURCE mappedSubresource;
     device->Map(GContext->graphics.tranformCBuf.Get(), 0u, D3D11_MAP_WRITE_DISCARD, 0u, &mappedSubresource);
@@ -641,8 +599,7 @@ render_mesh_shadow(mvAssetManager& am, mvMesh& mesh, mvMat4 transform, mvMat4 ca
         mvMaterial* material = &am.materials[primitive.materialID].asset;
         mvTexture* albedoMap = primitive.albedoTexture == -1 ? nullptr : &am.textures[primitive.albedoTexture].asset;
 
-        mvPipeline* pipeline = material->alphaMode == 0 ? mvGetRawPipelineAsset(&am, "shadow_no_alpha") : mvGetRawPipelineAsset(&am, "shadow_alpha");
-
+        mvPipeline* pipeline = &am.pipelines[material->spipeline].asset;
 
         // pipeline
         device->IASetPrimitiveTopology(pipeline->topology);

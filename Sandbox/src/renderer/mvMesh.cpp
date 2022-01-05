@@ -552,7 +552,6 @@ setup_texture(mvAssetManager& assetManager, mvGLTFModel& model, u32 currentPrimi
     }
     else
         resultID = mvGetTextureAssetID(&assetManager, model.root + name + std::to_string(currentPrimitive) + uri + suffix, model.root + uri);
-    //materialData.hasAlbedoMap = true;
     flag = true;
     if (texture.sampler_index > -1)
     {
@@ -778,13 +777,14 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
                             f32 tx0 = tangentAttributeBuffer[i0 * 3];
                             f32 ty0 = tangentAttributeBuffer[i0 * 3 + 1];
                             f32 tz0 = tangentAttributeBuffer[i0 * 3 + 2];
-                            f32 tw0 = round(tangentAttributeBuffer[i0 * 3 + 3]);
-                            f32 tw1 = tw0 == 0.0 ? 1.0 : tw0;
+                            //f32 tw0 = round(tangentAttributeBuffer[i0 * 3 + 3]);
+                            f32 tw0 = tangentAttributeBuffer[i0 * 3 + 3];
+                            //f32 tw1 = tw0 == 0.0 ? 1.0 : tw0;
 
                             combinedVertexBuffer.push_back(tx0);
                             combinedVertexBuffer.push_back(ty0);
                             combinedVertexBuffer.push_back(tz0);
-                            combinedVertexBuffer.push_back(tw1);
+                            combinedVertexBuffer.push_back(tw0);
                         }
                     }
                     else if (strcmp(semantic.c_str(), "Texcoord") == 0)
@@ -929,26 +929,23 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
                 float dirCorrection = (uv1.x * uv2.y - uv1.y * uv2.x) < 0.0f ? -1.0f : 1.0f;
 
                 mvVec4 tangent = {
-                    ((edge1.x * uv2.y) - (edge2.x * uv1.y)),
-                    ((edge1.y * uv2.y) - (edge2.y * uv1.y)),
-                    ((edge1.z * uv2.y) - (edge2.z * uv1.y)),
+                    ((edge1.x * uv2.y) - (edge2.x * uv1.y))*dirCorrection,
+                    ((edge1.y * uv2.y) - (edge2.y * uv1.y))*dirCorrection,
+                    ((edge1.z * uv2.y) - (edge2.z * uv1.y))*dirCorrection,
                     dirCorrection
                 };
 
                 if (calculateNormals)
                 {
-                    mvVec3 nn = {
-                        ((edge1.x * uv2.y) - (edge2.x * uv1.y)),
-                        ((edge1.y * uv2.y) - (edge2.y * uv1.y)),
-                        ((edge1.z * uv2.y) - (edge2.z * uv1.y))
-                    };
-                    //mvVec3 nn = normalize(cross(p[1] - p[0], p[2] - p[0]));
-                    n[0] = normalize(nn * dirCorrection);
-                    n[1] = normalize(nn * dirCorrection);
-                    n[2] = normalize(nn * dirCorrection);
-                    //*((mvVec3*)&combinedVertexBuffer[i0 * 14 + 3]) = n;
-                    //*((mvVec3*)&combinedVertexBuffer[i1 * 14 + 3]) = n;
-                    //*((mvVec3*)&combinedVertexBuffer[i2 * 14 + 3]) = n;
+                    //mvVec3 nn = {
+                    //    ((edge1.x * uv2.y) - (edge2.x * uv1.y)),
+                    //    ((edge1.y * uv2.y) - (edge2.y * uv1.y)),
+                    //    ((edge1.z * uv2.y) - (edge2.z * uv1.y))
+                    //};
+                    mvVec3 nn = normalize(cross(edge1, edge2));
+                    n[0] = nn;
+                    n[1] = nn;
+                    n[2] = nn;
                 }
 
                 // project tangent and bitangent into the plane formed by the vertex' normal
@@ -959,9 +956,9 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
                     if (calculateTangents)
                     {
                         mvVec3 interTan = normalize(tangent.xyz() - n[k] * (tangent.xyz() * n[k]));
-                        tanf[k].x = interTan.x*dirCorrection;
-                        tanf[k].y = interTan.y*dirCorrection;
-                        tanf[k].z = interTan.z*dirCorrection;
+                        tanf[k].x = interTan.x;
+                        tanf[k].y = interTan.y;
+                        tanf[k].z = interTan.z;
                         tanf[k].w = dirCorrection;
                     }
                     else
@@ -1052,7 +1049,7 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
                 newMesh.primitives.back().clearcoatRoughnessTexture = setup_texture(assetManager, model, currentPrimitive, material.clearcoat_roughness_texture, materialData.hasClearcoatRoughnessMap, newMesh.name, "_ccr");
                 newMesh.primitives.back().clearcoatNormalTexture = setup_texture(assetManager, model, currentPrimitive, material.clearcoat_normal_texture, materialData.hasClearcoatNormalMap, newMesh.name, "_ccn");
                
-                std::string hash = hash_material(materialData, std::string("PBR_PS.hlsl"), std::string("PBR_VS.hlsl"));
+                std::string hash = hash_material(materialData, modifiedLayout, std::string("PBR_PS.hlsl"), std::string("PBR_VS.hlsl"));
 
                 newMesh.primitives.back().materialID = mvGetMaterialAssetID(&assetManager, hash);
                 if (newMesh.primitives.back().materialID == -1)
@@ -1075,7 +1072,7 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
                 materialData.data.alphaCutoff = 0.5f;
                 materialData.data.doubleSided = false;
                 materialData.layout = modifiedLayout;
-                std::string hash = hash_material(materialData, std::string("PBR_PS.hlsl"), std::string("PBR_VS.hlsl"));
+                std::string hash = hash_material(materialData, modifiedLayout, std::string("PBR_PS.hlsl"), std::string("PBR_VS.hlsl"));
 
                 newMesh.primitives.back().materialID = mvGetMaterialAssetID(&assetManager, hash);
                 if (newMesh.primitives.back().materialID == -1)
@@ -1085,12 +1082,12 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
             }
 
             newMesh.primitives.back().indexBuffer = mvGetBufferAssetID(&assetManager,
-                std::string(glmesh.name) + std::to_string(currentPrimitive) + "_indexbuffer",
+                model.name + std::string(glmesh.name) + std::to_string(currentMesh) + std::to_string(currentPrimitive) + "_indexbuffer",
                 indexBuffer.data(),
                 indexBuffer.size() * sizeof(u32),
                 D3D11_BIND_INDEX_BUFFER);
             newMesh.primitives.back().vertexBuffer = mvGetBufferAssetID(&assetManager,
-                std::string(glmesh.name) + std::to_string(currentPrimitive) + "_vertexBuffer",
+                model.name + std::string(glmesh.name) + std::to_string(currentMesh) + std::to_string(currentPrimitive) + "_vertexBuffer",
                 vertexBuffer.data(),
                 vertexBuffer.size() * sizeof(f32),
                 D3D11_BIND_VERTEX_BUFFER);
