@@ -19,6 +19,7 @@ mvInitializeAssetManager(mvAssetManager* manager)
 	manager->targetViews = new mvTargetViewAsset[manager->maxTargetViewCount];
 	manager->depthViews = new mvDepthViewAsset[manager->maxDepthViewCount];
 	manager->animations = new mvAnimationAsset[manager->maxAnimationCount];
+	manager->skins = new mvSkinAsset[manager->maxSkinCount];
 
 	manager->freetextures = new b8[manager->maxTextureCount];
 	for (i32 i = 0; i < manager->maxTextureCount; i++)
@@ -152,6 +153,7 @@ mvCleanupAssetManager(mvAssetManager* manager)
 	delete[] manager->targetViews;
 	delete[] manager->depthViews;
 	delete[] manager->animations;
+	delete[] manager->skins;
 	
 	// free slots
 	delete[] manager->freetextures;
@@ -222,6 +224,43 @@ reload_materials(mvAssetManager* manager)
 	}
 
 
+}
+
+//-----------------------------------------------------------------------------
+// skins
+//-----------------------------------------------------------------------------
+
+mvAssetID
+register_asset(mvAssetManager* manager, const std::string& tag, mvSkin asset)
+{
+	manager->skins[manager->skinCount].asset = asset;
+	manager->skins[manager->skinCount].hash = tag;
+	manager->skinCount++;
+	return manager->skinCount - 1;
+}
+
+mvAssetID
+mvGetSkinAssetID(mvAssetManager* manager, const std::string& tag)
+{
+	for (s32 i = 0; i < manager->skinCount; i++)
+	{
+		if (manager->skins[i].hash == tag)
+			return i;
+	}
+
+	return -1;
+}
+
+mvSkin*
+mvGetRawSkinAsset(mvAssetManager* manager, const std::string& tag)
+{
+	for (s32 i = 0; i < manager->skinCount; i++)
+	{
+		if (manager->skins[i].hash == tag)
+			return &manager->skins[i].asset;
+	}
+
+	return nullptr;
 }
 
 //-----------------------------------------------------------------------------

@@ -100,7 +100,7 @@ create_vertex_shader(const std::string& path, mvVertexLayout& layout, std::vecto
     {
         layout.d3dLayout.push_back(D3D11_INPUT_ELEMENT_DESC{
             layout.semantics[i].c_str(),
-            0,
+            layout.indices[i],
             layout.formats[i],
             0,
             D3D11_APPEND_ALIGNED_ELEMENT,

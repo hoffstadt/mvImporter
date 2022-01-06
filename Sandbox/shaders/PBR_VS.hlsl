@@ -1,3 +1,5 @@
+#include "animations.hlsli"
+
 
 cbuffer TransformCBuf : register(b0)
 {
@@ -6,32 +8,15 @@ cbuffer TransformCBuf : register(b0)
     matrix modelViewProj;
 };
 
-struct VSIn
+cbuffer DirectionalShadowTransformCBuf : register(b1)
 {
-    float3 pos : Position;
-#ifdef HAS_NORMALS
-    float3 n: Normal;
-#endif
+    matrix directShadowView;
+    matrix directShadowProjection;
+};
 
-#ifdef HAS_TANGENTS
-    float4 tan: Tangent;
-#endif
-
-#ifdef HAS_TEXCOORD_0_VEC2
-    float2 tc : Texcoord;
-#endif
-
-#ifdef HAS_TEXCOORD_1_VEC2
-    float2 tc : Texcoord;
-#endif
-
-#ifdef HAS_VERTEX_COLOR_VEC3
-    float3 a_color : Color;
-#endif
-
-#ifdef HAS_VERTEX_COLOR_VEC4
-    float4 a_color : Color;
-#endif
+cbuffer OmniShadowTransformCBuf : register(b2)
+{
+    matrix pointShadowView;
 };
 
 struct VSOut
@@ -64,17 +49,6 @@ struct VSOut
 
 };
 
-cbuffer DirectionalShadowTransformCBuf : register(b1)
-{
-    matrix directShadowView;
-    matrix directShadowProjection;
-};
-
-cbuffer OmniShadowTransformCBuf : register(b2)
-{
-    matrix pointShadowView;
-};
-
 float4 ToShadowHomoSpace(const in float3 pos, uniform matrix modelTransform)
 {
     const float4 world = mul(modelTransform, float4(pos, 1.0f));
@@ -93,11 +67,11 @@ float4 getPosition(VSIn input)
     float4 pos = float4(input.pos, 1.0);
 
 #ifdef USE_MORPHING
-    pos += getTargetPosition();
+    pos += getTargetPosition(input);
 #endif
 
 #ifdef USE_SKINNING
-    pos = getSkinningMatrix() * pos;
+    pos = mul(getSkinningMatrix(input), pos);
 #endif
 
     return pos;
@@ -113,7 +87,7 @@ float3 getNormal(VSIn input)
 #endif
 
 #ifdef USE_SKINNING
-    normal = mat3(getSkinningNormalMatrix()) * normal;
+    normal = mul((float3x3)getSkinningNormalMatrix(input), normal);
 #endif
 
     return normalize(normal);
@@ -126,11 +100,11 @@ float3 getTangent(VSIn input)
     float3 tangent = input.tan.xyz;
 
 #ifdef USE_MORPHING
-    tangent += getTargetTangent();
+    tangent += getTargetTangent(input);
 #endif
 
 #ifdef USE_SKINNING
-    tangent = mat3(getSkinningMatrix()) * tangent;
+    tangent = mul((float3x3)getSkinningMatrix(input), tangent);
 #endif
 
     return normalize(tangent);
@@ -147,14 +121,14 @@ VSOut main(VSIn input)
     output.UV1 = float2(0.0, 0.0);
 
     #ifdef HAS_TEXCOORD_0_VEC2
-        output.UV0 =input.tc;
+        output.UV0 =input.tc0;
     #endif
 
     #ifdef HAS_TEXCOORD_1_VEC2
-        output.UV1 =input.tc;
+        output.UV1 =input.tc1;
     #endif
 
-    output.Pos = mul(modelViewProj, float4(input.pos, 1.0f));
+    output.Pos = mul(modelViewProj, getPosition(input));
     output.dshadowWorldPos = ToDirectShadowHomoSpace(getPosition(input).xyz, model);
     output.oshadowWorldPos = ToShadowHomoSpace(getPosition(input).xyz, model);
 

@@ -80,7 +80,7 @@ create_textured_cube(mvAssetManager& assetManager, f32 size)
         {
             mvVertexElement::Position3D,
             mvVertexElement::Normal,
-            mvVertexElement::Texture2D,
+            mvVertexElement::TexCoord0,
             mvVertexElement::Tangent
         }
     );
@@ -172,7 +172,7 @@ create_textured_quad(mvAssetManager& assetManager, f32 size)
         {
             mvVertexElement::Position3D,
             mvVertexElement::Normal,
-            mvVertexElement::Texture2D,
+            mvVertexElement::TexCoord0,
             mvVertexElement::Tangent
         }
     );
@@ -407,6 +407,32 @@ create_ortho_frustum(mvAssetManager& assetManager, f32 width, f32 height, f32 ne
     return mesh;
 }
 
+void
+compute_joints(mvAssetManager& am, mvNode& parentNode, mvSkin& skin)
+{
+    u32 textureWidth = ceil(sqrt(skin.jointCount * 8));
+
+    for (u32 i = 0; i < skin.jointCount; i++)
+    {
+        s32 joint = skin.joints[i];
+        mvNode& node = am.nodes[joint].asset;
+
+        //mvMat4 jointMatrix = (* (mvMat4*)&skin.inverseBindMatrices[i * 16]) * node.worldTransform * parentNode.inverseWorldTransform;
+        //mvMat4 jointMatrix = (*(mvMat4*)&skin.inverseBindMatrices[i * 16]) * parentNode.inverseWorldTransform * node.worldTransform;
+        mvMat4 jointMatrix = node.worldTransform * parentNode.inverseWorldTransform * (*(mvMat4*)&skin.inverseBindMatrices[i * 16]);
+
+        //mvMat4 jointMatrix = node.worldTransform * (*(mvMat4*)&skin.inverseBindMatrices[i * 16]);
+        //jointMatrix = parentNode.inverseWorldTransform * jointMatrix;
+
+        mvMat4 normalMatrix = transpose(invert(jointMatrix));
+
+        *(mvMat4*)&skin.textureData[i * 32] = jointMatrix;
+        *(mvMat4*)&skin.textureData[i * 32+16] = normalMatrix;
+    }
+
+    update_dynamic_texture(skin.jointTexture, textureWidth, textureWidth, skin.textureData);
+}
+
 static u8
 mvGetAccessorItemCompCount(mvGLTFAccessor& accessor)
 {
@@ -416,6 +442,9 @@ mvGetAccessorItemCompCount(mvGLTFAccessor& accessor)
     case(MV_IMP_VEC2): return 2u;
     case(MV_IMP_VEC3): return 3u;
     case(MV_IMP_VEC4): return 4u;
+    case(MV_IMP_MAT2): return 4u;
+    case(MV_IMP_MAT3): return 9u;
+    case(MV_IMP_MAT4): return 16u;
     default:
         assert(false && "Undefined attribute type");
         return 0u;
@@ -589,6 +618,31 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
     std::vector<mvAssetID> meshMapping;
     meshMapping.resize(model.mesh_count);
 
+    std::vector<mvAssetID> skinMapping;
+    skinMapping.resize(model.skin_count);
+
+    for (u32 currentSkin = 0u; currentSkin < model.skin_count; currentSkin++)
+    {
+        mvGLTFSkin& glskin = model.skins[currentSkin];
+        mvSkin skin{};
+
+        skin.skeleton = glskin.skeleton;
+        skin.jointCount = glskin.joints_count;
+        for (u32 joint = 0; joint < skin.jointCount; joint++)
+        {
+            skin.joints[joint] = glskin.joints[joint];
+        }
+
+        mvFillBuffer<f32>(model, model.accessors[glskin.inverseBindMatrices], skin.inverseBindMatrices, 16);
+
+        u32 textureWidth = ceil(sqrt(skin.jointCount * 8));
+
+        skin.jointTexture = create_dynamic_texture(textureWidth, textureWidth);
+        skin.textureData = new f32[textureWidth * textureWidth * 4];
+
+        skinMapping[currentSkin] = register_asset(&assetManager, glskin.name, skin);
+    }
+
     for (u32 currentCamera = 0u; currentCamera < model.camera_count; currentCamera++)
     {
         mvGLTFCamera& glcamera = model.cameras[currentCamera];
@@ -655,14 +709,25 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
             std::vector<f32> positionAttributeBuffer;
             std::vector<f32> tangentAttributeBuffer;
             std::vector<f32> normalAttributeBuffer;
-            std::vector<f32> textureAttributeBuffer;
+            std::vector<f32> texture0AttributeBuffer;
+            std::vector<f32> texture1AttributeBuffer;
             std::vector<f32> colorAttributeBuffer;
+            std::vector<f32> joints0AttributeBuffer;
+            std::vector<f32> joints1AttributeBuffer;
+            std::vector<f32> weights0AttributeBuffer;
+            std::vector<f32> weights1AttributeBuffer;
 
             b8 calculateNormals = true;
             b8 calculateTangents = true;
             b8 hasTexCoord0 = false;
+            b8 hasTexCoord1 = false;
             b8 hasColorVec3 = false;
             b8 hasColorVec4 = false;
+            b8 hasJoints0 = false;
+            b8 hasJoints1 = false;
+            b8 hasWeights0 = false;
+            b8 hasWeights1 = false;
+            b8 useSkinning = false;
 
             std::vector<mvVertexElement> attributes;
             for (u32 i = 0; i < glprimitive.attribute_count; i++)
@@ -673,23 +738,57 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
                     attributes.push_back(mvVertexElement::Position3D);
                     mvFillBuffer<f32>(model, model.accessors[attribute.index], positionAttributeBuffer);
                 }
-                else if (strcmp(attribute.semantic.c_str(), "TANGENT") == 0)
-                {
-                    calculateTangents = false;
-                    attributes.push_back(mvVertexElement::Tangent);
-                    mvFillBuffer<f32>(model, model.accessors[attribute.index], tangentAttributeBuffer, 4);
-                }
                 else if (strcmp(attribute.semantic.c_str(), "NORMAL") == 0)
                 {
                     calculateNormals = false;
                     attributes.push_back(mvVertexElement::Normal);
                     mvFillBuffer<f32>(model, model.accessors[attribute.index], normalAttributeBuffer);
                 }
+                else if (strcmp(attribute.semantic.c_str(), "TANGENT") == 0)
+                {
+                    calculateTangents = false;
+                    attributes.push_back(mvVertexElement::Tangent);
+                    mvFillBuffer<f32>(model, model.accessors[attribute.index], tangentAttributeBuffer, 4);
+                }
+                else if (strcmp(attribute.semantic.c_str(), "JOINTS_0") == 0)
+                {
+                    hasJoints0 = true;
+                    useSkinning = true;
+                    attributes.push_back(mvVertexElement::Joints0);
+                    mvFillBuffer<f32>(model, model.accessors[attribute.index], joints0AttributeBuffer, 4);
+                }
+                else if (strcmp(attribute.semantic.c_str(), "JOINTS_1") == 0)
+                {
+                    hasJoints1 = true;
+                    useSkinning = true;
+                    attributes.push_back(mvVertexElement::Joints1);
+                    mvFillBuffer<f32>(model, model.accessors[attribute.index], joints1AttributeBuffer, 4);
+                }
+                else if (strcmp(attribute.semantic.c_str(), "WEIGHTS_0") == 0)
+                {
+                    hasWeights0 = true;
+                    useSkinning = true;
+                    attributes.push_back(mvVertexElement::Weights0);
+                    mvFillBuffer<f32>(model, model.accessors[attribute.index], weights0AttributeBuffer, 4);
+                }
+                else if (strcmp(attribute.semantic.c_str(), "WEIGHTS_1") == 0)
+                {
+                    hasWeights1 = true;
+                    useSkinning = true;
+                    attributes.push_back(mvVertexElement::Weights1);
+                    mvFillBuffer<f32>(model, model.accessors[attribute.index], weights1AttributeBuffer, 4);
+                }
                 else if (strcmp(attribute.semantic.c_str(), "TEXCOORD_0") == 0)
                 {
                     hasTexCoord0 = true;
-                    attributes.push_back(mvVertexElement::Texture2D);
-                    mvFillBuffer<f32>(model, model.accessors[attribute.index], textureAttributeBuffer, 2);
+                    attributes.push_back(mvVertexElement::TexCoord0);
+                    mvFillBuffer<f32>(model, model.accessors[attribute.index], texture0AttributeBuffer, 2);
+                }
+                else if (strcmp(attribute.semantic.c_str(), "TEXCOORD_1") == 0)
+                {
+                    hasTexCoord1 = true;
+                    attributes.push_back(mvVertexElement::TexCoord1);
+                    mvFillBuffer<f32>(model, model.accessors[attribute.index], texture1AttributeBuffer, 2);
                 }
                 else if (strcmp(attribute.semantic.c_str(), "COLOR_0") == 0)
                 {
@@ -698,13 +797,48 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
                     {
                         hasColorVec3 = true;
                         attributes.push_back(mvVertexElement::Color3);
-                        mvFillBuffer<f32>(model, model.accessors[attribute.index], colorAttributeBuffer, 3);
+
+                        switch (accessor.component_type)
+                        {
+                        case MV_IMP_UNSIGNED_BYTE:
+                            mvFillBuffer<u8>(model, model.accessors[attribute.index], colorAttributeBuffer, 3);
+                            break;
+                        case MV_IMP_UNSIGNED_SHORT:
+                            mvFillBuffer<u16>(model, model.accessors[attribute.index], colorAttributeBuffer, 3);
+                            break;
+                        case MV_IMP_FLOAT:
+                            mvFillBuffer<f32>(model, model.accessors[attribute.index], colorAttributeBuffer, 3);
+                            break;
+
+                        default:
+                        {
+                            assert(false && "Undefined attribute type");
+                        }
+                                
+                        }
+                        
                     }
                     else if (accessor.type == MV_IMP_VEC4)
                     {
                         hasColorVec4 = true;
                         attributes.push_back(mvVertexElement::Color4);
-                        mvFillBuffer<f32>(model, model.accessors[attribute.index], colorAttributeBuffer, 4);
+                        switch (accessor.component_type)
+                        {
+                        case MV_IMP_UNSIGNED_BYTE:
+                            mvFillBuffer<u8>(model, model.accessors[attribute.index], colorAttributeBuffer, 4);
+                            break;
+                        case MV_IMP_UNSIGNED_SHORT:
+                            mvFillBuffer<u16>(model, model.accessors[attribute.index], colorAttributeBuffer, 4);
+                            break;
+                        case MV_IMP_FLOAT:
+                            mvFillBuffer<f32>(model, model.accessors[attribute.index], colorAttributeBuffer, 4);
+                            break;
+
+                        default:
+                        {
+                            assert(false && "Undefined attribute type");
+                        }
+                        }
                     }
                     else
                     {
@@ -714,8 +848,6 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
                 }
                 else
                 {
-                    //case(MV_IMP_WEIGHTS_0):
-                    //case(MV_IMP_JOINTS_0):
                     assert(false && "Undefined attribute type");
                 }
             }
@@ -762,6 +894,64 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
                         combinedVertexBuffer.push_back(y0);
                         combinedVertexBuffer.push_back(z0);
                     }
+                    else if (strcmp(semantic.c_str(), "Joints") == 0)
+                    {
+                        if (modifiedLayout.indices[j] == 0)
+                        {
+                            f32 x0 = joints0AttributeBuffer[i0 * 3];
+                            f32 y0 = joints0AttributeBuffer[i0 * 3 + 1];
+                            f32 z0 = joints0AttributeBuffer[i0 * 3 + 2];
+                            f32 w0 = joints0AttributeBuffer[i0 * 3 + 3];
+
+                            // position
+                            combinedVertexBuffer.push_back(x0);
+                            combinedVertexBuffer.push_back(y0);
+                            combinedVertexBuffer.push_back(z0);
+                            combinedVertexBuffer.push_back(w0);
+                        }
+                        else
+                        {
+                            f32 x0 = joints1AttributeBuffer[i0 * 3];
+                            f32 y0 = joints1AttributeBuffer[i0 * 3 + 1];
+                            f32 z0 = joints1AttributeBuffer[i0 * 3 + 2];
+                            f32 w0 = joints1AttributeBuffer[i0 * 3 + 3];
+
+                            // position
+                            combinedVertexBuffer.push_back(x0);
+                            combinedVertexBuffer.push_back(y0);
+                            combinedVertexBuffer.push_back(z0);
+                            combinedVertexBuffer.push_back(w0);
+                        }
+                    }
+                    else if (strcmp(semantic.c_str(), "Weights") == 0)
+                    {
+                        if (modifiedLayout.indices[j] == 0)
+                        {
+                            f32 x0 = weights0AttributeBuffer[i0 * 3];
+                            f32 y0 = weights0AttributeBuffer[i0 * 3 + 1];
+                            f32 z0 = weights0AttributeBuffer[i0 * 3 + 2];
+                            f32 w0 = weights0AttributeBuffer[i0 * 3 + 3];
+
+                            // position
+                            combinedVertexBuffer.push_back(x0);
+                            combinedVertexBuffer.push_back(y0);
+                            combinedVertexBuffer.push_back(z0);
+                            combinedVertexBuffer.push_back(w0);
+                        }
+                        else
+                        {
+                            f32 x0 = weights1AttributeBuffer[i0 * 3];
+                            f32 y0 = weights1AttributeBuffer[i0 * 3 + 1];
+                            f32 z0 = weights1AttributeBuffer[i0 * 3 + 2];
+                            f32 w0 = weights1AttributeBuffer[i0 * 3 + 3];
+
+                            // position
+                            combinedVertexBuffer.push_back(x0);
+                            combinedVertexBuffer.push_back(y0);
+                            combinedVertexBuffer.push_back(z0);
+                            combinedVertexBuffer.push_back(w0);
+                        }
+                    }
                     else if (strcmp(semantic.c_str(), "Normal") == 0)
                     {
                         if (calculateNormals)
@@ -805,12 +995,19 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
                             combinedVertexBuffer.push_back(tw0);
                         }
                     }
-                    else if (strcmp(semantic.c_str(), "Texcoord") == 0)
+                    else if (strcmp(semantic.c_str(), "Tex0Coord") == 0)
                     {
-                        f32 u0 = textureAttributeBuffer[i0 * 2];
-                        f32 v0 = textureAttributeBuffer[i0 * 2 + 1];
+                        f32 u0 = texture0AttributeBuffer[i0 * 2];
+                        f32 v0 = texture0AttributeBuffer[i0 * 2 + 1];
                         combinedVertexBuffer.push_back(u0);
                         combinedVertexBuffer.push_back(v0);
+                    }
+                    else if (strcmp(semantic.c_str(), "Tex1Coord") == 0)
+                    {
+                        f32 u1 = texture1AttributeBuffer[i0 * 2];
+                        f32 v1 = texture1AttributeBuffer[i0 * 2 + 1];
+                        combinedVertexBuffer.push_back(u1);
+                        combinedVertexBuffer.push_back(v1);
                     }
                     else if (strcmp(semantic.c_str(), "Color") == 0)
                     {
@@ -831,21 +1028,6 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
                     }
                 }
 
-                //if (calculateNormals)
-                //{
-                //    combinedVertexBuffer.push_back(0.0f);  // we will calculate
-                //    combinedVertexBuffer.push_back(0.0f);  // we will calculate
-                //    combinedVertexBuffer.push_back(0.0f);  // we will calculate
-                //}
-
-                //if (calculateTangents)
-                //{
-                //    combinedVertexBuffer.push_back(0.0f);  // we will calculate
-                //    combinedVertexBuffer.push_back(0.0f);  // we will calculate
-                //    combinedVertexBuffer.push_back(0.0f);  // we will calculate
-                //    combinedVertexBuffer.push_back(0.0f);  // we will calculate
-                //}
-
                 indexBuffer.push_back(indexBuffer.size());
             }
 
@@ -861,8 +1043,13 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
                 mvVec3 p[3];
                 mvVec3 n[3];
                 mvVec4 tan[3];
-                mvVec2 tex[3];
+                mvVec2 tex0[3];
+                mvVec2 tex1[3];
                 mvVec4 color[3];
+                mvVec4 joints0[3];
+                mvVec4 joints1[3];
+                mvVec4 weights0[3];
+                mvVec4 weights1[3];
 
                 u32 currentLocation = 0u;
                 for (size_t j = 0; j < modifiedLayout.semantics.size(); j++)
@@ -905,13 +1092,74 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
                         currentLocation += 4u;
 
                     }
-                    else if (strcmp(semantic.c_str(), "Texcoord") == 0)
+                    else if (strcmp(semantic.c_str(), "Joints") == 0)
+                    {
+                        if (modifiedLayout.indices[j] == 0)
+                        {
+                            for (size_t k = 0; k < 3; k++)
+                            {
+                                joints0[k].x = combinedVertexBuffer[indices[k] * modifiedLayout.elementCount + currentLocation];
+                                joints0[k].y = combinedVertexBuffer[indices[k] * modifiedLayout.elementCount + currentLocation + 1];
+                                joints0[k].z = combinedVertexBuffer[indices[k] * modifiedLayout.elementCount + currentLocation + 2];
+                                joints0[k].w = combinedVertexBuffer[indices[k] * modifiedLayout.elementCount + currentLocation + 3];
+                            }
+                        }
+                        else
+                        {
+                            for (size_t k = 0; k < 3; k++)
+                            {
+                                joints1[k].x = combinedVertexBuffer[indices[k] * modifiedLayout.elementCount + currentLocation];
+                                joints1[k].y = combinedVertexBuffer[indices[k] * modifiedLayout.elementCount + currentLocation + 1];
+                                joints1[k].z = combinedVertexBuffer[indices[k] * modifiedLayout.elementCount + currentLocation + 2];
+                                joints1[k].w = combinedVertexBuffer[indices[k] * modifiedLayout.elementCount + currentLocation + 3];
+                            }
+                        }
+                        currentLocation += 4u;
+
+                    }
+                    else if (strcmp(semantic.c_str(), "Weights") == 0)
+                    {
+                        if (modifiedLayout.indices[j] == 0)
+                        {
+                            for (size_t k = 0; k < 3; k++)
+                            {
+                                weights0[k].x = combinedVertexBuffer[indices[k] * modifiedLayout.elementCount + currentLocation];
+                                weights0[k].y = combinedVertexBuffer[indices[k] * modifiedLayout.elementCount + currentLocation + 1];
+                                weights0[k].z = combinedVertexBuffer[indices[k] * modifiedLayout.elementCount + currentLocation + 2];
+                                weights0[k].w = combinedVertexBuffer[indices[k] * modifiedLayout.elementCount + currentLocation + 3];
+                            }
+                        }
+                        else
+                        {
+                            for (size_t k = 0; k < 3; k++)
+                            {
+                                weights1[k].x = combinedVertexBuffer[indices[k] * modifiedLayout.elementCount + currentLocation];
+                                weights1[k].y = combinedVertexBuffer[indices[k] * modifiedLayout.elementCount + currentLocation + 1];
+                                weights1[k].z = combinedVertexBuffer[indices[k] * modifiedLayout.elementCount + currentLocation + 2];
+                                weights1[k].w = combinedVertexBuffer[indices[k] * modifiedLayout.elementCount + currentLocation + 3];
+                            }
+                        }
+                        currentLocation += 4u;
+
+                    }
+                    else if (strcmp(semantic.c_str(), "Tex0Coord") == 0)
                     {
 
                         for (size_t k = 0; k < 3; k++)
                         {
-                            tex[k].x = combinedVertexBuffer[indices[k] * modifiedLayout.elementCount + currentLocation];
-                            tex[k].y = combinedVertexBuffer[indices[k] * modifiedLayout.elementCount + currentLocation + 1];
+                            tex0[k].x = combinedVertexBuffer[indices[k] * modifiedLayout.elementCount + currentLocation];
+                            tex0[k].y = combinedVertexBuffer[indices[k] * modifiedLayout.elementCount + currentLocation + 1];
+                        }
+                        currentLocation += 2u;
+
+                    }
+                    else if (strcmp(semantic.c_str(), "Tex1Coord") == 0)
+                    {
+
+                        for (size_t k = 0; k < 3; k++)
+                        {
+                            tex1[k].x = combinedVertexBuffer[indices[k] * modifiedLayout.elementCount + currentLocation];
+                            tex1[k].y = combinedVertexBuffer[indices[k] * modifiedLayout.elementCount + currentLocation + 1];
                         }
                         currentLocation += 2u;
 
@@ -945,8 +1193,8 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
                 mvVec3 edge1 = p[1] - p[0];
                 mvVec3 edge2 = p[2] - p[0];
 
-                mvVec2 uv1 = tex[1] - tex[0];
-                mvVec2 uv2 = tex[2] - tex[0];
+                mvVec2 uv1 = tex0[1] - tex0[0];
+                mvVec2 uv2 = tex0[2] - tex0[0];
 
                 if (uv1.x * uv2.y == uv1.y * uv2.x)
                 {
@@ -1022,10 +1270,49 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
                             vertexBuffer.push_back(tanf[k].z);
                             vertexBuffer.push_back(tanf[k].w);
                         }
-                        else if (strcmp(semantic.c_str(), "Texcoord") == 0)
+                        else if (strcmp(semantic.c_str(), "Joints") == 0)
                         {
-                            vertexBuffer.push_back(tex[k].x);
-                            vertexBuffer.push_back(tex[k].y);
+                            if (modifiedLayout.indices[j] == 0)
+                            {
+                                vertexBuffer.push_back(joints0[k].x);
+                                vertexBuffer.push_back(joints0[k].y);
+                                vertexBuffer.push_back(joints0[k].z);
+                                vertexBuffer.push_back(joints0[k].w);
+                            }
+                            else
+                            {
+                                vertexBuffer.push_back(joints1[k].x);
+                                vertexBuffer.push_back(joints1[k].y);
+                                vertexBuffer.push_back(joints1[k].z);
+                                vertexBuffer.push_back(joints1[k].w);
+                            }
+                        }
+                        else if (strcmp(semantic.c_str(), "Weights") == 0)
+                        {
+                            if (modifiedLayout.indices[j] == 0)
+                            {
+                                vertexBuffer.push_back(weights0[k].x);
+                                vertexBuffer.push_back(weights0[k].y);
+                                vertexBuffer.push_back(weights0[k].z);
+                                vertexBuffer.push_back(weights0[k].w);
+                            }
+                            else
+                            {
+                                vertexBuffer.push_back(weights1[k].x);
+                                vertexBuffer.push_back(weights1[k].y);
+                                vertexBuffer.push_back(weights1[k].z);
+                                vertexBuffer.push_back(weights1[k].w);
+                            }
+                        }
+                        else if (strcmp(semantic.c_str(), "Tex0Coord") == 0)
+                        {
+                            vertexBuffer.push_back(tex0[k].x);
+                            vertexBuffer.push_back(tex0[k].y);
+                        }
+                        else if (strcmp(semantic.c_str(), "Tex1Coord") == 0)
+                        {
+                            vertexBuffer.push_back(tex1[k].x);
+                            vertexBuffer.push_back(tex1[k].y);
                         }
                         else if (strcmp(semantic.c_str(), "Color") == 0)
                         {
@@ -1057,8 +1344,14 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
                 materialData.extramacros.push_back({ "HAS_NORMALS", "0" });
                 materialData.extramacros.push_back({ "HAS_TANGENTS", "0" });
                 if(hasTexCoord0) materialData.extramacros.push_back({ "HAS_TEXCOORD_0_VEC2", "0" });
+                if(hasTexCoord1) materialData.extramacros.push_back({ "HAS_TEXCOORD_1_VEC2", "0" });
                 if(hasColorVec3) materialData.extramacros.push_back({ "HAS_VERTEX_COLOR_VEC3", "0" });
                 if(hasColorVec4) materialData.extramacros.push_back({ "HAS_VERTEX_COLOR_VEC4", "0" });
+                if(hasJoints0) materialData.extramacros.push_back({ "HAS_JOINTS_0_VEC4", "0" });
+                if(hasJoints1) materialData.extramacros.push_back({ "HAS_JOINTS_1_VEC4", "0" });
+                if(hasWeights0) materialData.extramacros.push_back({ "HAS_WEIGHTS_0_VEC4", "0" });
+                if(hasWeights1) materialData.extramacros.push_back({ "HAS_WEIGHTS_1_VEC4", "0" });
+                if(useSkinning) materialData.extramacros.push_back({ "USE_SKINNING", "0" });
                 materialData.data.albedo = *(mvVec4*)material.base_color_factor;
                 materialData.data.metalness = material.metallic_factor;
                 materialData.data.roughness = material.roughness_factor;
@@ -1102,8 +1395,14 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
                 materialData.extramacros.push_back({ "HAS_NORMALS", "0" });
                 materialData.extramacros.push_back({ "HAS_TANGENTS", "0" });
                 if (hasTexCoord0) materialData.extramacros.push_back({ "HAS_TEXCOORD_0_VEC2", "0" });
+                if (hasTexCoord1) materialData.extramacros.push_back({ "HAS_TEXCOORD_1_VEC2", "0" });
                 if (hasColorVec3) materialData.extramacros.push_back({ "HAS_VERTEX_COLOR_VEC3", "0" });
                 if (hasColorVec4) materialData.extramacros.push_back({ "HAS_VERTEX_COLOR_VEC4", "0" });
+                if (hasJoints0) materialData.extramacros.push_back({ "HAS_JOINTS_0_VEC4", "0" });
+                if (hasJoints1) materialData.extramacros.push_back({ "HAS_JOINTS_1_VEC4", "0" });
+                if (hasWeights0) materialData.extramacros.push_back({ "HAS_WEIGHTS_0_VEC4", "0" });
+                if (hasWeights1) materialData.extramacros.push_back({ "HAS_WEIGHTS_1_VEC4", "0" });
+                if (useSkinning) materialData.extramacros.push_back({ "USE_SKINNING", "0" });
                 materialData.data.albedo = { 0.45f, 0.45f, 0.85f, 1.0f };
                 materialData.data.metalness = 0.0f;
                 materialData.data.roughness = 0.5f;
@@ -1143,6 +1442,8 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
         newNode.name = glnode.name;
         if (glnode.mesh_index > -1)
             newNode.mesh = meshMapping[glnode.mesh_index];
+        if (glnode.skin_index > -1)
+            newNode.skin = skinMapping[glnode.skin_index];
         if (glnode.camera_index > -1)
         {
             
@@ -1268,6 +1569,15 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
         mvNode& node = assetManager.nodes[nodeMapping[currentNode]].asset;
         for (i32 i = 0; i < node.childCount; i++)
             node.children[i] = nodeMapping[node.children[i]];
+    }
+
+    // update joints for actual offset
+    for (u32 currentSkin = 0u; currentSkin < model.skin_count; currentSkin++)
+    {
+
+        mvSkin& skin = assetManager.skins[skinMapping[currentSkin]].asset;
+        for (i32 i = 0; i < skin.jointCount; i++)
+            skin.joints[i] = nodeMapping[skin.joints[i]];
     }
 
     mvAssetID defaultScene = -1;

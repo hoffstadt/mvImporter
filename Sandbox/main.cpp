@@ -370,6 +370,18 @@ int main()
         if (activeScene > -1)
         {
             Renderer::submit_scene(am, renderCtx, am.scenes[activeScene].asset, stransform0, ttransform0);
+            //-----------------------------------------------------------------------------
+            // update skins
+            //-----------------------------------------------------------------------------
+            for (i32 i = 0; i < am.nodeCount; i++)
+            {
+                mvNode& node = am.nodes[i].asset;
+                if (node.skin != -1 && node.mesh != -1)
+                {
+                    compute_joints(am, node, am.skins[node.skin].asset);
+                }
+            }
+
             Renderer::render_jobs(am, renderCtx, viewMatrix, projMatrix);
             //Renderer::render_scene(am, am.scenes[activeScene].asset, viewMatrix, projMatrix, stransform0, ttransform0);
         }
@@ -485,7 +497,7 @@ int main()
             ImGui::TableSetColumnIndex(2);
 
             ImGui::Checkbox("Blur##skybox", &blur);
-            if (ImGui::ListBox("Environment##separate", &envMapIndex, env_maps, 14, 14))
+            if (ImGui::ListBox("Environment##separate", &envMapIndex, env_maps, 11, 11))
             {
                 recreateEnvironment = true;
             }

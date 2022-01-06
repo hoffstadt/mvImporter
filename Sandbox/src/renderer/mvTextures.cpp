@@ -10,6 +10,77 @@
 #include "stb_image.h"
 
 mvTexture
+create_dynamic_texture(u32 width, u32 height)
+{
+	mvTexture texture{};
+
+	// Create Texture
+	D3D11_TEXTURE2D_DESC textureDesc = {};
+	textureDesc.Width = width;
+	textureDesc.Height = height;
+	textureDesc.MipLevels = 1;
+	textureDesc.ArraySize = 1;
+	textureDesc.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+	textureDesc.SampleDesc.Count = 1;
+	textureDesc.SampleDesc.Quality = 0;
+	textureDesc.Usage = D3D11_USAGE_DYNAMIC;
+	textureDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+	textureDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+
+	HRESULT hResult = GContext->graphics.device->CreateTexture2D(&textureDesc, nullptr, &texture.texture);
+	assert(SUCCEEDED(hResult));
+
+	// create the resource view on the texture
+	D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+	srvDesc.Format = textureDesc.Format;
+	srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+	srvDesc.Texture2D.MostDetailedMip = 0;
+	srvDesc.Texture2D.MipLevels = textureDesc.MipLevels;
+
+	hResult = GContext->graphics.device->CreateShaderResourceView(texture.texture, &srvDesc, &texture.textureView);
+	assert(SUCCEEDED(hResult));
+
+	// Create Sampler State
+	D3D11_SAMPLER_DESC samplerDesc{};
+	samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
+	samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
+	samplerDesc.AddressW = samplerDesc.AddressV;
+	samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
+	samplerDesc.BorderColor[0] = 0.0f;
+	samplerDesc.MaxAnisotropy = D3D11_REQ_MAXANISOTROPY;
+	samplerDesc.MinLOD = -FLT_MAX;
+	samplerDesc.MaxLOD = FLT_MAX;
+	hResult = GContext->graphics.device->CreateSamplerState(&samplerDesc, &texture.sampler);
+	assert(SUCCEEDED(hResult));
+
+	return texture;
+}
+
+void
+update_dynamic_texture(mvTexture& texture, u32 width, u32 height, f32* data)
+{
+	D3D11_MAPPED_SUBRESOURCE mappedResource;
+	ZeroMemory(&mappedResource, sizeof(D3D11_MAPPED_SUBRESOURCE));
+
+	//  Disable GPU access to the vertex buffer data.
+	ID3D11Resource* resource;
+	texture.textureView->GetResource(&resource);
+	GContext->graphics.imDeviceContext->Map(resource, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
+
+	BYTE* mappedData = reinterpret_cast<BYTE*>(mappedResource.pData);
+	BYTE* buffer = reinterpret_cast<BYTE*>(data);
+	for (UINT i = 0; i < height; ++i)
+	{
+		memcpy(mappedData, buffer, width * 4 * sizeof(int));
+		mappedData += mappedResource.RowPitch;
+		buffer += width * 4 * sizeof(int);
+	}
+	GContext->graphics.imDeviceContext->Unmap(resource, 0);
+
+	resource->Release();
+}
+
+mvTexture
 create_texture(std::vector<unsigned char> data)
 {
 	mvTexture texture{};

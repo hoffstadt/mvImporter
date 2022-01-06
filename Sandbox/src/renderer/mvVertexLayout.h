@@ -15,17 +15,23 @@ enum class mvVertexElement
 {
 	Position2D,
 	Position3D,
-	Texture2D,
+	TexCoord0,
+	TexCoord1,
 	Color3,
 	Color4,
 	Normal,
-	Tangent
+	Tangent,
+	Joints0,
+	Joints1,
+	Weights0,
+	Weights1,
 };
 
 struct mvVertexLayout
 {
 	u32                                   elementCount;
 	u32                                   size;
+	std::vector<u32>                      indices;
 	std::vector<std::string>              semantics;
 	std::vector<DXGI_FORMAT>              formats;
 	std::vector<D3D11_INPUT_ELEMENT_DESC> d3dLayout;

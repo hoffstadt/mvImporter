@@ -229,7 +229,7 @@ mvSetupCommonAssets(mvAssetManager& am)
 }
 
 static void
-submit_mesh(mvAssetManager& am, mvRendererContext& ctx, mvMesh& mesh, mvMat4 transform)
+submit_mesh(mvAssetManager& am, mvRendererContext& ctx, mvMesh& mesh, mvMat4 transform, mvSkin* skin)
 {
     auto device = GContext->graphics.imDeviceContext;
 
@@ -247,12 +247,12 @@ submit_mesh(mvAssetManager& am, mvRendererContext& ctx, mvMesh& mesh, mvMat4 tra
 
         if (material->alphaMode == 2)
         {
-            ctx.transparentJobs[ctx.transparentJobCount] = { &primitive, transform };
+            ctx.transparentJobs[ctx.transparentJobCount] = { &primitive, transform, skin };
             ctx.transparentJobCount++;
         }
         else
         {
-            ctx.opaqueJobs[ctx.opaqueJobCount] = { &primitive, transform };
+            ctx.opaqueJobs[ctx.opaqueJobCount] = { &primitive, transform, skin };
             ctx.opaqueJobCount++;
         }
     }
@@ -261,9 +261,12 @@ submit_mesh(mvAssetManager& am, mvRendererContext& ctx, mvMesh& mesh, mvMat4 tra
 static void
 submit_node(mvAssetManager& am, mvRendererContext& ctx, mvNode& node, mvMat4 transform)
 {
+    mvSkin* skin = nullptr;
 
+    if (node.skin != -1)
+        skin = &am.skins[node.skin].asset;
     if (node.mesh > -1 && node.camera == -1)
-        submit_mesh(am, ctx, am.meshes[node.mesh].asset, transform * node.matrix);
+        submit_mesh(am, ctx, am.meshes[node.mesh].asset, transform * node.matrix, skin);
     else if (node.camera > -1)
     {
         for (u32 i = 0; i < am.meshes[node.mesh].asset.primitives.size(); i++)
@@ -276,6 +279,8 @@ submit_node(mvAssetManager& am, mvRendererContext& ctx, mvNode& node, mvMat4 tra
 
     for (u32 i = 0; i < node.childCount; i++)
     {
+        am.nodes[node.children[i]].asset.worldTransform = transform * node.matrix * am.nodes[node.children[i]].asset.matrix;
+        am.nodes[node.children[i]].asset.inverseWorldTransform = invert(am.nodes[node.children[i]].asset.worldTransform);
         submit_node(am, ctx, am.nodes[node.children[i]].asset, transform * node.matrix);
     }
 }
@@ -283,12 +288,19 @@ submit_node(mvAssetManager& am, mvRendererContext& ctx, mvNode& node, mvMat4 tra
 void 
 submit_scene(mvAssetManager& am, mvRendererContext& ctx, mvScene& scene, mvMat4 scaleM, mvMat4 trans)
 {
+    mvSkin* skin = nullptr;
+
     for (u32 i = 0; i < scene.nodeCount; i++)
     {
         mvNode& rootNode = am.nodes[scene.nodes[i]].asset;
+        rootNode.worldTransform = trans * rootNode.matrix * scaleM;
+        rootNode.inverseWorldTransform = invert(rootNode.worldTransform);
+
+        if (rootNode.skin != -1)
+            skin = &am.skins[rootNode.skin].asset;
 
         if (rootNode.mesh > -1 && rootNode.camera == -1)
-            submit_mesh(am, ctx, am.meshes[rootNode.mesh].asset, trans * rootNode.matrix * scaleM);
+            submit_mesh(am, ctx, am.meshes[rootNode.mesh].asset, trans * rootNode.matrix * scaleM, skin);
         else if (rootNode.camera > -1)
         {
             for (u32 i = 0; i < am.meshes[rootNode.mesh].asset.primitives.size(); i++)
@@ -301,6 +313,8 @@ submit_scene(mvAssetManager& am, mvRendererContext& ctx, mvScene& scene, mvMat4 
 
         for (u32 j = 0; j < rootNode.childCount; j++)
         {
+            am.nodes[rootNode.children[j]].asset.worldTransform = rootNode.worldTransform * am.nodes[rootNode.children[j]].asset.matrix;
+            am.nodes[rootNode.children[j]].asset.inverseWorldTransform = invert(am.nodes[rootNode.children[j]].asset.worldTransform);
             submit_node(am, ctx, am.nodes[rootNode.children[j]].asset, trans * rootNode.matrix * scaleM);
         }
     }
@@ -323,6 +337,7 @@ render_job(mvAssetManager& am, mvRenderJob& job, mvMat4 cam, mvMat4 proj)
     mvTexture* clearcoatMap = primitive.clearcoatTexture == -1 ? nullptr : &am.textures[primitive.clearcoatTexture].asset;
     mvTexture* clearcoatRoughnessMap = primitive.clearcoatRoughnessTexture == -1 ? nullptr : &am.textures[primitive.clearcoatRoughnessTexture].asset;
     mvTexture* clearcoatNormalMap = primitive.clearcoatNormalTexture == -1 ? nullptr : &am.textures[primitive.clearcoatNormalTexture].asset;
+    mvTexture* skinTexture = job.skin ? &job.skin->jointTexture : nullptr;
 
     mvPipeline& pipeline = am.pipelines[material->pipeline].asset;
 
@@ -344,6 +359,8 @@ render_job(mvAssetManager& am, mvRenderJob& job, mvMat4 cam, mvMat4 proj)
     device->PSSetSamplers(11, 1, clearcoatRoughnessMap ? &clearcoatRoughnessMap->sampler : &emptySamplers);
     device->PSSetSamplers(12, 1, clearcoatNormalMap ? &clearcoatNormalMap->sampler : &emptySamplers);
 
+    device->VSSetSamplers(0, 1, skinTexture ? &skinTexture->sampler : &emptySamplers);
+
     // maps
     ID3D11ShaderResourceView* const pSRV[1] = { NULL };
     device->PSSetShaderResources(0, 1, albedoMap ? &albedoMap->textureView : pSRV);
@@ -354,6 +371,8 @@ render_job(mvAssetManager& am, mvRenderJob& job, mvMat4 cam, mvMat4 proj)
     device->PSSetShaderResources(10, 1, clearcoatMap ? &clearcoatMap->textureView : pSRV);
     device->PSSetShaderResources(11, 1, clearcoatRoughnessMap ? &clearcoatRoughnessMap->textureView : pSRV);
     device->PSSetShaderResources(12, 1, clearcoatNormalMap ? &clearcoatNormalMap->textureView : pSRV);
+
+    device->VSSetShaderResources(0, 1, skinTexture ? &skinTexture->textureView : pSRV);
 
     update_const_buffer(material->buffer, &material->data);
     device->PSSetConstantBuffers(1u, 1u, &material->buffer.buffer);

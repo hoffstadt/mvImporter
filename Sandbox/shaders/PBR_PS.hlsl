@@ -256,6 +256,8 @@ float4 main(VSOut input) : SV_Target
     float4 finalColor;
     float4 baseColor = getBaseColor(input);
 
+    return baseColor;
+
     
 #if ALPHAMODE == 0
     baseColor.a = 1.0;

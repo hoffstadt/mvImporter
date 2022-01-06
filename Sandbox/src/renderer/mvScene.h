@@ -7,6 +7,7 @@
 struct mvNode
 {
     std::string name;
+    mvAssetID   skin   = -1;
     mvAssetID   mesh   = -1;
     mvAssetID   camera = -1;
     mvAssetID   children[256];
@@ -22,6 +23,9 @@ struct mvNode
     b8          rotationAnimated = false;
     b8          scaleAnimated = false;
     b8          animated = false;
+
+    mvMat4      worldTransform = identity_mat4();
+    mvMat4      inverseWorldTransform = identity_mat4();
 };
 
 struct mvScene

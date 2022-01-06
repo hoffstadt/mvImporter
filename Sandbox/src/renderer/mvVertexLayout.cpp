@@ -8,6 +8,7 @@ struct mvVertexElementTemp
 	i32            itemCount = 0;
 	b8             normalize = false;
 	size_t         size = 0;
+	size_t         index = 0;
 	size_t         offset = 0;
 	DXGI_FORMAT    format = DXGI_FORMAT_R32G32_FLOAT;
 	std::string    semantic;
@@ -38,12 +39,20 @@ mvGetVertexElementInfo(mvVertexElement element)
 		newelement.semantic = "Position";
 		break;
 
-	case mvVertexElement::Texture2D:
+	case mvVertexElement::TexCoord0:
 		newelement.format = DXGI_FORMAT_R32G32_FLOAT;
 		newelement.itemCount = 2;
 		newelement.normalize = false;
 		newelement.size = sizeof(f32) * newelement.itemCount;
-		newelement.semantic = "Texcoord";
+		newelement.semantic = "Tex0Coord";
+		break;
+
+	case mvVertexElement::TexCoord1:
+		newelement.format = DXGI_FORMAT_R32G32_FLOAT;
+		newelement.itemCount = 2;
+		newelement.normalize = false;
+		newelement.size = sizeof(f32) * newelement.itemCount;
+		newelement.semantic = "Tex1Coord";
 		break;
 
 	case mvVertexElement::Color3:
@@ -78,6 +87,42 @@ mvGetVertexElementInfo(mvVertexElement element)
 		newelement.semantic = "Tangent";
 		break;
 
+	case mvVertexElement::Joints0:
+		newelement.format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+		newelement.itemCount = 4;
+		newelement.index = 0;
+		newelement.normalize = false;
+		newelement.size = sizeof(f32) * newelement.itemCount;
+		newelement.semantic = "Joints";
+		break;
+
+	case mvVertexElement::Joints1:
+		newelement.format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+		newelement.itemCount = 4;
+		newelement.index = 1;
+		newelement.normalize = false;
+		newelement.size = sizeof(f32) * newelement.itemCount;
+		newelement.semantic = "Joints";
+		break;
+
+	case mvVertexElement::Weights0:
+		newelement.format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+		newelement.itemCount = 4;
+		newelement.index = 0;
+		newelement.normalize = false;
+		newelement.size = sizeof(f32) * newelement.itemCount;
+		newelement.semantic = "Weights";
+		break;
+
+	case mvVertexElement::Weights1:
+		newelement.format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+		newelement.itemCount = 4;
+		newelement.index = 1;
+		newelement.normalize = false;
+		newelement.size = sizeof(f32) * newelement.itemCount;
+		newelement.semantic = "Weights";
+		break;
+
 	}
 
 	newelement.type = element;
@@ -98,6 +143,7 @@ create_vertex_layout(std::vector<mvVertexElement> elements)
 	{
 		newelements.push_back(mvGetVertexElementInfo(element));
 		newelements.back().offset = stride;
+		layout.indices.push_back(newelements.back().index);
 		layout.semantics.push_back(newelements.back().semantic);
 		layout.formats.push_back(newelements.back().format);
 		stride += newelements.back().size;

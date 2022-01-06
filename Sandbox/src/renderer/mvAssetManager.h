@@ -24,6 +24,7 @@ struct mvNodeAsset;
 struct mvCameraAsset;
 struct mvPipelineAsset;
 struct mvAnimationAsset;
+struct mvSkinAsset;
 struct mvAssetManager;
 
 void mvInitializeAssetManager(mvAssetManager* manager);
@@ -45,6 +46,7 @@ mvAssetID register_asset(mvAssetManager* manager, const std::string& tag, mvPipe
 mvAssetID register_asset(mvAssetManager* manager, const std::string& tag, ID3D11RenderTargetView* asset);
 mvAssetID register_asset(mvAssetManager* manager, const std::string& tag, ID3D11DepthStencilView* asset);
 mvAssetID register_asset(mvAssetManager* manager, const std::string& tag, mvAnimation asset);
+mvAssetID register_asset(mvAssetManager* manager, const std::string& tag, mvSkin asset);
 
 // unregistering
 b8 unregister_texture_asset (mvAssetManager* manager, mvAssetID asset);
@@ -69,6 +71,7 @@ mvAssetID mvGetPipelineAssetID   (mvAssetManager* manager, const std::string& ta
 mvAssetID mvGetTargetViewAssetID (mvAssetManager* manager, const std::string& tag);
 mvAssetID mvGetDepthViewAssetID  (mvAssetManager* manager, const std::string& tag);
 mvAssetID mvGetAnimationAssetID  (mvAssetManager* manager, const std::string& tag);
+mvAssetID mvGetSkinAssetID       (mvAssetManager* manager, const std::string& skin);
 
 // asset retrieval
 mvPipeline*             mvGetRawPipelineAsset  (mvAssetManager* manager, const std::string& tag);
@@ -84,6 +87,7 @@ mvCamera*               mvGetRawCameraAsset    (mvAssetManager* manager, const s
 ID3D11RenderTargetView* mvGetRawTargetViewAsset(mvAssetManager* manager, const std::string& tag);
 ID3D11DepthStencilView* mvGetRawDepthViewAsset (mvAssetManager* manager, const std::string& tag);
 mvAnimation*            mvGetRawAnimationAsset (mvAssetManager* manager, const std::string& tag);
+mvSkin*                 mvGetRawSkinAsset      (mvAssetManager* manager, const std::string& tag);
 
 struct mvAssetManager
 {
@@ -164,6 +168,11 @@ struct mvAssetManager
 	u32                 maxAnimationCount = 100u;
 	u32                 animationCount = 0u;
 	mvAnimationAsset*   animations = nullptr;
+
+	// skins
+	u32                 maxSkinCount = 100u;
+	u32                 skinCount = 0u;
+	mvSkinAsset*        skins = nullptr;
 };
 
 struct mvDepthViewAsset
@@ -248,4 +257,10 @@ struct mvAnimationAsset
 {
 	std::string hash;
 	mvAnimation asset;
+};
+
+struct mvSkinAsset
+{
+	std::string hash;
+	mvSkin asset;
 };

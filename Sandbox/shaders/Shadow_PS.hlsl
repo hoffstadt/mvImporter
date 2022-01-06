@@ -12,7 +12,7 @@ SamplerState Sampler : register(s0);
 
 struct VSOut
 {
-    float2 tc               : Texcoord;        // texture coordinates (model space)
+    float2 tc               : Tex0Coord;        // texture coordinates (model space)
     float4 pixelPos         : SV_Position; // pixel pos           (screen space)
 };
 

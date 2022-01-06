@@ -107,6 +107,9 @@ enum mvGLTFAccessorType
 	MV_IMP_VEC2,
 	MV_IMP_VEC3,
 	MV_IMP_VEC4,
+	MV_IMP_MAT2,
+	MV_IMP_MAT3,
+	MV_IMP_MAT4,
 };
 
 enum mvGLTFComponentType
@@ -1864,6 +1867,15 @@ namespace mvImp {
 
 				else if (strtype == "VEC4")
 					accessor.type = MV_IMP_VEC4;
+
+				else if (strtype == "MAT2")
+					accessor.type = MV_IMP_MAT2;
+
+				else if (strtype == "MAT3")
+					accessor.type = MV_IMP_MAT3;
+
+				else if (strtype == "MAT4")
+					accessor.type = MV_IMP_MAT4;
 			}
 
 			if (jaccessor.doesMemberExist("max"))
