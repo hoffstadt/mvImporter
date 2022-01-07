@@ -186,7 +186,7 @@ interpolate(mvAnimationChannel& channel, f32 tcurrent, f32 tmax)
 }
 
 void
-advance(mvAssetManager& am, mvAnimation& animation, f32 tcurrent)
+advance_animations(mvAssetManager& am, mvAnimation& animation, f32 tcurrent)
 {
     if (animation.tmax == 0.0f)
     {
@@ -223,5 +223,10 @@ advance(mvAssetManager& am, mvAnimation& animation, f32 tcurrent)
         {
             assert(false);
         }
+
+        mvVec3& trans = node.translationAnimated ? node.animationTranslation : node.translation;
+        mvVec3& scal = node.scaleAnimated ? node.animationScale : node.scale;
+        mvVec4& rot = node.rotationAnimated ? node.animationRotation : node.rotation;
+        node.transform = rotation_translation_scale(rot, trans, scal);
     }
 }

@@ -6,7 +6,6 @@
 #include "mvVertexLayout.h"
 #include "mvTextures.h"
 
-struct mvObjMesh;
 struct mvAssetManager;
 struct mvGLTFModel;
 struct mvMeshPrimitive;
@@ -22,7 +21,7 @@ mvMesh    create_frustum2     (mvAssetManager& assetManager, f32 fov, f32 aspect
 mvMesh    create_ortho_frustum(mvAssetManager& assetManager, f32 width, f32 height, f32 nearZ, f32 farZ);
 mvAssetID load_gltf_assets    (mvAssetManager& assetManager, mvGLTFModel& model);
 
-void compute_joints(mvAssetManager& am, mvNode& parentNode, mvSkin& skin);
+void compute_joints(mvAssetManager& am, mvMat4 transform, mvSkin& skin);
 
 struct mvSkin
 {
@@ -57,5 +56,3 @@ struct mvMesh
     std::string                  name;
     std::vector<mvMeshPrimitive> primitives;
 };
-
-

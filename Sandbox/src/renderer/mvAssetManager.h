@@ -27,8 +27,8 @@ struct mvAnimationAsset;
 struct mvSkinAsset;
 struct mvAssetManager;
 
-void mvInitializeAssetManager(mvAssetManager* manager);
-void mvCleanupAssetManager   (mvAssetManager* manager);
+void initialize_asset_manager(mvAssetManager* manager);
+void cleanup_asset_manager   (mvAssetManager* manager);
 void reload_materials        (mvAssetManager* manager);
 
 // registering

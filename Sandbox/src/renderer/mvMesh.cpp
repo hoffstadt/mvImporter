@@ -408,7 +408,7 @@ create_ortho_frustum(mvAssetManager& assetManager, f32 width, f32 height, f32 ne
 }
 
 void
-compute_joints(mvAssetManager& am, mvNode& parentNode, mvSkin& skin)
+compute_joints(mvAssetManager& am, mvMat4 transform, mvSkin& skin)
 {
     u32 textureWidth = ceil(sqrt(skin.jointCount * 8));
 
@@ -416,14 +416,9 @@ compute_joints(mvAssetManager& am, mvNode& parentNode, mvSkin& skin)
     {
         s32 joint = skin.joints[i];
         mvNode& node = am.nodes[joint].asset;
-
-        //mvMat4 jointMatrix = (* (mvMat4*)&skin.inverseBindMatrices[i * 16]) * node.worldTransform * parentNode.inverseWorldTransform;
-        //mvMat4 jointMatrix = (*(mvMat4*)&skin.inverseBindMatrices[i * 16]) * parentNode.inverseWorldTransform * node.worldTransform;
-        mvMat4 jointMatrix = node.worldTransform * parentNode.inverseWorldTransform * (*(mvMat4*)&skin.inverseBindMatrices[i * 16]);
-
-        //mvMat4 jointMatrix = node.worldTransform * (*(mvMat4*)&skin.inverseBindMatrices[i * 16]);
-        //jointMatrix = parentNode.inverseWorldTransform * jointMatrix;
-
+        mvMat4 ibm = (*(mvMat4*)&skin.inverseBindMatrices[i * 16]);
+        mvMat4 jointMatrix = transform * node.worldTransform * ibm;
+        //mvMat4 jointMatrix = transform * ibm * node.worldTransform;
         mvMat4 normalMatrix = transpose(invert(jointMatrix));
 
         *(mvMat4*)&skin.textureData[i * 32] = jointMatrix;
@@ -451,39 +446,33 @@ mvGetAccessorItemCompCount(mvGLTFAccessor& accessor)
     }
 }
 
-static void
-mvVerifyBufferViewStride(mvGLTFModel& model, mvGLTFAccessor& accessor)
+static mvS32
+mvGetBufferViewStride(mvGLTFModel& model, mvGLTFAccessor& accessor)
 {
     mvGLTFBufferView& bufferview = model.bufferviews[accessor.buffer_view_index];
 
     u8 actualItemCompCount = mvGetAccessorItemCompCount(accessor);
 
     // calculate stride if not available
-    //if (bufferview.byte_stride == -1)
+    if (bufferview.byte_stride == -1)
     {
         switch (accessor.component_type)
         {
         case MV_IMP_UNSIGNED_BYTE:
-        case MV_IMP_BYTE:
-            bufferview.byte_stride = 1 * actualItemCompCount;
-            break;
+        case MV_IMP_BYTE: return 1 * actualItemCompCount;
 
         case MV_IMP_UNSIGNED_SHORT:
-        case MV_IMP_SHORT:
-            bufferview.byte_stride = 2 * actualItemCompCount;
-            break;
+        case MV_IMP_SHORT: return 2 * actualItemCompCount;
 
         case MV_IMP_FLOAT:
         case MV_IMP_INT:
-        case MV_IMP_UNSIGNED_INT:
-            bufferview.byte_stride = 4 * actualItemCompCount;
-            break;
+        case MV_IMP_UNSIGNED_INT: return 4 * actualItemCompCount;
 
-        case MV_IMP_DOUBLE:
-            bufferview.byte_stride = 8 * actualItemCompCount;
-            break;
+        case MV_IMP_DOUBLE: return 8 * actualItemCompCount;
         }
     }
+    else
+        return bufferview.byte_stride;
 
 }
 
@@ -500,7 +489,7 @@ template<typename T, typename W>
 static void
 mvFillBuffer(mvGLTFModel& model, mvGLTFAccessor& accessor, std::vector<W>& outBuffer, u32 componentCap = 4)
 {
-    mvVerifyBufferViewStride(model, accessor);
+    mvS32 bufferviewStride = mvGetBufferViewStride(model, accessor);
     mvGLTFBufferView bufferView = model.bufferviews[accessor.buffer_view_index];
     char* bufferRawData = (char*)model.buffers[bufferView.buffer_index].data.data();
     char* bufferRawSection = &bufferRawData[bufferView.byte_offset + accessor.byteOffset]; // start of buffer section
@@ -513,7 +502,7 @@ mvFillBuffer(mvGLTFModel& model, mvGLTFAccessor& accessor, std::vector<W>& outBu
 
     for (i32 i = 0; i < accessor.count; i++)
     {
-        T* values = (T*)&bufferRawSection[i*bufferView.byte_stride];
+        T* values = (T*)&bufferRawSection[i* bufferviewStride];
 
         for (i32 j = 0; j < accessorItemCompCount; j++)
             outBuffer.push_back((W)values[j]);
@@ -742,7 +731,7 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
                 {
                     calculateNormals = false;
                     attributes.push_back(mvVertexElement::Normal);
-                    mvFillBuffer<f32>(model, model.accessors[attribute.index], normalAttributeBuffer);
+                    mvFillBuffer<f32>(model, model.accessors[attribute.index], normalAttributeBuffer, 3);
                 }
                 else if (strcmp(attribute.semantic.c_str(), "TANGENT") == 0)
                 {
@@ -752,31 +741,96 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
                 }
                 else if (strcmp(attribute.semantic.c_str(), "JOINTS_0") == 0)
                 {
+                    mvGLTFAccessor& accessor = model.accessors[attribute.index];
                     hasJoints0 = true;
                     useSkinning = true;
                     attributes.push_back(mvVertexElement::Joints0);
-                    mvFillBuffer<f32>(model, model.accessors[attribute.index], joints0AttributeBuffer, 4);
+                    switch (accessor.component_type)
+                    {
+                        case MV_IMP_UNSIGNED_BYTE:
+                            mvFillBuffer<u8>(model, model.accessors[attribute.index], joints0AttributeBuffer, 4);
+                            break;
+                        case MV_IMP_UNSIGNED_SHORT:
+                            mvFillBuffer<u16>(model, model.accessors[attribute.index], joints0AttributeBuffer, 4);
+                            break;
+
+                        default:
+                        {
+                            assert(false && "Undefined attribute type");
+                        }
+                    }
                 }
                 else if (strcmp(attribute.semantic.c_str(), "JOINTS_1") == 0)
                 {
+                    mvGLTFAccessor& accessor = model.accessors[attribute.index];
                     hasJoints1 = true;
                     useSkinning = true;
                     attributes.push_back(mvVertexElement::Joints1);
-                    mvFillBuffer<f32>(model, model.accessors[attribute.index], joints1AttributeBuffer, 4);
+
+                    switch (accessor.component_type)
+                    {
+                    case MV_IMP_UNSIGNED_BYTE:
+                        mvFillBuffer<u8>(model, model.accessors[attribute.index], joints1AttributeBuffer, 4);
+                        break;
+                    case MV_IMP_UNSIGNED_SHORT:
+                        mvFillBuffer<u16>(model, model.accessors[attribute.index], joints1AttributeBuffer, 4);
+                        break;
+
+                    default:
+                    {
+                        assert(false && "Undefined attribute type");
+                    }
+                    }
                 }
                 else if (strcmp(attribute.semantic.c_str(), "WEIGHTS_0") == 0)
                 {
+                    mvGLTFAccessor& accessor = model.accessors[attribute.index];
                     hasWeights0 = true;
                     useSkinning = true;
                     attributes.push_back(mvVertexElement::Weights0);
-                    mvFillBuffer<f32>(model, model.accessors[attribute.index], weights0AttributeBuffer, 4);
+                    switch (accessor.component_type)
+                    {
+                    case MV_IMP_UNSIGNED_BYTE:
+                        mvFillBuffer<u8>(model, model.accessors[attribute.index], weights0AttributeBuffer, 4);
+                        break;
+                    case MV_IMP_UNSIGNED_SHORT:
+                        mvFillBuffer<u16>(model, model.accessors[attribute.index], weights0AttributeBuffer, 4);
+                        break;
+
+                    case MV_IMP_FLOAT:
+                        mvFillBuffer<f32>(model, model.accessors[attribute.index], weights0AttributeBuffer, 4);
+                        break;
+
+                    default:
+                    {
+                        assert(false && "Undefined attribute type");
+                    }
+                    }
                 }
                 else if (strcmp(attribute.semantic.c_str(), "WEIGHTS_1") == 0)
                 {
+                    mvGLTFAccessor& accessor = model.accessors[attribute.index];
                     hasWeights1 = true;
                     useSkinning = true;
                     attributes.push_back(mvVertexElement::Weights1);
-                    mvFillBuffer<f32>(model, model.accessors[attribute.index], weights1AttributeBuffer, 4);
+                    switch (accessor.component_type)
+                    {
+                    case MV_IMP_UNSIGNED_BYTE:
+                        mvFillBuffer<u8>(model, model.accessors[attribute.index], weights1AttributeBuffer, 4);
+                        break;
+                    case MV_IMP_UNSIGNED_SHORT:
+                        mvFillBuffer<u16>(model, model.accessors[attribute.index], weights1AttributeBuffer, 4);
+                        break;
+
+                    case MV_IMP_FLOAT:
+                        mvFillBuffer<f32>(model, model.accessors[attribute.index], weights1AttributeBuffer, 4);
+                        break;
+
+                    default:
+                    {
+                        assert(false && "Undefined attribute type");
+                    }
+                    }
                 }
                 else if (strcmp(attribute.semantic.c_str(), "TEXCOORD_0") == 0)
                 {
@@ -898,23 +952,24 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
                     {
                         if (modifiedLayout.indices[j] == 0)
                         {
-                            f32 x0 = joints0AttributeBuffer[i0 * 3];
-                            f32 y0 = joints0AttributeBuffer[i0 * 3 + 1];
-                            f32 z0 = joints0AttributeBuffer[i0 * 3 + 2];
-                            f32 w0 = joints0AttributeBuffer[i0 * 3 + 3];
+                            f32 x0 = joints0AttributeBuffer[i0 * 4];
+                            f32 y0 = joints0AttributeBuffer[i0 * 4 + 1];
+                            f32 z0 = joints0AttributeBuffer[i0 * 4 + 2];
+                            f32 w0 = joints0AttributeBuffer[i0 * 4 + 3];
 
                             // position
                             combinedVertexBuffer.push_back(x0);
                             combinedVertexBuffer.push_back(y0);
+                            //combinedVertexBuffer.push_back(1.0f);
                             combinedVertexBuffer.push_back(z0);
                             combinedVertexBuffer.push_back(w0);
                         }
                         else
                         {
-                            f32 x0 = joints1AttributeBuffer[i0 * 3];
-                            f32 y0 = joints1AttributeBuffer[i0 * 3 + 1];
-                            f32 z0 = joints1AttributeBuffer[i0 * 3 + 2];
-                            f32 w0 = joints1AttributeBuffer[i0 * 3 + 3];
+                            f32 x0 = joints1AttributeBuffer[i0 * 4];
+                            f32 y0 = joints1AttributeBuffer[i0 * 4 + 1];
+                            f32 z0 = joints1AttributeBuffer[i0 * 4 + 2];
+                            f32 w0 = joints1AttributeBuffer[i0 * 4 + 3];
 
                             // position
                             combinedVertexBuffer.push_back(x0);
@@ -927,10 +982,10 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
                     {
                         if (modifiedLayout.indices[j] == 0)
                         {
-                            f32 x0 = weights0AttributeBuffer[i0 * 3];
-                            f32 y0 = weights0AttributeBuffer[i0 * 3 + 1];
-                            f32 z0 = weights0AttributeBuffer[i0 * 3 + 2];
-                            f32 w0 = weights0AttributeBuffer[i0 * 3 + 3];
+                            f32 x0 = weights0AttributeBuffer[i0 * 4];
+                            f32 y0 = weights0AttributeBuffer[i0 * 4 + 1];
+                            f32 z0 = weights0AttributeBuffer[i0 * 4 + 2];
+                            f32 w0 = weights0AttributeBuffer[i0 * 4 + 3];
 
                             // position
                             combinedVertexBuffer.push_back(x0);
@@ -940,10 +995,10 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
                         }
                         else
                         {
-                            f32 x0 = weights1AttributeBuffer[i0 * 3];
-                            f32 y0 = weights1AttributeBuffer[i0 * 3 + 1];
-                            f32 z0 = weights1AttributeBuffer[i0 * 3 + 2];
-                            f32 w0 = weights1AttributeBuffer[i0 * 3 + 3];
+                            f32 x0 = weights1AttributeBuffer[i0 * 4];
+                            f32 y0 = weights1AttributeBuffer[i0 * 4 + 1];
+                            f32 z0 = weights1AttributeBuffer[i0 * 4 + 2];
+                            f32 w0 = weights1AttributeBuffer[i0 * 4 + 3];
 
                             // position
                             combinedVertexBuffer.push_back(x0);
@@ -982,11 +1037,11 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
                         }
                         else
                         {
-                            f32 tx0 = tangentAttributeBuffer[i0 * 3];
-                            f32 ty0 = tangentAttributeBuffer[i0 * 3 + 1];
-                            f32 tz0 = tangentAttributeBuffer[i0 * 3 + 2];
+                            f32 tx0 = tangentAttributeBuffer[i0 * 4];
+                            f32 ty0 = tangentAttributeBuffer[i0 * 4 + 1];
+                            f32 tz0 = tangentAttributeBuffer[i0 * 4 + 2];
                             //f32 tw0 = round(tangentAttributeBuffer[i0 * 3 + 3]);
-                            f32 tw0 = tangentAttributeBuffer[i0 * 3 + 3];
+                            f32 tw0 = tangentAttributeBuffer[i0 * 4 + 3];
                             //f32 tw1 = tw0 == 0.0 ? 1.0 : tw0;
 
                             combinedVertexBuffer.push_back(tx0);
@@ -1012,18 +1067,26 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
                     else if (strcmp(semantic.c_str(), "Color") == 0)
                     {
 
-                        f32 r0 = colorAttributeBuffer[i0 * 3];
-                        f32 g0 = colorAttributeBuffer[i0 * 3 + 1];
-                        f32 b0 = colorAttributeBuffer[i0 * 3 + 2];
-                        
-                        combinedVertexBuffer.push_back(r0);  // we will calculate
-                        combinedVertexBuffer.push_back(g0);  // we will calculate
-                        combinedVertexBuffer.push_back(b0);  // we will calculate
-
                         if (modifiedLayout.formats[j] == DXGI_FORMAT_R32G32B32A32_FLOAT)
                         {
-                            f32 a0 = colorAttributeBuffer[i0 * 3 + 3];
+                            f32 r0 = colorAttributeBuffer[i0 * 4];
+                            f32 g0 = colorAttributeBuffer[i0 * 4 + 1];
+                            f32 b0 = colorAttributeBuffer[i0 * 4 + 2];
+                            f32 a0 = colorAttributeBuffer[i0 * 4 + 3];
+                            combinedVertexBuffer.push_back(r0);  // we will calculate
+                            combinedVertexBuffer.push_back(g0);  // we will calculate
+                            combinedVertexBuffer.push_back(b0);  // we will calculate
                             combinedVertexBuffer.push_back(a0);  // we will calculate
+                        }
+                        else
+                        {
+                            f32 r0 = colorAttributeBuffer[i0 * 3];
+                            f32 g0 = colorAttributeBuffer[i0 * 3 + 1];
+                            f32 b0 = colorAttributeBuffer[i0 * 3 + 2];
+
+                            combinedVertexBuffer.push_back(r0);  // we will calculate
+                            combinedVertexBuffer.push_back(g0);  // we will calculate
+                            combinedVertexBuffer.push_back(b0);  // we will calculate
                         }
                     }
                 }
@@ -1479,6 +1542,8 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
             newNode.matrix = rotation_translation_scale(newNode.rotation, newNode.translation, newNode.scale);
         }
 
+        newNode.transform = newNode.matrix;
+
         nodeMapping[currentNode] = register_asset(&assetManager, "node_" + std::to_string(currentNode), newNode);
     }
 
@@ -1576,8 +1641,12 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
     {
 
         mvSkin& skin = assetManager.skins[skinMapping[currentSkin]].asset;
+        if(skin.skeleton != -1)
+            skin.skeleton = nodeMapping[skin.skeleton];
         for (i32 i = 0; i < skin.jointCount; i++)
+        {
             skin.joints[i] = nodeMapping[skin.joints[i]];
+        }
     }
 
     mvAssetID defaultScene = -1;

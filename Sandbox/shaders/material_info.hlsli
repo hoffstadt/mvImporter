@@ -197,15 +197,8 @@ MaterialInfo getMetallicRoughnessInfo(VSOut input, MaterialInfo info)
     // Roughness is stored in the 'g' channel, metallic is stored in the 'b' channel.
     // This layout intentionally reserves the 'r' channel for (optional) occlusion map data
     float4 mrSample = MetalRoughnessTexture.Sample(MetalRoughnessTextureSampler, input.UV0);
-    //mrSample = pow(mrSample, float4(0.4545f.xxx, 1.0f));
-    if (ginfo.useRoughness)
-    {
-        info.perceptualRoughness *= mrSample.g;
-    }
-    if (ginfo.useMetalness)
-    {
-        info.metallic *= mrSample.b;
-    }
+    info.perceptualRoughness *= mrSample.g;
+    info.metallic *= mrSample.b;
 #endif
 
     // Achromatic f0 based on IOR.

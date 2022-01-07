@@ -24,6 +24,7 @@ struct mvNode
     b8          scaleAnimated = false;
     b8          animated = false;
 
+    mvMat4      transform = identity_mat4();
     mvMat4      worldTransform = identity_mat4();
     mvMat4      inverseWorldTransform = identity_mat4();
 };

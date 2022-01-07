@@ -4,7 +4,7 @@
 extern mvContext* GContext = nullptr;
 
 void 
-mvCreateContext()
+create_context()
 {
 	if (GContext)
 	{
@@ -16,7 +16,7 @@ mvCreateContext()
 }
 
 void 
-mvDestroyContext()
+destroy_context()
 {
 	if (GContext)
 	{

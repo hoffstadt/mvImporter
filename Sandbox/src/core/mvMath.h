@@ -53,6 +53,7 @@ struct mvMat4
 	mvVec4 cols[4];
 
 	mvVec4& operator[](i32 index);
+	f32& at(i32 index);
 };
 
 mvMat4 identity_mat4();

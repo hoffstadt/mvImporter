@@ -1,4 +1,4 @@
-# mvImporter
+# mvImporter (WIP)
 A simple, portable header-only [glTF 2.0](https://github.com/KhronosGroup/glTF) loader with no dependencies. Similar to [TinyGLTF](https://github.com/syoyo/tinygltf) but with a built-in JSON parser.
 
 | [Basic Usage](#basic-usage) | [Features](#features) | [TODOs](#todos) | [Licenses](#licenses) | [Sample Renderers](#sample-renderers) |
@@ -93,7 +93,7 @@ int main()
 * [ ] Remove C++ std dependencies on _vector_ and _string_.
 * [ ] Add tests
 * [ ] Support extensions and extras
-* [ ] Support animations
+* [x] Support animations
 * [ ] Added toy engine for Linux & macOS
 
 ## Sample Renderers

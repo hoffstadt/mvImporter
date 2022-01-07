@@ -61,31 +61,19 @@ struct mvGlobalInfo
 {
 
     float3 ambientColor;
-    bool useShadows;
-    
-    bool useOmniShadows;
-    bool useSkybox;
-    bool useAlbedo;
-    bool useMetalness;
+    int pcfRange;
     //-------------------------- ( 16 bytes )
     
-    bool useRoughness;
-    bool useIrradiance;
-    bool useReflection;
-    bool useEmissiveMap;
+    float3 camPos;
+    //-------------------------- ( 16 bytes )
     
     float4x4 projection;
     float4x4 model;
     float4x4 view;
+    //-------------------------- ( 192 bytes )
     
-    float3 camPos;
-    bool useOcclusionMap;
-    //-------------------------- ( 1*16 = 16 bytes )
+    //-------------------------- ( 124 bytes )
     
-    bool useNormalMap;
-    bool usePCF;
-    int pcfRange;
-    bool usePunctualLights;
 };
 
 //-----------------------------------------------------------------------------
@@ -116,10 +104,16 @@ Texture2D OcclusionTexture : register(t4);
 SamplerState OcclusionTextureSampler : register(s4);
 #endif
 
+#ifdef USE_PUNCTUAL
+#ifdef SHADOWS_DIRECTIONAL
 Texture2D DirectionalShadowMap : register(t5);
-TextureCube ShadowMap : register(t6);
 SamplerComparisonState DirectionalShadowMapSampler : register(s5);
+#endif
+#ifdef SHADOWS_OMNI
+TextureCube ShadowMap : register(t6);
 SamplerComparisonState ShadowMapSampler : register(s6);
+#endif
+#endif
 
 #ifdef USE_IBL
 TextureCube IrradianceMap : register(t7);
@@ -145,7 +139,6 @@ Texture2D ClearCoatNormalTexture : register(t12);
 SamplerState ClearCoatNormalTextureSampler : register(s12);
 #endif
 
-
 //-----------------------------------------------------------------------------
 // constant buffers
 //-----------------------------------------------------------------------------
@@ -153,18 +146,6 @@ cbuffer mvPointLightCBuf       : register(b0) { mvPointLight PointLight; };
 cbuffer mvMaterialCBuf         : register(b1) { mvMaterial material; };
 cbuffer mvDirectionalLightCBuf : register(b2) { mvDirectionalLight DirectionalLight; };
 cbuffer mvGlobalCBuf           : register(b3) { mvGlobalInfo ginfo; };
-
-//struct VSOut
-//{   
-//    float4 Pos              : SV_Position;
-//    float3 WorldPos         : POSITION0;
-//    float3 WorldNormal      : NORMAL0;
-//    float2 UV               : TEXCOORD0;
-//    float4 dshadowWorldPos  : dshadowPosition; // directional light pos
-//    float4 oshadowWorldPos  : oshadowPosition; // point light pos
-//    float3x3 TBN            : TangentBasis;
-//    bool frontFace          : SV_IsFrontFace;
-//};
 
 struct VSOut
 {
@@ -204,7 +185,7 @@ struct VSOut
 #include <ibl.hlsli>
 #include <material_info.hlsli>
 
-// shadows
+#ifdef SHADOWS_OMNI
 static const float zf = 100.0f;
 static const float zn = 0.5f;
 static const float c1 = (zf + zn) / (zf - zn);
@@ -226,7 +207,9 @@ float Shadow(const in float4 shadowPos, uniform TextureCube map, uniform Sampler
 {
     return map.SampleCmpLevelZero(smplr, shadowPos.xyz, CalculateShadowDepth(shadowPos));
 }
+#endif
 
+#ifdef SHADOWS_DIRECTIONAL
 float filterPCF(const in float2 spos, float depthCheck)
 {
     float shadowLevel = 0.0f;
@@ -250,13 +233,12 @@ float filterPCF(const in float2 spos, float depthCheck)
     }
     return shadowLevel / count;
 }
+#endif
 
 float4 main(VSOut input) : SV_Target
 {
     float4 finalColor;
     float4 baseColor = getBaseColor(input);
-
-    return baseColor;
 
     
 #if ALPHAMODE == 0
@@ -409,8 +391,9 @@ float4 main(VSOut input) : SV_Target
         input.oshadowWorldPos.z = -input.oshadowWorldPos.z;
         float shadowLevel = 1.0f;
         float3 pointToLight = PointLight.viewLightPos - input.WorldPos;
-        if(ginfo.useOmniShadows)
+#ifdef SHADOWS_OMNI
             shadowLevel = Shadow(input.oshadowWorldPos, ShadowMap, ShadowMapSampler);
+#endif
         
         // BSTF
         float3 l = normalize(pointToLight); // Direction from surface point to light
@@ -488,14 +471,15 @@ float4 main(VSOut input) : SV_Target
         if (NdotL > 0.0 || NdotV > 0.0)
         {
             
+#ifdef SHADOWS_DIRECTIONAL
             // Calculate the depth of the light.
             lightDepthValue = input.dshadowWorldPos.z / input.dshadowWorldPos.w;
             
             // Determine if the projected coordinates are in the 0 to 1 range.  If so then this pixel is in the view of the light.
-            if ((saturate(projectTexCoord.x) == projectTexCoord.x) && (saturate(projectTexCoord.y) == projectTexCoord.y) && ginfo.useShadows)
+            if ((saturate(projectTexCoord.x) == projectTexCoord.x) && (saturate(projectTexCoord.y) == projectTexCoord.y))
             {
                 
-                if (ginfo.usePCF)
+                if (ginfo.pcfRange > 0)
                 {
                     shadowLevel = filterPCF(projectTexCoord, lightDepthValue);
                 }
@@ -506,8 +490,8 @@ float4 main(VSOut input) : SV_Target
 
                 
             }
-
-                
+#endif
+          
             // Calculation of analytical light
             // https://github.com/KhronosGroup/glTF/tree/master/specification/2.0#acknowledgments AppendixB
             //float3 intensity = getLighIntensity(pointToLight);

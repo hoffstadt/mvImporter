@@ -9,8 +9,7 @@ struct mvAssetManager;
 struct mvAnimationChannel;
 struct mvAnimation;
 
-void advance(mvAssetManager& am, mvAnimation& animation, f32 tcurrent);
-
+void advance_animations(mvAssetManager& am, mvAnimation& animation, f32 tcurrent);
 
 struct mvAnimationChannel
 {
