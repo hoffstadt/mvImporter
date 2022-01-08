@@ -56,35 +56,35 @@ float3 getIBLRadianceGGX(float3 n, float3 v, float roughness, float3 F0, float s
 vec3 getTransmissionSample(vec2 fragCoord, float roughness, float ior)
 {
     float framebufferLod = log2(float(u_TransmissionFramebufferSize.x)) * applyIorToRoughness(roughness, ior);
-    vec3 transmittedLight = textureLod(u_TransmissionFramebufferSampler, fragCoord.xy, framebufferLod).rgb;
+    float3 transmittedLight = textureLod(u_TransmissionFramebufferSampler, fragCoord.xy, framebufferLod).rgb;
     return transmittedLight;
 }
 #endif
 
 
 #ifdef MATERIAL_TRANSMISSION
-vec3 getIBLVolumeRefraction(vec3 n, vec3 v, float perceptualRoughness, vec3 baseColor, vec3 f0, vec3 f90,
-    vec3 position, mat4 modelMatrix, mat4 viewMatrix, mat4 projMatrix, float ior, float thickness, vec3 attenuationColor, float attenuationDistance)
+float3 getIBLVolumeRefraction(float3 n, float3 v, float perceptualRoughness, float3 baseColor, float3 f0, float3 f90,
+    float3 position, float4x4 modelMatrix, float4x4 viewMatrix, float4x4 projMatrix, float ior, float thickness, float3 attenuationColor, float attenuationDistance)
 {
-    vec3 transmissionRay = getVolumeTransmissionRay(n, v, thickness, ior, modelMatrix);
-    vec3 refractedRayExit = position + transmissionRay;
+    float3 transmissionRay = getVolumeTransmissionRay(n, v, thickness, ior, modelMatrix);
+    float3 refractedRayExit = position + transmissionRay;
 
     // Project refracted vector on the framebuffer, while mapping to normalized device coordinates.
-    vec4 ndcPos = projMatrix * viewMatrix * vec4(refractedRayExit, 1.0);
-    vec2 refractionCoords = ndcPos.xy / ndcPos.w;
+    float4 ndcPos = projMatrix * viewMatrix * float4(refractedRayExit, 1.0);
+    float2 refractionCoords = ndcPos.xy / ndcPos.w;
     refractionCoords += 1.0;
     refractionCoords /= 2.0;
 
     // Sample framebuffer to get pixel the refracted ray hits.
-    vec3 transmittedLight = getTransmissionSample(refractionCoords, perceptualRoughness, ior);
+    float3 transmittedLight = getTransmissionSample(refractionCoords, perceptualRoughness, ior);
 
-    vec3 attenuatedColor = applyVolumeAttenuation(transmittedLight, length(transmissionRay), attenuationColor, attenuationDistance);
+    float3 attenuatedColor = applyVolumeAttenuation(transmittedLight, length(transmissionRay), attenuationColor, attenuationDistance);
 
     // Sample GGX LUT to get the specular component.
     float NdotV = clampedDot(n, v);
-    vec2 brdfSamplePoint = clamp(vec2(NdotV, perceptualRoughness), vec2(0.0, 0.0), vec2(1.0, 1.0));
-    vec2 brdf = texture(u_GGXLUT, brdfSamplePoint).rg;
-    vec3 specularColor = f0 * brdf.x + f90 * brdf.y;
+    float2 brdfSamplePoint = clamp(vec2(NdotV, perceptualRoughness), float2(0.0, 0.0), float2(1.0, 1.0));
+    float2 brdf = u_GGXLUT.Sample(u_GGXLUTSampler, brdfSamplePoint).rg;
+    float3 specularColor = f0 * brdf.x + f90 * brdf.y;
 
     return (1.0 - specularColor) * attenuatedColor * baseColor;
 }

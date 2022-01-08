@@ -6,7 +6,6 @@ float4 main(float3 worldPos : Position) : SV_TARGET
 {
     worldPos.x = -worldPos.x;
     worldPos.z = -worldPos.z;
-    //float4 color =  tex.SampleLevel(sam, worldPos, 0.0f);
     float4 color =  tex.SampleLevel(sam, worldPos, 0.6 * 6.0);
     
     // Gamma correct

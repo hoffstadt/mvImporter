@@ -23,11 +23,11 @@ struct mvMaterialData
     f32 roughness = 0.1f;
     f32 radiance  = 1.0f;
     f32 fresnel   = 0.04f;
-
     //-------------------------- ( 16 bytes )
 
     mvVec3 emisiveFactor = { 0.0f, 0.0f, 0.0f };
     f32 occlusionStrength = 1.0f;
+    //-------------------------- ( 16 bytes )
 
     b32 doubleSided = false;
     f32 alphaCutoff;
@@ -37,9 +37,22 @@ struct mvMaterialData
 
     f32 normalScale              = 1.0f;
     f32 clearcoatNormalScale     = 1.0f;
-    char _pad[8];
+    f32 transmissionFactor       = 1.0f;
+    f32 thicknessFactor          = 1.0f;
+    //-------------------------- ( 16 bytes )
 
-    //-------------------------- ( 4 * 16 = 64 bytes )
+    mvVec4 attenuationColor = { 0.45f, 0.45f, 0.85f, 1.0f };
+    //-------------------------- ( 16 bytes )
+
+    mvVec3 sheenColorFactor = { 0.0f, 0.0f, 0.0f };
+    f32 sheenRoughnessFactor = 1.0f;
+    //-------------------------- ( 16 bytes )
+
+    f32 attenuationDistance = 1.0f;
+    f32 ior = 1.0f;
+    char _padding[8];
+    //-------------------------- ( 16 bytes )
+
 };
 
 struct mvMaterial

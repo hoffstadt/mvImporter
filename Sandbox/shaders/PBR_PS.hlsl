@@ -41,6 +41,19 @@ struct mvMaterial
 
     float normalScale;
     float clearcoatNormalScale;
+    float transmissionFactor;
+    float thicknessFactor;
+    //-------------------------- ( 16 bytes )
+
+    float4 attenuationColor;
+    //-------------------------- ( 16 bytes )
+
+    float3 sheenColorFactor;
+    float sheenRoughnessFactor;
+    //-------------------------- ( 16 bytes )
+
+    float attenuationDistance;
+    float ior;
     //-------------------------- ( 16 bytes )
 
 };
@@ -137,6 +150,26 @@ SamplerState ClearCoatRoughnessTextureSampler : register(s11);
 #ifdef HAS_CLEARCOAT_NORMAL_MAP
 Texture2D ClearCoatNormalTexture : register(t12);
 SamplerState ClearCoatNormalTextureSampler : register(s12);
+#endif
+
+#ifdef HAS_SHEEN_COLOR_MAP
+Texture2D SheenColorTexture : register(t13);
+SamplerState SheenColorTextureSampler : register(s13);
+#endif
+
+#ifdef HAS_SHEEN_ROUGHNESS_MAP
+Texture2D SheenRoughnessTexture: register(t14);
+SamplerState SheenRoughnessTextureSampler : register(s14);
+#endif
+
+#ifdef HAS_TRANSMISSION_MAP
+//Texture2D TransmissionTexture : register(t13);
+//SamplerState TransmissionSampler : register(s13);
+#endif
+
+#ifdef HAS_THICKNESS_MAP
+//Texture2D ThicknessTexture : register(t14);
+//SamplerState ThicknessTextureSampler : register(s14);
 #endif
 
 //-----------------------------------------------------------------------------
@@ -305,7 +338,7 @@ float4 main(VSOut input) : SV_Target
 #endif
 
 #ifdef MATERIAL_SHEEN
-    materialInfo = getSheenInfo(materialInfo);
+    materialInfo = getSheenInfo(input, materialInfo);
 #endif
 
 #ifdef MATERIAL_CLEARCOAT
@@ -366,7 +399,7 @@ float4 main(VSOut input) : SV_Target
         n, v,
         materialInfo.perceptualRoughness,
         materialInfo.baseColor, materialInfo.f0, materialInfo.f90,
-        v_Position, u_ModelMatrix, u_ViewMatrix, u_ProjectionMatrix,
+        v_Position, ginfo.model, ginfo.view, ginfo.projection,
         materialInfo.ior, materialInfo.thickness, materialInfo.attenuationColor, materialInfo.attenuationDistance);
 #endif
 

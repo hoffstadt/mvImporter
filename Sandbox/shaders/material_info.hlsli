@@ -137,12 +137,12 @@ float3 getClearcoatNormal(VSOut input, NormalInfo normalInfo)
 #endif
 
 #ifdef MATERIAL_TRANSMISSION
-MaterialInfo getTransmissionInfo(MaterialInfo info)
+MaterialInfo getTransmissionInfo(VSOut input, MaterialInfo info)
 {
-    info.transmissionFactor = u_TransmissionFactor;
+    info.transmissionFactor = input.transmissionFactor;
 
 #ifdef HAS_TRANSMISSION_MAP
-    vec4 transmissionSample = texture(u_TransmissionSampler, getTransmissionUV());
+    float4 transmissionSample = TransmissionTexture.Sample(TransmissionSampler, input.UV0);
     info.transmissionFactor *= transmissionSample.r;
 #endif
     return info;
@@ -151,14 +151,14 @@ MaterialInfo getTransmissionInfo(MaterialInfo info)
 
 
 #ifdef MATERIAL_VOLUME
-MaterialInfo getVolumeInfo(MaterialInfo info)
+MaterialInfo getVolumeInfo(VSOut input, MaterialInfo info)
 {
-    info.thickness = u_ThicknessFactor;
-    info.attenuationColor = u_AttenuationColor;
-    info.attenuationDistance = u_AttenuationDistance;
+    info.thickness = input.thicknessFactor;
+    info.attenuationColor = input.attenuationColor;
+    info.attenuationDistance = input.attenuationDistance;
 
 #ifdef HAS_THICKNESS_MAP
-    vec4 thicknessSample = texture(u_ThicknessSampler, getThicknessUV());
+    float4 thicknessSample = ThicknessTexture.Sample(ThicknessTextureSampler, input.UV0));
     info.thickness *= thicknessSample.g;
 #endif
     return info;
@@ -209,18 +209,18 @@ MaterialInfo getMetallicRoughnessInfo(VSOut input, MaterialInfo info)
 #endif
 
 #ifdef MATERIAL_SHEEN
-MaterialInfo getSheenInfo(MaterialInfo info)
+MaterialInfo getSheenInfo(VSOut input, MaterialInfo info)
 {
-    info.sheenColorFactor = u_SheenColorFactor;
-    info.sheenRoughnessFactor = u_SheenRoughnessFactor;
+    info.sheenColorFactor = material.sheenColorFactor;
+    info.sheenRoughnessFactor = material.sheenRoughnessFactor;
 
 #ifdef HAS_SHEEN_COLOR_MAP
-    vec4 sheenColorSample = texture(u_SheenColorSampler, getSheenColorUV());
+    float4 sheenColorSample = SheenColorTexture.Sample(SheenColorTextureSampler, input.UV0);
     info.sheenColorFactor *= sheenColorSample.rgb;
 #endif
 
 #ifdef HAS_SHEEN_ROUGHNESS_MAP
-    vec4 sheenRoughnessSample = texture(u_SheenRoughnessSampler, getSheenRoughnessUV());
+    float4 sheenRoughnessSample = SheenRoughnessTexture.Sample(SheenRoughnessTextureSampler, input.UV0);
     info.sheenRoughnessFactor *= sheenRoughnessSample.a;
 #endif
     return info;
@@ -264,8 +264,8 @@ float4 getBaseColor(VSOut input)
 #ifdef MATERIAL_IOR
 MaterialInfo getIorInfo(MaterialInfo info)
 {
-    info.f0 = vec3(pow((u_Ior - 1.0) / (u_Ior + 1.0), 2.0));
-    info.ior = u_Ior;
+    info.f0 = float3(pow((material.ior - 1.0) / (material.ior + 1.0), 2.0).xxx);
+    info.ior = input.ior;
     return info;
 }
 #endif

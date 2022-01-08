@@ -670,29 +670,32 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
             mvGLTFMeshPrimitive& glprimitive = glmesh.primitives[currentPrimitive];
 
             std::vector<u32> origIndexBuffer;
-            u8 indexCompCount = mvGetAccessorItemCompCount(model.accessors[glprimitive.indices_index]);
-
-            mvGLTFComponentType indexCompType = model.accessors[glprimitive.indices_index].component_type;
-
-            switch (indexCompType)
+            if (glprimitive.indices_index > -1)
             {
-            case MV_IMP_BYTE:
-            case MV_IMP_UNSIGNED_BYTE:
-                mvFillBuffer<u8>(model, model.accessors[glprimitive.indices_index], origIndexBuffer);
-                break;
+                u8 indexCompCount = mvGetAccessorItemCompCount(model.accessors[glprimitive.indices_index]);
 
-            case MV_IMP_SHORT:
-            case MV_IMP_UNSIGNED_SHORT:
-                mvFillBuffer<u16>(model, model.accessors[glprimitive.indices_index], origIndexBuffer);
-                break;
+                mvGLTFComponentType indexCompType = model.accessors[glprimitive.indices_index].component_type;
 
-            case MV_IMP_INT:
-            case MV_IMP_UNSIGNED_INT:
-                mvFillBuffer<u32>(model, model.accessors[glprimitive.indices_index], origIndexBuffer);
-                break;
+                switch (indexCompType)
+                {
+                case MV_IMP_BYTE:
+                case MV_IMP_UNSIGNED_BYTE:
+                    mvFillBuffer<u8>(model, model.accessors[glprimitive.indices_index], origIndexBuffer);
+                    break;
 
-            default:
-                assert(false && "Unknown index compenent type");
+                case MV_IMP_SHORT:
+                case MV_IMP_UNSIGNED_SHORT:
+                    mvFillBuffer<u16>(model, model.accessors[glprimitive.indices_index], origIndexBuffer);
+                    break;
+
+                case MV_IMP_INT:
+                case MV_IMP_UNSIGNED_INT:
+                    mvFillBuffer<u32>(model, model.accessors[glprimitive.indices_index], origIndexBuffer);
+                    break;
+
+                default:
+                    assert(false && "Unknown index compenent type");
+                }
             }
 
             std::vector<f32> positionAttributeBuffer;
@@ -909,9 +912,10 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
             std::vector<u32> indexBuffer;
             std::vector<f32> vertexBuffer;
 
-            u32 triangleCount = origIndexBuffer.size() / 3;
+            u32 triangleCount = origIndexBuffer.size()*3;
 
-            //vertexBuffer.reserve(triangleCount * 12 * 3);
+            if (glprimitive.indices_index == -1)
+                triangleCount = positionAttributeBuffer.size();
 
             if (calculateNormals)
             {
@@ -929,9 +933,9 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
 
             std::vector<f32> combinedVertexBuffer;
 
-            for (size_t i = 0; i < origIndexBuffer.size(); i++)
+            for (size_t i = 0; i < triangleCount/3; i++)
             {
-                size_t i0 = origIndexBuffer[i];
+                size_t i0 = glprimitive.indices_index == -1 ? i : origIndexBuffer[i];
 
                 for (size_t j = 0; j < modifiedLayout.semantics.size(); j++)
                 {
@@ -960,7 +964,6 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
                             // position
                             combinedVertexBuffer.push_back(x0);
                             combinedVertexBuffer.push_back(y0);
-                            //combinedVertexBuffer.push_back(1.0f);
                             combinedVertexBuffer.push_back(z0);
                             combinedVertexBuffer.push_back(w0);
                         }
@@ -1047,7 +1050,7 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
                             combinedVertexBuffer.push_back(tx0);
                             combinedVertexBuffer.push_back(ty0);
                             combinedVertexBuffer.push_back(tz0);
-                            combinedVertexBuffer.push_back(tw0);
+                            combinedVertexBuffer.push_back(-tw0);
                         }
                     }
                     else if (strcmp(semantic.c_str(), "Tex0Coord") == 0)

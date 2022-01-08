@@ -19,6 +19,13 @@ cbuffer OmniShadowTransformCBuf : register(b2)
     matrix pointShadowView;
 };
 
+#ifdef USE_MORPHING
+cbuffer MorphCBuf : register(b3)
+{
+    float morphWeights[WEIGHT_COUNT];
+};
+#endif
+
 struct VSOut
 {
 

@@ -285,7 +285,7 @@ draw_ui(UISession& session, f32 dt, mvRendererContext& renderCtx,
         ImGui::Dummy(ImVec2(50.0f, 25.0f));
 
         ImGui::Text("%s", "Scene:");
-        if (ImGui::DragFloat("Scale", &session.uniformScale, 0.1f, 0.0f))
+        if (ImGui::DragFloat("Scale", &session.uniformScale, 0.1f, 0.001f))
         {
             session.scaleTransform = scale(identity_mat4(), mvVec3{ session.uniformScale, session.uniformScale, session.uniformScale });
         }

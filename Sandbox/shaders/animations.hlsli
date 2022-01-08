@@ -49,6 +49,11 @@ Texture2D JointsTexture : register(t0);
 SamplerState JointsTextureSampler : register(s0);
 #endif
 
+#ifdef USE_MORPHING
+Texture2D MorphTargetsTexture : register(t1);
+SamplerState MorphTargetsTextureSampler : register(s1);
+#endif
+
 #ifdef USE_SKINNING
 
 float4x4 getMatrixFromTexture(int index)
@@ -138,3 +143,128 @@ float4x4 getSkinningNormalMatrix(VSIn input)
 }
 
 #endif // !USE_SKINNING
+
+#ifdef USE_MORPHING
+
+#ifdef HAS_MORPH_TARGETS
+float4 getDisplacement(int vertexID, int targetIndex, int texSize)
+{
+    int x = vertexID % texSize;
+    //Rounding mode of integers is undefined:
+    //https://www.khronos.org/registry/OpenGL/specs/es/3.0/GLSL_ES_Specification_3.00.pdf (section 12.33)
+    int y = (vertexID - x) / texSize; 
+    return MorphTargetsTexture.Load(int3(x, y, targetIndex));
+}
+#endif
+
+
+float4 getTargetPosition(int vertexID)
+{
+    float4 pos = float4(0.0.xxxx);
+#ifdef HAS_MORPH_TARGET_POSITION
+    int texWidth = 0;
+    int texHeight = 0;
+    MorphTargetsTexture.GetDimensions(texWidth, texHeight);
+    for(int i = 0; i < WEIGHT_COUNT; i++)
+    {
+        float4 displacement = getDisplacement(vertexID, MORPH_TARGET_POSITION_OFFSET + i, texWidth);
+        pos += u_morphWeights[i] * displacement;
+    }
+#endif
+
+    return pos;
+}
+
+float3 getTargetNormal(int vertexID)
+{
+   float3 normal = float3(0.0.xxx);
+
+#ifdef HAS_MORPH_TARGET_NORMAL
+    int texWidth = 0;
+    int texHeight = 0;
+    MorphTargetsTexture.GetDimensions(texWidth, texHeight);
+    for(int i = 0; i < WEIGHT_COUNT; i++)
+    {
+        float3 displacement = getDisplacement(vertexID, MORPH_TARGET_NORMAL_OFFSET + i, texWidth).xyz;
+        normal += morphWeights[i] * displacement;
+    }
+#endif
+
+    return normal;
+}
+
+
+float3 getTargetTangent(int vertexID)
+{
+    float3 tangent = float3(0.0.xxx);
+
+#ifdef HAS_MORPH_TARGET_TANGENT
+    int texWidth = 0;
+    int texHeight = 0;
+    MorphTargetsTexture.GetDimensions(texWidth, texHeight);
+    for(int i = 0; i < WEIGHT_COUNT; i++)
+    {
+        float3 displacement = getDisplacement(vertexID, MORPH_TARGET_TANGENT_OFFSET + i, texWidth).xyz;
+        tangent += morphWeights[i] * displacement;
+    }
+#endif
+
+    return tangent;
+}
+
+float2 getTargetTexCoord0(int vertexID)
+{
+    float2 uv = float2(0.0.xxx);
+
+#ifdef HAS_MORPH_TARGET_TEXCOORD_0
+    int texWidth = 0;
+    int texHeight = 0;
+    MorphTargetsTexture.GetDimensions(texWidth, texHeight);
+    for(int i = 0; i < WEIGHT_COUNT; i++)
+    {
+        float2 displacement = getDisplacement(vertexID, MORPH_TARGET_TEXCOORD_0_OFFSET + i, texWidth).xy;
+        uv += morphWeights[i] * displacement;
+    }
+#endif
+
+    return uv;
+}
+
+float2 getTargetTexCoord1(int vertexID)
+{
+    float2 uv = float2(0.0.xxx);
+
+#ifdef HAS_MORPH_TARGET_TEXCOORD_1
+    int texWidth = 0;
+    int texHeight = 0;
+    MorphTargetsTexture.GetDimensions(texWidth, texHeight);
+    for(int i = 0; i < WEIGHT_COUNT; i++)
+    {
+        float2 displacement = getDisplacement(vertexID, MORPH_TARGET_TEXCOORD_1_OFFSET + i, texWidth).xy;
+        uv += morphWeights[i] * displacement;
+    }
+#endif
+
+    return uv;
+}
+
+float4 getTargetColor0(int vertexID)
+{
+    float4 color = float4(0.0.xxxx);
+
+    int texWidth = 0;
+    int texHeight = 0;
+    MorphTargetsTexture.GetDimensions(texWidth, texHeight);
+
+#ifdef HAS_MORPH_TARGET_COLOR_0
+    for(int i = 0; i < WEIGHT_COUNT; i++)
+    {
+        float4 displacement = getDisplacement(vertexID, MORPH_TARGET_COLOR_0_OFFSET + i, texWidth);
+        color += morphWeights[i] * displacement;
+    }
+#endif
+
+    return color;
+}
+
+#endif // !USE_MORPHING
