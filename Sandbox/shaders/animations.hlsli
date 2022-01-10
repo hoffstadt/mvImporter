@@ -42,6 +42,8 @@ struct VSIn
 #ifdef HAS_WEIGHTS_1_VEC4
     float4 a_weights_1 : Weights1;
 #endif
+
+    uint vid : SV_VertexID;
 };
 
 #ifdef USE_SKINNING
@@ -168,7 +170,7 @@ float4 getTargetPosition(int vertexID)
     for(int i = 0; i < WEIGHT_COUNT; i++)
     {
         float4 displacement = getDisplacement(vertexID, MORPH_TARGET_POSITION_OFFSET + i, texWidth);
-        pos += u_morphWeights[i] * displacement;
+        pos += morphWeights[i] * displacement;
     }
 #endif
 

@@ -44,6 +44,7 @@ struct mvGLTFOrthographic;           // GLTF -> "orthographic"
 struct mvGLTFNode;                   // GLTF -> "nodes"
 struct mvGLTFSkin;                   // GLTF -> "skins"
 struct mvGLTFScene;                  // GLTF -> "scenes"
+struct mvGLTFMorphTarget;            // GLTF -> "meshPrimitives.targets"
 struct mvGLTFMeshPrimitive;          // GLTF -> "meshPrimitives"
 struct mvGLTFMesh;                   // GLTF -> "meshes"
 struct mvGLTFMaterial;               // GLTF -> "materials"
@@ -206,13 +207,21 @@ struct mvGLTFBufferView
 	mvS32       byte_stride  = -1;
 };
 
-struct mvGLTFMeshPrimitive
+struct mvGLTFMorphTarget
 {
-	mvS32            indices_index = -1; // accessor index
-	mvS32            material_index = -1;
-	mvGLTFPrimMode   mode = MV_IMP_TRIANGLES;
 	mvGLTFAttribute* attributes = nullptr;
 	mvU32            attribute_count = 0u;
+};
+
+struct mvGLTFMeshPrimitive
+{
+	mvS32              indices_index = -1; // accessor index
+	mvS32              material_index = -1;
+	mvGLTFPrimMode     mode = MV_IMP_TRIANGLES;
+	mvGLTFAttribute*   attributes = nullptr;
+	mvU32              attribute_count = 0u;
+	mvGLTFMorphTarget* targets = nullptr;
+	mvU32              target_count = 0u;
 };
 
 struct mvGLTFMesh
@@ -220,6 +229,8 @@ struct mvGLTFMesh
 	std::string          name;
 	mvGLTFMeshPrimitive* primitives = nullptr;
 	mvU32                primitives_count = 0u;
+	mvF32*               weights = nullptr;
+	mvU32                weights_count = 0u;
 };
 
 struct mvGLTFMaterial
@@ -1496,11 +1507,32 @@ namespace mvImp {
 							primitive.attribute_count++;
 						}
 
-						//if (jprimitive["attributes"].doesMemberExist("POSITION"))
-						//{
-						//	primitive.attributes[primitive.attribute_count] = { MV_IMP_POSITION , jprimitive["attributes"].getMember("POSITION") };
-						//	primitive.attribute_count++;
-						//}
+					}
+
+					if (jprimitive.doesMemberExist("targets"))
+					{
+						mvJsonObject jtargets = jprimitive["targets"];
+						mvU32 targetCount = jtargets.members.size();
+						primitive.targets = new mvGLTFMorphTarget[targetCount];
+
+						for (int k = 0; k < targetCount; k++)
+						{
+							mvGLTFMorphTarget& target = primitive.targets[k];
+
+							mvJsonObject jtarget = jtargets.members[k];
+							
+							mvU32 attrCount = jtarget.members.size();
+							target.attributes = new mvGLTFAttribute[attrCount];
+							for (int x = 0; x < attrCount; x++)
+							{
+								mvJsonMember jattribute = jtarget.members[x];
+								target.attributes[target.attribute_count] = { jattribute.name , (int)jattribute };
+								target.attribute_count++;
+							}
+
+							primitive.target_count++;
+						}
+
 					}
 
 
@@ -2227,8 +2259,15 @@ mvCleanupGLTF(mvGLTFModel& model)
 	{
 		for (mvU32 j = 0; j < model.meshes[i].primitives_count; j++)
 		{
+			
+			for (mvU32 k = 0; k < model.meshes[i].primitives[j].target_count; k++)
+			{
+				delete[] model.meshes[i].primitives[j].targets[k].attributes;
+			}
+			delete[] model.meshes[i].primitives[j].targets;
 			delete[] model.meshes[i].primitives[j].attributes;
 		}
+		delete[] model.meshes[i].weights;
 		delete[] model.meshes[i].primitives;
 	}
 

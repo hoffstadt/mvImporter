@@ -6,6 +6,7 @@
 #include "mvVertexLayout.h"
 #include "mvTextures.h"
 
+// forward declarations
 struct mvAssetManager;
 struct mvGLTFModel;
 struct mvMeshPrimitive;
@@ -19,19 +20,6 @@ mvMesh    create_textured_quad(mvAssetManager& assetManager, f32 size = 1.0f);
 mvMesh    create_frustum      (mvAssetManager& assetManager, f32 width, f32 height, f32 nearZ, f32 farZ);
 mvMesh    create_frustum2     (mvAssetManager& assetManager, f32 fov, f32 aspect, f32 nearZ, f32 farZ);
 mvMesh    create_ortho_frustum(mvAssetManager& assetManager, f32 width, f32 height, f32 nearZ, f32 farZ);
-mvAssetID load_gltf_assets    (mvAssetManager& assetManager, mvGLTFModel& model);
-
-void compute_joints(mvAssetManager& am, mvMat4 transform, mvSkin& skin);
-
-struct mvSkin
-{
-    u32       skeleton = 0u;
-    mvAssetID joints[256];
-    u32       jointCount = 0u;
-    mvTexture jointTexture;
-    std::vector<f32> inverseBindMatrices;
-    f32* textureData = nullptr;
-};
 
 struct mvMeshPrimitive
 {

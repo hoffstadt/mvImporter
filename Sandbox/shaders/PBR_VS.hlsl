@@ -74,7 +74,7 @@ float4 getPosition(VSIn input)
     float4 pos = float4(input.pos, 1.0);
 
 #ifdef USE_MORPHING
-    pos += getTargetPosition(input);
+    pos += getTargetPosition(input.vid);
 #endif
 
 #ifdef USE_SKINNING
@@ -90,7 +90,7 @@ float3 getNormal(VSIn input)
     float3 normal = input.n;
 
 #ifdef USE_MORPHING
-    normal += getTargetNormal();
+    normal += getTargetNormal(input.vid);
 #endif
 
 #ifdef USE_SKINNING
@@ -107,7 +107,7 @@ float3 getTangent(VSIn input)
     float3 tangent = input.tan.xyz;
 
 #ifdef USE_MORPHING
-    tangent += getTargetTangent(input);
+    tangent += getTargetTangent(input.vid);
 #endif
 
 #ifdef USE_SKINNING
@@ -134,6 +134,11 @@ VSOut main(VSIn input)
     #ifdef HAS_TEXCOORD_1_VEC2
         output.UV1 =input.tc1;
     #endif
+
+    #ifdef USE_MORPHING
+    output.UV0  += getTargetTexCoord0(input.vid);
+    output.UV1  += getTargetTexCoord1(input.vid);
+#endif
 
     output.Pos = mul(modelViewProj, getPosition(input));
     output.dshadowWorldPos = ToDirectShadowHomoSpace(getPosition(input).xyz, model);

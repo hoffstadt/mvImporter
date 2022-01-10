@@ -5,10 +5,11 @@
 #include <thread>
 #include "mvWindows.h"
 
+// forward declarations
 struct mvViewport;
 struct mvPipeline;
 
-void setup_graphics(mvViewport& viewport);
+void setup_graphics    (mvViewport& viewport);
 void recreate_swapchain(unsigned width, unsigned height);
 void set_pipeline_state(mvPipeline& pipeline);
 
