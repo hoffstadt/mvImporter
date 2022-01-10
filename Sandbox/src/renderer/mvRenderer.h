@@ -35,6 +35,7 @@ struct mvRenderJob
     mvMeshPrimitive* meshPrimitive = nullptr;
     mvMat4           accumulatedTransform = identity_mat4();
     mvSkin*          skin = nullptr;
+    ID3D11Buffer*    morphBuffer = nullptr;
 };
 
 struct mvRendererContext

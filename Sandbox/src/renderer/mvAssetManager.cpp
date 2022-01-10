@@ -144,6 +144,12 @@ cleanup_asset_manager(mvAssetManager* manager)
 		delete[] manager->skins[i].asset.textureData;
 	}
 
+	for (int i = 0; i < manager->meshCount; i++)
+	{
+		if(manager->meshes[i].asset.morphBuffer.buffer)
+			manager->meshes[i].asset.morphBuffer.buffer->Release();
+	}
+
 	// assets
 	delete[] manager->buffers;
 	delete[] manager->textures;

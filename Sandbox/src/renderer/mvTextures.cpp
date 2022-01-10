@@ -10,7 +10,7 @@
 #include "stb_image.h"
 
 mvTexture
-create_dynamic_texture(u32 width, u32 height)
+create_dynamic_texture(u32 width, u32 height, u32 arraySize)
 {
 	mvTexture texture{};
 
@@ -19,7 +19,7 @@ create_dynamic_texture(u32 width, u32 height)
 	textureDesc.Width = width;
 	textureDesc.Height = height;
 	textureDesc.MipLevels = 1;
-	textureDesc.ArraySize = 1;
+	textureDesc.ArraySize = arraySize;
 	textureDesc.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
 	textureDesc.SampleDesc.Count = 1;
 	textureDesc.SampleDesc.Quality = 0;
@@ -33,9 +33,12 @@ create_dynamic_texture(u32 width, u32 height)
 	// create the resource view on the texture
 	D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
 	srvDesc.Format = textureDesc.Format;
-	srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+	srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2DARRAY;
 	srvDesc.Texture2D.MostDetailedMip = 0;
 	srvDesc.Texture2D.MipLevels = textureDesc.MipLevels;
+	srvDesc.Texture2DArray.ArraySize = 1;
+	srvDesc.Texture2DArray.MostDetailedMip = 0;
+	srvDesc.Texture2DArray.MipLevels = textureDesc.MipLevels;
 
 	hResult = GContext->graphics.device->CreateShaderResourceView(texture.texture, &srvDesc, &texture.textureView);
 	assert(SUCCEEDED(hResult));
@@ -69,7 +72,7 @@ update_dynamic_texture(mvTexture& texture, u32 width, u32 height, f32* data)
 
 	BYTE* mappedData = reinterpret_cast<BYTE*>(mappedResource.pData);
 	BYTE* buffer = reinterpret_cast<BYTE*>(data);
-	for (UINT i = 0; i < height; ++i)
+	for (UINT i = 0; i < height; i++)
 	{
 		memcpy(mappedData, buffer, width * 4 * sizeof(int));
 		mappedData += mappedResource.RowPitch;

@@ -1473,6 +1473,18 @@ namespace mvImp {
 			if (jmesh.doesMemberExist("name"))
 				mesh.name = jmesh.getMember("name");
 
+			if (jmesh.doesMemberExist("weights"))
+			{
+				mesh.weights_count = jmesh["weights"].members.size();
+				mesh.weights = new mvF32[mesh.weights_count];
+				for (int j = 0; j < mesh.weights_count; j++)
+				{
+					mvJsonMember m = jmesh["weights"][j];
+					//mvGLTFMeshPrimitive& primitive = mesh.primitives[j];
+					mesh.weights[j] = m;
+				}
+			}
+
 			if (jmesh.doesMemberExist("primitives"))
 			{
 

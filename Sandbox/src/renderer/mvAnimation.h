@@ -29,7 +29,7 @@ struct mvAnimationChannel
 {
     mvAssetID        node = -1;
     std::vector<f32> inputdata;
-    std::vector<u32> outputdata;
+    std::vector<f32> outputdata;
     std::string      path;
     std::string      interpolation = "LINEAR";
     f32              tprev = 0.0f;

@@ -193,12 +193,20 @@ struct VSOut
 #endif
 #endif
 
-#ifdef HAS_VERTEX_COLOR_VEC3
-    float3 v_color : COLOR0;
+#ifdef HAS_VERTEX_COLOR_0_VEC3
+    float3 v_color0 : COLOR0;
 #endif
 
-#ifdef HAS_VERTEX_COLOR_VEC4
-    float4 v_color : COLOR0;
+#ifdef HAS_VERTEX_COLOR_0_VEC4
+    float4 v_color0 : COLOR0;
+#endif
+
+#ifdef HAS_VERTEX_COLOR_1_VEC3
+    float3 v_color1 : COLOR1;
+#endif
+
+#ifdef HAS_VERTEX_COLOR_1_VEC4
+    float4 v_color1 : COLOR1;
 #endif
 
     float3 WorldPos : POSITION0;
@@ -609,7 +617,7 @@ float4 main(VSOut input) : SV_Target
     finalColor = float4(toneMap(color.rgb), baseColor.a);
 #endif
 
-#ifdef HAS_VERTEX_COLOR_VEC4
+#ifdef HAS_VERTEX_COLOR_0_VEC4
     //finalColor = float4(1.0.xxxx);
     //finalColor= getBaseColor(input);
     //finalColor = input.v_color*sRGBToLinear(AlbedoTexture.Sample(AlbedoTextureSampler, input.UV0).rgba);

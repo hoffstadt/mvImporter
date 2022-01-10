@@ -270,12 +270,12 @@ submit_mesh(mvAssetManager& am, mvRendererContext& ctx, mvMesh& mesh, mvMat4 tra
 
         if (material->alphaMode == 2)
         {
-            ctx.transparentJobs[ctx.transparentJobCount] = { &primitive, transform, skin };
+            ctx.transparentJobs[ctx.transparentJobCount] = { &primitive, transform, skin, mesh.morphBuffer.buffer };
             ctx.transparentJobCount++;
         }
         else
         {
-            ctx.opaqueJobs[ctx.opaqueJobCount] = { &primitive, transform, skin };
+            ctx.opaqueJobs[ctx.opaqueJobCount] = { &primitive, transform, skin, mesh.morphBuffer.buffer };
             ctx.opaqueJobCount++;
         }
     }
@@ -360,6 +360,7 @@ render_job(mvAssetManager& am, mvRenderJob& job, mvMat4 cam, mvMat4 proj)
     mvTexture* clearcoatRoughnessMap = primitive.clearcoatRoughnessTexture == -1 ? nullptr : &am.textures[primitive.clearcoatRoughnessTexture].asset;
     mvTexture* clearcoatNormalMap = primitive.clearcoatNormalTexture == -1 ? nullptr : &am.textures[primitive.clearcoatNormalTexture].asset;
     mvTexture* skinTexture = job.skin ? &job.skin->jointTexture : nullptr;
+    mvTexture* morphTexture = primitive.morphTexture.textureView ? &primitive.morphTexture : nullptr;
 
     mvPipeline& pipeline = am.pipelines[material->pipeline].asset;
 
@@ -382,6 +383,7 @@ render_job(mvAssetManager& am, mvRenderJob& job, mvMat4 cam, mvMat4 proj)
     device->PSSetSamplers(12, 1, clearcoatNormalMap ? &clearcoatNormalMap->sampler : &emptySamplers);
 
     device->VSSetSamplers(0, 1, skinTexture ? &skinTexture->sampler : &emptySamplers);
+    device->VSSetSamplers(1, 1, morphTexture ? &morphTexture->sampler : &emptySamplers);
 
     // maps
     ID3D11ShaderResourceView* const pSRV[1] = { NULL };
@@ -395,6 +397,7 @@ render_job(mvAssetManager& am, mvRenderJob& job, mvMat4 cam, mvMat4 proj)
     device->PSSetShaderResources(12, 1, clearcoatNormalMap ? &clearcoatNormalMap->textureView : pSRV);
 
     device->VSSetShaderResources(0, 1, skinTexture ? &skinTexture->textureView : pSRV);
+    device->VSSetShaderResources(1, 1, morphTexture ? &morphTexture->textureView : pSRV);
 
     update_const_buffer(material->buffer, &material->data);
     device->PSSetConstantBuffers(1u, 1u, &material->buffer.buffer);
@@ -412,6 +415,8 @@ render_job(mvAssetManager& am, mvRenderJob& job, mvMat4 cam, mvMat4 proj)
     // mesh
     static const UINT offset = 0u;
     device->VSSetConstantBuffers(0u, 1u, GContext->graphics.tranformCBuf.GetAddressOf());
+    if(job.morphBuffer)
+        device->VSSetConstantBuffers(3u, 1u, &job.morphBuffer);
     device->IASetIndexBuffer(am.buffers[primitive.indexBuffer].asset.buffer, DXGI_FORMAT_R32_UINT, 0u);
     device->IASetVertexBuffers(0u, 1u,
         &am.buffers[primitive.vertexBuffer].asset.buffer,

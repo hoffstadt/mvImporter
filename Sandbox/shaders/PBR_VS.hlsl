@@ -19,13 +19,6 @@ cbuffer OmniShadowTransformCBuf : register(b2)
     matrix pointShadowView;
 };
 
-#ifdef USE_MORPHING
-cbuffer MorphCBuf : register(b3)
-{
-    float morphWeights[WEIGHT_COUNT];
-};
-#endif
-
 struct VSOut
 {
 
@@ -43,8 +36,12 @@ struct VSOut
     float3 v_color : COLOR0;
 #endif
 
-#ifdef HAS_VERTEX_COLOR_VEC4
-    float4 v_color : COLOR0;
+#ifdef HAS_VERTEX_COLOR_0_VEC4
+    float4 v_color0 : COLOR0;
+#endif
+
+#ifdef HAS_VERTEX_COLOR_1_VEC4
+    float4 v_color1 : COLOR1;
 #endif
 
     float3 WorldPos : POSITION0;
@@ -158,8 +155,12 @@ VSOut main(VSIn input)
     #endif
     #endif // !HAS_NORMALS
 
-    #if defined(HAS_VERTEX_COLOR_VEC3) || defined(HAS_VERTEX_COLOR_VEC4)
-        output.v_color = input.a_color;
+    #if defined(HAS_VERTEX_COLOR_0_VEC3) || defined(HAS_VERTEX_COLOR_0_VEC4)
+        output.v_color0 = input.a_color0;
+    #endif
+
+    #if defined(HAS_VERTEX_COLOR_1_VEC3) || defined(HAS_VERTEX_COLOR_1_VEC4)
+        output.v_color1 = input.a_color1;
     #endif
 
     return output;

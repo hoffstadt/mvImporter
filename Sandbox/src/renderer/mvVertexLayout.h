@@ -10,6 +10,7 @@ enum class mvVertexElement;
 struct mvVertexLayout;
 
 mvVertexLayout create_vertex_layout(std::vector<mvVertexElement> elements);
+mvVertexElement get_element_from_gltf_semantic(const char* semantic);
 
 enum class mvVertexElement
 {
@@ -17,8 +18,10 @@ enum class mvVertexElement
 	Position3D,
 	TexCoord0,
 	TexCoord1,
-	Color3,
-	Color4,
+	Color3_0,
+	Color3_1,
+	Color4_0,
+	Color4_1,
 	Normal,
 	Tangent,
 	Joints0,

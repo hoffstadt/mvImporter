@@ -42,30 +42,52 @@ mvGetVertexElementInfo(mvVertexElement element)
 	case mvVertexElement::TexCoord0:
 		newelement.format = DXGI_FORMAT_R32G32_FLOAT;
 		newelement.itemCount = 2;
+		newelement.index = 0;
 		newelement.normalize = false;
 		newelement.size = sizeof(f32) * newelement.itemCount;
-		newelement.semantic = "Tex0Coord";
+		newelement.semantic = "TexCoord";
 		break;
 
 	case mvVertexElement::TexCoord1:
 		newelement.format = DXGI_FORMAT_R32G32_FLOAT;
 		newelement.itemCount = 2;
+		newelement.index = 1;
 		newelement.normalize = false;
 		newelement.size = sizeof(f32) * newelement.itemCount;
-		newelement.semantic = "Tex1Coord";
+		newelement.semantic = "TexCoord";
 		break;
 
-	case mvVertexElement::Color3:
+	case mvVertexElement::Color3_0:
 		newelement.format = DXGI_FORMAT_R32G32B32_FLOAT;
 		newelement.itemCount = 3;
+		newelement.index = 0;
 		newelement.normalize = false;
 		newelement.size = sizeof(f32) * newelement.itemCount;
 		newelement.semantic = "Color";
 		break;
 
-	case mvVertexElement::Color4:
+	case mvVertexElement::Color4_0:
 		newelement.format = DXGI_FORMAT_R32G32B32A32_FLOAT;
 		newelement.itemCount = 4;
+		newelement.index = 0;
+		newelement.normalize = false;
+		newelement.size = sizeof(f32) * newelement.itemCount;
+		newelement.semantic = "Color";
+		break;
+
+	case mvVertexElement::Color3_1:
+		newelement.format = DXGI_FORMAT_R32G32B32_FLOAT;
+		newelement.itemCount = 3;
+		newelement.index = 1;
+		newelement.normalize = false;
+		newelement.size = sizeof(f32) * newelement.itemCount;
+		newelement.semantic = "Color";
+		break;
+
+	case mvVertexElement::Color4_1:
+		newelement.format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+		newelement.itemCount = 4;
+		newelement.index = 1;
 		newelement.normalize = false;
 		newelement.size = sizeof(f32) * newelement.itemCount;
 		newelement.semantic = "Color";
@@ -155,6 +177,26 @@ create_vertex_layout(std::vector<mvVertexElement> elements)
 	//layout.stride = stride;
 
     return layout;
+}
+
+mvVertexElement
+get_element_from_gltf_semantic(const char* semantic)
+{
+	if (strcmp(semantic, "POSITION") == 0)   return mvVertexElement::Position3D;
+	if (strcmp(semantic, "NORMAL") == 0)     return mvVertexElement::Normal;
+	if (strcmp(semantic, "TANGENT") == 0)    return mvVertexElement::Tangent;
+	if (strcmp(semantic, "JOINTS_0") == 0)   return mvVertexElement::Joints0;
+	if (strcmp(semantic, "JOINTS_1") == 0)   return mvVertexElement::Joints1;
+	if (strcmp(semantic, "WEIGHTS_0") == 0)  return mvVertexElement::Weights0;
+	if (strcmp(semantic, "WEIGHTS_1") == 0)  return mvVertexElement::Weights0;
+	if (strcmp(semantic, "TEXCOORD_0") == 0) return mvVertexElement::TexCoord0;
+	if (strcmp(semantic, "TEXCOORD_1") == 0) return mvVertexElement::TexCoord0;
+	if (strcmp(semantic, "COLOR_03") == 0)   return mvVertexElement::Color3_0;
+	if (strcmp(semantic, "COLOR_04") == 0)   return mvVertexElement::Color4_0;
+	if (strcmp(semantic, "COLOR_13") == 0)   return mvVertexElement::Color3_1;
+	if (strcmp(semantic, "COLOR_14") == 0)   return mvVertexElement::Color4_1;
+
+	assert(false && "Undefined semantic");
 }
 
 bool

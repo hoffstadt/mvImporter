@@ -19,7 +19,7 @@ float4 getPosition(VSIn input)
     float4 pos = float4(input.pos, 1.0);
 
 #ifdef USE_MORPHING
-    pos += getTargetPosition(input);
+    pos += getTargetPosition(input.vid);
 #endif
 
 #ifdef USE_SKINNING

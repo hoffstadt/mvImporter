@@ -231,11 +231,11 @@ float4 getVertexColor(VSOut input)
 {
     float4 color = float4(1.0.xxxx);
 
-#ifdef HAS_VERTEX_COLOR_VEC3
-    color.rgb = input.v_color.rgb;
+#ifdef HAS_VERTEX_COLOR_0_VEC3
+    color.rgb = input.v_color0.rgb;
 #endif
-#ifdef HAS_VERTEX_COLOR_VEC4
-    color = input.v_color;
+#ifdef HAS_VERTEX_COLOR_0_VEC4
+    color = input.v_color0;
 #endif
 
     return color;
