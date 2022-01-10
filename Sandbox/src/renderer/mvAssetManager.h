@@ -10,6 +10,7 @@
 #include "mvCamera.h"
 #include "mvAnimation.h"
 
+// forward declaraionts
 struct mvTargetViewAsset;
 struct mvDepthViewAsset;
 struct mvMeshAsset;
@@ -27,9 +28,10 @@ struct mvAnimationAsset;
 struct mvSkinAsset;
 struct mvAssetManager;
 
+// startup/cleanup
 void initialize_asset_manager(mvAssetManager* manager);
 void cleanup_asset_manager   (mvAssetManager* manager);
-void reload_materials        (mvAssetManager* manager);
+void reload_materials        (mvAssetManager* manager); // recompiles shaders
 
 // registering
 mvAssetID register_asset(mvAssetManager* manager, const std::string& tag, mvScene asset);

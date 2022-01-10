@@ -6,6 +6,7 @@
 #include "mvCamera.h"
 #include "mvBuffers.h"
 
+// forward declarations
 struct mvPointLight;
 struct mvDirectionalLight;
 

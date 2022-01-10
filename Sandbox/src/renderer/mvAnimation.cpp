@@ -230,3 +230,23 @@ advance_animations(mvAssetManager& am, mvAnimation& animation, f32 tcurrent)
         node.transform = rotation_translation_scale(rot, trans, scal);
     }
 }
+
+void
+compute_joints(mvAssetManager& am, mvMat4 transform, mvSkin& skin)
+{
+    u32 textureWidth = ceil(sqrt(skin.jointCount * 8));
+
+    for (u32 i = 0; i < skin.jointCount; i++)
+    {
+        s32 joint = skin.joints[i];
+        mvNode& node = am.nodes[joint].asset;
+        mvMat4 ibm = (*(mvMat4*)&skin.inverseBindMatrices[i * 16]);
+        mvMat4 jointMatrix = transform * node.worldTransform * ibm;
+        mvMat4 normalMatrix = transpose(invert(jointMatrix));
+
+        *(mvMat4*)&skin.textureData[i * 32] = jointMatrix;
+        *(mvMat4*)&skin.textureData[i * 32 + 16] = normalMatrix;
+    }
+
+    update_dynamic_texture(skin.jointTexture, textureWidth, textureWidth, skin.textureData);
+}

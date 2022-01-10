@@ -24,6 +24,7 @@ target_sources(mvimporter_sandbox
 
 		# renderer
 		"src/renderer/mvAssetManager.cpp"
+		"src/renderer/mvAssetLoader.cpp"
 		"src/renderer/mvAnimation.cpp"
 		"src/renderer/mvGraphics.cpp"
 		"src/renderer/mvBuffers.cpp"
@@ -52,7 +53,7 @@ target_sources(mvimporter_sandbox
 		"vendor/imgui/imgui_tables.cpp"
 		"vendor/imgui/backends/imgui_impl_win32.cpp"
 		"vendor/imgui/backends/imgui_impl_dx11.cpp"
-)
+ "src/renderer/mvAssetLoader.h" "src/renderer/mvAssetLoader.cpp")
 
 target_include_directories(mvimporter_sandbox
 

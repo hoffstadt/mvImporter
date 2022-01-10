@@ -136,7 +136,13 @@ cleanup_asset_manager(mvAssetManager* manager)
 		delete[] manager->animations[i].asset.channels;
 	}
 
-
+	for (int i = 0; i < manager->skinCount; i++)
+	{
+		manager->skins[i].asset.jointTexture.sampler->Release();
+		manager->skins[i].asset.jointTexture.textureView->Release();
+		manager->skins[i].asset.jointTexture.texture->Release();
+		delete[] manager->skins[i].asset.textureData;
+	}
 
 	// assets
 	delete[] manager->buffers;

@@ -2,7 +2,14 @@
 
 #include "mvMath.h"
 
+// forward declarations
 struct mvCamera;
+
+enum mvCameraType
+{
+    MV_CAMERA_PERSPECTIVE,
+    MV_CAMERA_ORTHOGRAPHIC,
+};
 
 mvCamera create_ortho_camera      (mvVec3 pos, mvVec3 dir, f32 width, f32 height, f32 nearZ, f32 farZ);
 mvCamera create_perspective_camera(mvVec3 pos, f32 fov, f32 aspect, f32 nearZ, f32 farZ);
@@ -12,12 +19,6 @@ mvMat4   create_fps_view          (mvCamera& camera);
 mvMat4   create_lookat_view       (mvCamera& camera);        
 void     update_lookat_camera     (mvCamera& camera, f32 dt, f32 travelSpeed, f32 rotationSpeed);
 void     update_fps_camera        (mvCamera& camera, f32 dt, f32 travelSpeed, f32 rotationSpeed);
-
-enum mvCameraType
-{
-    MV_CAMERA_PERSPECTIVE,
-    MV_CAMERA_ORTHOGRAPHIC,
-};
 
 struct mvCamera
 {

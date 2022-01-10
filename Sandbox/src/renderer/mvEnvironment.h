@@ -3,6 +3,7 @@
 #include "mvTypes.h"
 #include "mvTextures.h"
 
+// forward declarations
 struct mvAssetManager;
 struct mvEnvironment;
 

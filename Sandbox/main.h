@@ -12,6 +12,8 @@
 #include "mvTimer.h"
 #include "gltf_scene_info.h"
 #include "mvAnimation.h"
+#include "mvSandbox.h"
+#include "mvAssetLoader.h"
 
 #define MODEL_CACHE_SIZE 5
 #define ENV_CACHE_SIZE 3
@@ -64,21 +66,6 @@ create_ui_session()
 {
     UISession session{};
 
-    create_context();
-    GContext->IO.shaderDirectory = "../../Sandbox/shaders/";
-    GContext->IO.resourceDirectory = "../../Resources/";
-
-    session.window = initialize_viewport(1850, 900);
-    setup_graphics(*session.window);
-
-    // setup imgui
-    ImGui::CreateContext();
-    ImPlot::CreateContext();
-    ImGuiIO& io = ImGui::GetIO(); (void)io;
-    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
-    ImGui_ImplWin32_Init(session.window->hWnd);
-    ImGui_ImplDX11_Init(GContext->graphics.device.Get(), GContext->graphics.imDeviceContext.Get());
-
     for (int i = 0; i < MODEL_CACHE_SIZE; i++)
     {
         session.cachedModel[i] = -1;
@@ -92,152 +79,11 @@ create_ui_session()
 }
 
 void
-end_ui_session(UISession& session)
-{
-    for (int i = 0; i < ENV_CACHE_SIZE; i++)
-        cleanup_environment(session.cachedEnvironments[i]);
-
-    ImGui_ImplDX11_Shutdown();
-    ImGui_ImplWin32_Shutdown();
-    ImPlot::DestroyContext();
-    ImGui::DestroyContext();
-    destroy_context();
-}
-
-void 
 blendCallback(const ImDrawList* parent_list, const ImDrawCmd* cmd)
 {
     // Setup blend state
     const float blend_factor[4] = { 0.f, 0.f, 0.f, 0.f };
     GContext->graphics.imDeviceContext->OMSetBlendState((ID3D11BlendState*)cmd->UserCallbackData, blend_factor, 0xffffffff);
-}
-
-void
-do_updates(f32 dt, mvAssetManager& am, UISession& session, mvDirectionalShadowPass& directionalShadowMap, mvOmniShadowPass omniShadowMap,
-    mvOffscreenPass& offscreen)
-{
-    session.currentTime += dt;
-
-    if (session.window->resized)
-    {
-        recreate_swapchain(session.window->width, session.window->height);
-        session.window->resized = false;
-    }
-
-    if (session.reloadMaterials)
-    {
-        reload_materials(&am);
-        session.reloadMaterials = false;
-    }
-
-    if (session.recreatePrimary)
-    {
-        offscreen.recreate();
-        session.recreatePrimary = false;
-    }
-
-    if (session.recreateShadowMapRS)
-    {
-        directionalShadowMap.recreate();
-        session.recreateShadowMapRS = false;
-    }
-
-    if (session.recreateOShadowMapRS)
-    {
-        omniShadowMap.recreate();
-        session.recreateOShadowMapRS = false;
-    }
-
-    if (session.recreateEnvironment)
-    {
-        session.recreateEnvironment = false;
-        if (session.envMapIndex == 0)
-        {
-            session.showSkybox = false;
-            return;
-        }
-
-        session.showSkybox = true;
-        b8 cacheFound = false;
-        for (int i = 0; i < ENV_CACHE_SIZE; i++)
-        {
-            if (session.cachedEnvironmentsID[i] == session.envMapIndex)
-            {
-                session.activeEnv = i;
-                cacheFound = true;
-                break;
-            }
-        }
-
-        if (!cacheFound)
-        {
-            std::string newMap = "../../data/glTF-Sample-Environments/" + std::string(env_maps[session.envMapIndex]) + ".hdr";
-            cleanup_environment(session.cachedEnvironments[session.envCacheIndex]);
-            session.cachedEnvironments[session.envCacheIndex] = create_environment(newMap, 1024, 1024, 1.0f, 7);
-            session.cachedEnvironmentsID[session.envCacheIndex] = session.envMapIndex;
-            session.activeEnv = session.envCacheIndex;
-            session.envCacheIndex++;
-            if (session.envCacheIndex == ENV_CACHE_SIZE) session.envCacheIndex = 0;
-        }
-    }
-    if (session.changeScene)
-    {
-        session.changeScene = false;
-        b8 cacheFound = false;
-        for (int i = 0; i < MODEL_CACHE_SIZE; i++)
-        {
-            if (session.cachedModel[i] == session.modelIndex)
-            {
-                session.activeScene = session.cachedScenes[i];
-                cacheFound = true;
-                break;
-            }
-        }
-
-        if (!cacheFound)
-        {
-
-            mvAssetID sceneToRemove = session.cachedScenes[session.cacheIndex];
-
-            if (sceneToRemove > -1)
-            {
-                mvScene* previousScene = &am.scenes[sceneToRemove].asset;
-                for (int i = 0; i < previousScene->nodeCount; i++)
-                {
-                    if (am.nodes[previousScene->nodes[i]].asset.mesh > -1)
-                    {
-                        mvMesh& mesh = am.meshes[am.nodes[previousScene->nodes[i]].asset.mesh].asset;
-                        for (int i = 0; i < mesh.primitives.size(); i++)
-                        {
-                            unregister_buffer_asset(&am, mesh.primitives[i].indexBuffer);
-                            unregister_buffer_asset(&am, mesh.primitives[i].vertexBuffer);
-                            unregister_texture_asset(&am, mesh.primitives[i].normalTexture);
-                            unregister_texture_asset(&am, mesh.primitives[i].specularTexture);
-                            unregister_texture_asset(&am, mesh.primitives[i].albedoTexture);
-                            unregister_texture_asset(&am, mesh.primitives[i].emissiveTexture);
-                            unregister_texture_asset(&am, mesh.primitives[i].occlusionTexture);
-                            unregister_texture_asset(&am, mesh.primitives[i].metalRoughnessTexture);
-                            unregister_material_asset(&am, mesh.primitives[i].materialID);
-                            unregister_material_asset(&am, mesh.primitives[i].shadowMaterialID);
-                        }
-                    }
-                    unregister_mesh_asset(&am, am.nodes[previousScene->nodes[i]].asset.mesh); // maybe do mesh offset?
-                    unregister_camera_asset(&am, am.nodes[previousScene->nodes[i]].asset.camera); // maybe do mesh offset?
-                    unregister_node_asset(&am, previousScene->nodes[i]);
-                }
-                unregister_scene_asset(&am, sceneToRemove);
-            }
-
-            mvGLTFModel gltfmodel0 = mvLoadGLTF(gltf_directories[session.modelIndex], gltf_models[session.modelIndex]);
-            session.activeScene = load_gltf_assets(am, gltfmodel0);
-            mvCleanupGLTF(gltfmodel0);
-            session.cachedScenes[session.cacheIndex] = session.activeScene;
-            session.cachedModel[session.cacheIndex] = session.modelIndex;
-            session.cacheIndex++;
-            if (session.cacheIndex == MODEL_CACHE_SIZE) session.cacheIndex = 0;
-
-        }
-    }
 }
 
 void 
