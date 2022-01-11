@@ -183,7 +183,6 @@ float4 getTargetPosition(int vertexID)
     int levels = 0;
     int texWidth = 0;
     int texHeight = 0;
-    //MorphTargetsTexture.GetDimensions(0, texWidth, texHeight, levels);
     MorphTargetsTexture.GetDimensions(0, texWidth, texHeight, elements, levels);
     for(int i = 0; i < WEIGHT_COUNT; i++)
     {
@@ -204,7 +203,6 @@ float3 getTargetNormal(int vertexID)
     int levels = 0;
     int texWidth = 0;
     int texHeight = 0;
-    //MorphTargetsTexture.GetDimensions(0, texWidth, texHeight, levels);
     MorphTargetsTexture.GetDimensions(0, texWidth, texHeight, elements, levels);
     for(int i = 0; i < WEIGHT_COUNT; i++)
     {
@@ -226,7 +224,6 @@ float3 getTargetTangent(int vertexID)
     int levels = 0;
     int texWidth = 0;
     int texHeight = 0;
-    //MorphTargetsTexture.GetDimensions(0, texWidth, texHeight, levels);
     MorphTargetsTexture.GetDimensions(0, texWidth, texHeight, elements, levels);
     for(int i = 0; i < WEIGHT_COUNT; i++)
     {

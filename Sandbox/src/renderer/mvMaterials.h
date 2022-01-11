@@ -58,13 +58,15 @@ struct mvMaterialData
 
 struct mvMaterial
 {
-    mvConstBuffer                 buffer;
-    mvMaterialData                data;
-    mvAssetID                     pipeline; 
-    mvAssetID                     spipeline; 
-    std::vector<D3D_SHADER_MACRO> macros;
-    std::vector<D3D_SHADER_MACRO> extramacros;
-    mvVertexLayout                layout;
+    mvConstBuffer              buffer;
+    mvMaterialData             data;
+    mvAssetID                  pipeline; 
+    mvAssetID                  spipeline; 
+    //std::vector<D3D_SHADER_MACRO> macros;
+    //std::vector<D3D_SHADER_MACRO> extramacros;
+    std::vector<mvShaderMacro> macros;
+    std::vector<mvShaderMacro> extramacros;
+    mvVertexLayout             layout;
 
     i32 alphaMode = 0;
     b8 hasNormalMap = false;

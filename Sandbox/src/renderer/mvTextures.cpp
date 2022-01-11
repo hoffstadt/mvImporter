@@ -28,8 +28,8 @@ create_texture(u32 width, u32 height, u32 arraySize, f32* data)
 	textureDesc.CPUAccessFlags = 0;
 	textureDesc.MiscFlags = 0;
 
-	HRESULT hResult = GContext->graphics.device->CreateTexture2D(&textureDesc, nullptr, &texture.texture);
-	assert(SUCCEEDED(hResult));
+	//HRESULT hResult = GContext->graphics.device->CreateTexture2D(&textureDesc, nullptr, &texture.texture);
+	//assert(SUCCEEDED(hResult));
 	i32 texBytesPerRow = 4 * width * sizeof(f32);
 
 	// subresource data
@@ -42,7 +42,8 @@ create_texture(u32 width, u32 height, u32 arraySize, f32* data)
 		sdata[i].SysMemSlicePitch = width * height * 4 * sizeof(f32);
 	}
 	// create the texture resource
-	GContext->graphics.device->CreateTexture2D(&textureDesc, sdata, &texture.texture);
+	HRESULT hResult = GContext->graphics.device->CreateTexture2D(&textureDesc, sdata, &texture.texture);
+	assert(SUCCEEDED(hResult));
 	delete[] sdata;
 
 	// create the resource view on the texture

@@ -148,6 +148,16 @@ cleanup_asset_manager(mvAssetManager* manager)
 	{
 		if(manager->meshes[i].asset.morphBuffer.buffer)
 			manager->meshes[i].asset.morphBuffer.buffer->Release();
+
+		for (int j = 0; j < manager->meshes[i].asset.primitives.size(); j++)
+		{
+			if (manager->meshes[i].asset.primitives[j].morphTexture.texture)
+			{
+				manager->meshes[i].asset.primitives[j].morphTexture.sampler->Release();
+				manager->meshes[i].asset.primitives[j].morphTexture.texture->Release();
+				manager->meshes[i].asset.primitives[j].morphTexture.textureView->Release();
+			}
+		}
 	}
 
 	// assets
@@ -233,8 +243,6 @@ reload_materials(mvAssetManager* manager)
 
 			for (auto& macro : material.extramacros)
 				pipeline.info.macros.push_back(macro);
-
-			pipeline.info.macros.push_back({ NULL, NULL });
 
 			manager->pipelines[material.pipeline].asset = finalize_pipeline(pipeline.info);
 		}

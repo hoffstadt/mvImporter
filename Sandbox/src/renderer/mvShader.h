@@ -10,10 +10,17 @@ struct mvVertexShader;
 struct mvComputeShader;
 struct mvPipelineInfo;
 struct mvShaderOptions;
+struct mvShaderMacro;
 
 mvPixelShader   create_pixel_shader  (const std::string& path, std::vector<D3D_SHADER_MACRO>* macros = nullptr);
 mvVertexShader  create_vertex_shader (const std::string& path, mvVertexLayout& layout, std::vector<D3D_SHADER_MACRO>* macros = nullptr);
 mvComputeShader create_compute_shader(const std::string& path, std::vector<D3D_SHADER_MACRO>* macros = nullptr);
+
+struct mvShaderMacro
+{
+    std::string macro;
+    std::string value;
+};
 
 struct mvShaderOptions
 {
@@ -49,7 +56,6 @@ struct mvShaderOptions
     b8 usePunctual = false;
 
     i32 alphaMode;
-
 
 };
 

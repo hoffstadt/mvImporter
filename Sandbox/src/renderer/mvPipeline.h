@@ -11,14 +11,14 @@ mvPipeline finalize_pipeline(mvPipelineInfo& info);
 
 struct mvPipelineInfo
 {
-    std::string                   pixelShader;
-    std::string                   vertexShader;
-    mvVertexLayout                layout;
-    i32                           depthBias;
-    f32                           slopeBias;
-    f32                           clamp;
-    b8                            cull = true;
-    std::vector<D3D_SHADER_MACRO> macros;
+    std::string                pixelShader;
+    std::string                vertexShader;
+    mvVertexLayout             layout;
+    i32                        depthBias;
+    f32                        slopeBias;
+    f32                        clamp;
+    b8                         cull = true;
+    std::vector<mvShaderMacro> macros;
 };
 
 struct mvPipeline

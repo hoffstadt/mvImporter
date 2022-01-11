@@ -268,7 +268,8 @@ submit_mesh(mvAssetManager& am, mvRendererContext& ctx, mvMesh& mesh, mvMat4 tra
 
         mvMaterial* material = &am.materials[primitive.materialID].asset;
 
-        update_const_buffer(mesh.morphBuffer, mesh.weightsAnimated.data());
+        if(mesh.morphBuffer.buffer)
+            update_const_buffer(mesh.morphBuffer, mesh.weightsAnimated.data());
 
         if (material->alphaMode == 2)
         {

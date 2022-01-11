@@ -44,10 +44,7 @@ create_pixel_shader(const std::string& path, std::vector<D3D_SHADER_MACRO>* macr
     mvPixelShader shader{};
     shader.path = path;
 
-    //const D3D_SHADER_MACRO* macros = create_shader_macros(options);
-
     mvComPtr<ID3DBlob> shaderCompileErrorsBlob;
-    int a = 5;
     HRESULT hResult = D3DCompileFromFile(
         ToWide(path).c_str(),
 macros ? macros->data() : nullptr, D3D_COMPILE_STANDARD_FILE_INCLUDE, "main", "ps_5_0", 0, 0,

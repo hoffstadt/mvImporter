@@ -56,7 +56,7 @@ create_material(mvAssetManager& am, const std::string& vs, const std::string& ps
 		pipelineInfo.cull = !materialInfo.data.doubleSided;
 		pipelineInfo.macros = materialInfo.macros;
 
-		if (GContext->IO.imageBasedLighting) pipelineInfo.macros.push_back({ "USE_IBL", "0" });
+		if (GContext->IO.imageBasedLighting) pipelineInfo.macros.push_back({ "USE_IBL" , "0"});
 		if (GContext->IO.punctualLighting) pipelineInfo.macros.push_back({ "USE_PUNCTUAL", "0" });
 		if (materialInfo.extensionClearcoat && GContext->IO.clearcoat) pipelineInfo.macros.push_back({ "MATERIAL_CLEARCOAT", "0" });
 		if (materialInfo.pbrMetallicRoughness) pipelineInfo.macros.push_back({ "MATERIAL_METALLICROUGHNESS", "0" });
@@ -74,8 +74,6 @@ create_material(mvAssetManager& am, const std::string& vs, const std::string& ps
 
 		for (auto& macro : materialInfo.extramacros)
 			pipelineInfo.macros.push_back(macro);
-
-		pipelineInfo.macros.push_back({ NULL, NULL });
 
 		std::string hash = hash_material(material, material.layout, ps, vs);
 		pipelineInfo.layout = material.layout;
@@ -104,7 +102,6 @@ create_material(mvAssetManager& am, const std::string& vs, const std::string& ps
 
 		for (auto& macro : materialInfo.extramacros)
 			pipelineInfo.macros.push_back(macro);
-		pipelineInfo.macros.push_back({ NULL, NULL });
 
 		std::string hash = hash_material(material, material.layout, pipelineInfo.pixelShader, pipelineInfo.vertexShader);
 

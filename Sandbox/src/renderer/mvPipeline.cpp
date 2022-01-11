@@ -53,14 +53,20 @@ finalize_pipeline(mvPipelineInfo& info)
     brt.DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
     GContext->graphics.device->CreateBlendState(&blendDesc, &pipeline.blendState);
 
+    std::vector<D3D_SHADER_MACRO> macros;
+    for (auto& mac : info.macros)
+        macros.push_back({ mac.macro.c_str(), mac.value.c_str()});
+
+    macros.push_back({ NULL, NULL });
+
     if (!info.pixelShader.empty())
     {
-        mvPixelShader pixelShader = create_pixel_shader(GContext->IO.shaderDirectory + info.pixelShader, info.macros.empty() ? nullptr : &info.macros);
+        mvPixelShader pixelShader = create_pixel_shader(GContext->IO.shaderDirectory + info.pixelShader, macros.empty() ? nullptr : &macros);
         pipeline.pixelShader = pixelShader.shader;
         pipeline.pixelBlob = pixelShader.blob;
     }
 
-    mvVertexShader vertexShader = create_vertex_shader(GContext->IO.shaderDirectory + info.vertexShader, info.layout, info.macros.empty() ? nullptr : &info.macros);
+    mvVertexShader vertexShader = create_vertex_shader(GContext->IO.shaderDirectory + info.vertexShader, info.layout, macros.empty() ? nullptr : &macros);
 
     pipeline.vertexShader = vertexShader.shader;
     pipeline.vertexBlob = vertexShader.blob;

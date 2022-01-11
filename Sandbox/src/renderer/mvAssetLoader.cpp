@@ -1139,28 +1139,27 @@ load_gltf_meshes(mvAssetManager& assetManager, mvGLTFModel& model)
 
                 for (i32 i = 0; i < targetAttributes.size(); i++)
                 {
-                    std::string attributeOffsetStr = std::to_string(attributeOffset);
                     switch (targetAttributes[i])
                     {
                     case mvVertexElement::Position3D:
                         materialData.extramacros.push_back({ "HAS_MORPH_TARGET_POSITION", "1" });
-                        materialData.extramacros.push_back({ "MORPH_TARGET_POSITION_OFFSET", attributeOffsetStr.c_str()});
+                        materialData.extramacros.push_back({ "MORPH_TARGET_POSITION_OFFSET", std::to_string(attributeOffset) });
                         break;
                     case mvVertexElement::Normal:
                         materialData.extramacros.push_back({ "HAS_MORPH_TARGET_NORMAL", "1" });
-                        materialData.extramacros.push_back({ "MORPH_TARGET_NORMAL_OFFSET", attributeOffsetStr.c_str() });
+                        materialData.extramacros.push_back({ "MORPH_TARGET_NORMAL_OFFSET", std::to_string(attributeOffset) });
                         break;
                     case mvVertexElement::Tangent:
                         materialData.extramacros.push_back({ "HAS_MORPH_TARGET_TANGENT", "1" });
-                        materialData.extramacros.push_back({ "MORPH_TARGET_TANGENT_OFFSET", attributeOffsetStr.c_str() });
+                        materialData.extramacros.push_back({ "MORPH_TARGET_TANGENT_OFFSET", std::to_string(attributeOffset) });
                         break;
                     case mvVertexElement::TexCoord0:
                         materialData.extramacros.push_back({ "HAS_MORPH_TARGET_TEXCOORD_0", "1" });
-                        materialData.extramacros.push_back({ "MORPH_TARGET_TEXCOORD_0_OFFSET", attributeOffsetStr.c_str() });
+                        materialData.extramacros.push_back({ "MORPH_TARGET_TEXCOORD_0_OFFSET", std::to_string(attributeOffset) });
                         break;
                     case mvVertexElement::TexCoord1:
                         materialData.extramacros.push_back({ "HAS_MORPH_TARGET_TEXCOORD_1", "1" });
-                        materialData.extramacros.push_back({ "MORPH_TARGET_TEXCOORD_1_OFFSET", attributeOffsetStr.c_str() });
+                        materialData.extramacros.push_back({ "MORPH_TARGET_TEXCOORD_1_OFFSET", std::to_string(attributeOffset) });
                         break;
                     }
                     
@@ -1258,8 +1257,8 @@ load_gltf_meshes(mvAssetManager& assetManager, mvGLTFModel& model)
                                 }
 
                             }
-                            attributeOffsets[item.first] = item.second + 1;
                         }
+                        attributeOffsets[item.first] = item.second + 1;
                     }
                 }
                 newMesh.primitives.back().morphTexture = create_texture(textureWidth, textureWidth, glprimitive.target_count* targetAttributes.size(), newMesh.primitives.back().morphData);
