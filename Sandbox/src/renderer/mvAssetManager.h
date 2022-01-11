@@ -9,6 +9,7 @@
 #include "mvScene.h"
 #include "mvCamera.h"
 #include "mvAnimation.h"
+#include "mvImporter.h"
 
 // forward declaraionts
 struct mvTargetViewAsset;
@@ -62,7 +63,7 @@ b8 unregister_scene_asset   (mvAssetManager* manager, mvAssetID asset);
 // ID retrieval
 mvAssetID mvGetSceneAssetID      (mvAssetManager* manager, const std::string& tag);
 mvAssetID mvGetTextureAssetID    (mvAssetManager* manager, const std::string& path, const std::string& tag);
-mvAssetID mvGetTextureAssetID    (mvAssetManager* manager, const std::string& tag, std::vector<unsigned char> data);
+mvAssetID mvGetTextureAssetID    (mvAssetManager* manager, const std::string& tag, mvVector<unsigned char> data);
 mvAssetID mvGetCubeTextureAssetID(mvAssetManager* manager, const std::string& path);
 mvAssetID mvGetBufferAssetID     (mvAssetManager* manager, const std::string& tag, void* data, u32 size, D3D11_BIND_FLAG flags);
 mvAssetID mvGetMaterialAssetID   (mvAssetManager* manager, const std::string& tag);

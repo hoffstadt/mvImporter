@@ -2,8 +2,7 @@
 #include "mvAssetManager.h"
 #include "mvSandbox.h"
 #include <unordered_map>
-
-#define MV_IMPORTER_IMPLEMENTATION
+#include <assert.h>
 #include "mvImporter.h"
 
 static u8
@@ -69,7 +68,7 @@ mvFillBufferAsType(mvGLTFModel& model, mvGLTFAccessor& accessor, std::vector<W>&
 {
     mvS32 bufferviewStride = mvGetBufferViewStride(model, accessor);
     mvGLTFBufferView bufferView = model.bufferviews[accessor.buffer_view_index];
-    char* bufferRawData = (char*)model.buffers[bufferView.buffer_index].data.data();
+    char* bufferRawData = (char*)model.buffers[bufferView.buffer_index].data.data;
     char* bufferRawSection = &bufferRawData[bufferView.byte_offset + accessor.byteOffset]; // start of buffer section
 
     u8 actualItemCompCount = mvGetAccessorItemCompCount(accessor);
@@ -306,52 +305,52 @@ load_raw_attribute_buffers(mvGLTFModel& model, mvGLTFMeshPrimitive& glprimitive,
     for (u32 i = 0; i < glprimitive.attribute_count; i++)
     {
         auto& attribute = glprimitive.attributes[i];
-        if (strcmp(attribute.semantic.c_str(), "POSITION") == 0)
+        if (strcmp(attribute.semantic, "POSITION") == 0)
         {
             attributes.push_back(mvVertexElement::Position3D);
             mvFillBuffer(model, model.accessors[attribute.index], rawBuffers.positionAttributeBuffer);
         }
-        else if (strcmp(attribute.semantic.c_str(), "NORMAL") == 0)
+        else if (strcmp(attribute.semantic, "NORMAL") == 0)
         {
             attributes.push_back(mvVertexElement::Normal);
             mvFillBuffer(model, model.accessors[attribute.index], rawBuffers.normalAttributeBuffer, 3);
         }
-        else if (strcmp(attribute.semantic.c_str(), "TANGENT") == 0)
+        else if (strcmp(attribute.semantic, "TANGENT") == 0)
         {
             attributes.push_back(mvVertexElement::Tangent);
             mvFillBuffer(model, model.accessors[attribute.index], rawBuffers.tangentAttributeBuffer, 4);
         }
-        else if (strcmp(attribute.semantic.c_str(), "JOINTS_0") == 0)
+        else if (strcmp(attribute.semantic, "JOINTS_0") == 0)
         {
             attributes.push_back(mvVertexElement::Joints0);
             mvFillBuffer(model, model.accessors[attribute.index], rawBuffers.joints0AttributeBuffer, 4);
         }
-        else if (strcmp(attribute.semantic.c_str(), "JOINTS_1") == 0)
+        else if (strcmp(attribute.semantic, "JOINTS_1") == 0)
         {
             attributes.push_back(mvVertexElement::Joints1);
             mvFillBuffer(model, model.accessors[attribute.index], rawBuffers.joints1AttributeBuffer, 4);
         }
-        else if (strcmp(attribute.semantic.c_str(), "WEIGHTS_0") == 0)
+        else if (strcmp(attribute.semantic, "WEIGHTS_0") == 0)
         {
             attributes.push_back(mvVertexElement::Weights0);
             mvFillBuffer(model, model.accessors[attribute.index], rawBuffers.weights0AttributeBuffer, 4);
         }
-        else if (strcmp(attribute.semantic.c_str(), "WEIGHTS_1") == 0)
+        else if (strcmp(attribute.semantic, "WEIGHTS_1") == 0)
         {
             attributes.push_back(mvVertexElement::Weights1);
             mvFillBuffer(model, model.accessors[attribute.index], rawBuffers.weights1AttributeBuffer, 4);
         }
-        else if (strcmp(attribute.semantic.c_str(), "TEXCOORD_0") == 0)
+        else if (strcmp(attribute.semantic, "TEXCOORD_0") == 0)
         {
             attributes.push_back(mvVertexElement::TexCoord0);
             mvFillBuffer<f32>(model, model.accessors[attribute.index], rawBuffers.texture0AttributeBuffer, 2);
         }
-        else if (strcmp(attribute.semantic.c_str(), "TEXCOORD_1") == 0)
+        else if (strcmp(attribute.semantic, "TEXCOORD_1") == 0)
         {
             attributes.push_back(mvVertexElement::TexCoord1);
             mvFillBuffer<f32>(model, model.accessors[attribute.index], rawBuffers.texture1AttributeBuffer, 2);
         }
-        else if (strcmp(attribute.semantic.c_str(), "COLOR_0") == 0)
+        else if (strcmp(attribute.semantic, "COLOR_0") == 0)
         {
             mvGLTFAccessor& accessor = model.accessors[attribute.index];
             if (accessor.type == MV_IMP_VEC3)
@@ -374,7 +373,7 @@ load_raw_attribute_buffers(mvGLTFModel& model, mvGLTFMeshPrimitive& glprimitive,
             }
 
         }
-        else if (strcmp(attribute.semantic.c_str(), "COLOR_1") == 0)
+        else if (strcmp(attribute.semantic, "COLOR_1") == 0)
         {
             mvGLTFAccessor& accessor = model.accessors[attribute.index];
             if (accessor.type == MV_IMP_VEC3)
@@ -963,32 +962,32 @@ gather_target_attributes(mvGLTFModel& model, mvGLTFMeshPrimitive& glprimitive)
         for (int j = 0; j < target.attribute_count; j++)
         {
             mvGLTFAttribute attribute = target.attributes[j];
-            if (strcmp(attribute.semantic.c_str(), "POSITION") == 0 && !hasPosition)
+            if (strcmp(attribute.semantic, "POSITION") == 0 && !hasPosition)
             {
                 hasPosition = true;
                 targetAttributes.push_back(mvVertexElement::Position3D);
             }
-            else if (strcmp(attribute.semantic.c_str(), "NORMAL") == 0 && !hasNormal)
+            else if (strcmp(attribute.semantic, "NORMAL") == 0 && !hasNormal)
             {
                 hasNormal = true;
                 targetAttributes.push_back(mvVertexElement::Normal);
             }
-            else if (strcmp(attribute.semantic.c_str(), "TANGENT") == 0 && !hasTangent)
+            else if (strcmp(attribute.semantic, "TANGENT") == 0 && !hasTangent)
             {
                 hasTangent = true;
                 targetAttributes.push_back(mvVertexElement::Tangent);
             }
-            else if (strcmp(attribute.semantic.c_str(), "TEXCOORD_0") == 0 && !hasTex0)
+            else if (strcmp(attribute.semantic, "TEXCOORD_0") == 0 && !hasTex0)
             {
                 hasTex0 = true;
                 targetAttributes.push_back(mvVertexElement::TexCoord0);
             }
-            else if (strcmp(attribute.semantic.c_str(), "TEXCOORD_1") == 0 && !hasTex1)
+            else if (strcmp(attribute.semantic, "TEXCOORD_1") == 0 && !hasTex1)
             {
                 hasTex1 = true;
                 targetAttributes.push_back(mvVertexElement::TexCoord1);
             }
-            else if (strcmp(attribute.semantic.c_str(), "COLOR_0") == 0 && !hasColor1)
+            else if (strcmp(attribute.semantic, "COLOR_0") == 0 && !hasColor1)
             {
                 hasColor0 = true;
                 mvGLTFAccessor& accessor = model.accessors[attribute.index];
@@ -1007,7 +1006,7 @@ gather_target_attributes(mvGLTFModel& model, mvGLTFMeshPrimitive& glprimitive)
 
             }
 
-            else if (strcmp(attribute.semantic.c_str(), "COLOR_1") == 0 && !hasColor1)
+            else if (strcmp(attribute.semantic, "COLOR_1") == 0 && !hasColor1)
             {
                 hasColor1 = true;
                 mvGLTFAccessor& accessor = model.accessors[attribute.index];
@@ -1183,7 +1182,7 @@ load_gltf_meshes(mvAssetManager& assetManager, mvGLTFModel& model)
                         for (i32 j = 0; j < target.attribute_count; j++)
                         {
                             // todo: handle colors
-                            mvVertexElement semantic = get_element_from_gltf_semantic(target.attributes[j].semantic.c_str());
+                            mvVertexElement semantic = get_element_from_gltf_semantic(target.attributes[j].semantic);
 
                             if (item.first == semantic)
                             {

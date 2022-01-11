@@ -553,7 +553,7 @@ mvGetTextureAssetID(mvAssetManager* manager, const std::string& tag, const std::
 }
 
 mvAssetID
-mvGetTextureAssetID(mvAssetManager* manager, const std::string& tag, std::vector<unsigned char> data)
+mvGetTextureAssetID(mvAssetManager* manager, const std::string& tag, mvVector<unsigned char> data)
 {
 	for (s32 i = 0; i < manager->maxTextureCount; i++)
 	{

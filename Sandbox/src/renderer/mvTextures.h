@@ -4,12 +4,13 @@
 #include <vector>
 #include "mvTypes.h"
 #include "mvGraphics.h"
+#include "mvImporter.h"
 
 struct mvTexture;
 struct mvCubeTexture;
 
 mvTexture     create_texture     (const std::string& path);
-mvTexture     create_texture     (std::vector<unsigned char> data);
+mvTexture     create_texture     (mvVector<unsigned char> data);
 mvCubeTexture create_cube_texture(const std::string& path);
 
 mvTexture create_dynamic_texture(u32 width, u32 height, u32 arraySize = 1);

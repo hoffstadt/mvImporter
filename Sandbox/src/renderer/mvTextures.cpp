@@ -150,7 +150,7 @@ update_dynamic_texture(mvTexture& texture, u32 width, u32 height, f32* data)
 }
 
 mvTexture
-create_texture(std::vector<unsigned char> data)
+create_texture(mvVector<unsigned char> data)
 {
 	mvTexture texture{};
 
@@ -171,7 +171,7 @@ create_texture(std::vector<unsigned char> data)
 	// Load Image
 	i32 texWidth, texHeight, texNumChannels;
 	i32 texForceNumChannels = 4;
-	unsigned char* testTextureBytes = stbi_load_from_memory(data.data(), data.size(), &texWidth, &texHeight,
+	unsigned char* testTextureBytes = stbi_load_from_memory(data.data, data.size, &texWidth, &texHeight,
 		&texNumChannels, texForceNumChannels);
 	assert(testTextureBytes);
 	

@@ -90,7 +90,7 @@ int main()
   * [ ] Draco mesh encoding
 
 ## TODOs
-* [ ] Remove C++ std dependencies on _vector_ and _string_.
+* [ ] Remove C++ std dependencies on _string_.
 * [ ] Add tests
 * [ ] Support extensions and extras
 * [x] Support animations

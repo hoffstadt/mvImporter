@@ -4,6 +4,9 @@
 #include "mvMath.h"
 #include "mvPipeline.h"
 
+#define MV_IMPORTER_IMPLEMENTATION
+#include "mvImporter.h"
+
 void
 setup_graphics(mvViewport& viewport)
 {

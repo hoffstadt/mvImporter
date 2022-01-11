@@ -22,13 +22,21 @@
 #define MV_IMPORTER_API
 #endif
 
+#ifndef MV_IMPORTER_MAX_STRING_LENGTH
+#define MV_IMPORTER_MAX_STRING_LENGTH 256
+#endif
+
+#ifndef MV_IMPORTER_MAX_NAME_LENGTH
+#define MV_IMPORTER_MAX_NAME_LENGTH 256
+#endif
+
 #include <string>
-#include <vector>
 
 //#define MV_IMPORTER_IMPLEMENTATION
 #ifdef MV_IMPORTER_IMPLEMENTATION
 #include <assert.h>
 #include <stdio.h>
+#include<stdlib.h>
 #endif // MV_IMPORTER_IMPLEMENTATION
 
 //-----------------------------------------------------------------------------
@@ -148,10 +156,50 @@ enum mvGLTFCameraType
 	MV_IMP_ORTHOGRAPHIC = 1
 };
 
+template<typename T>
+struct mvVector
+{
+	int size     = 0u;
+	int capacity = 0u;
+	T*  data     = nullptr;
+
+	// Constructors, destructor
+	inline mvVector() { size = capacity = 0; data = nullptr; }
+	inline mvVector(const mvVector<T>& src) { size = capacity = 0; data = nullptr; operator=(src); }
+	inline mvVector<T>& operator=(const mvVector<T>& src) { clear(); resize(src.size); memcpy(data, src.data, (size_t)size * sizeof(T)); return *this; }
+	inline ~mvVector() { if (data) free(data); }
+
+	inline bool empty() const           { return size == 0; }
+	inline int  size_in_bytes() const   { return size * (int)sizeof(T); }
+	inline int  max_size() const        { return 0x7FFFFFFF / (int)sizeof(T); }
+	inline T&   operator[](int i)       { assert(i >= 0 && i < size); return data[i]; }
+	inline T&   operator[](int i) const { assert(i >= 0 && i < size); return data[i]; }
+
+	inline void         clear()      { if (data) { size = capacity = 0; free(data); data = nullptr; } }
+	inline T*           begin()      { return data; }
+    inline const T*     begin() const{ return data; }
+    inline T*           end()        { return data + size; }
+    inline const T*     end() const  { return data + size; }
+    inline T&           front()      { IM_ASSERT(size > 0); return data[0]; }
+	inline T&           back()       { assert(size > 0); return data[size - 1]; }
+	inline T&           back() const { assert(size > 0); return data[size - 1]; }
+	inline void         swap(mvVector<T>& rhs) { int rhs_size = rhs.size; rhs.size = size; size = rhs_size; int rhs_cap = rhs.capacity; rhs.capacity = capacity; capacity = rhs_cap; T* rhs_data = rhs.data; rhs.data = data; data = rhs_data; }
+
+	inline int _grow_capacity(int sz)     { int new_capacity = capacity ? (capacity + capacity / 2) : 8; return new_capacity > sz ? new_capacity : sz; }
+	inline void resize(int new_size)      { if (new_size > capacity) reserve(_grow_capacity(new_size)); size = new_size; }
+	inline void reserve(int new_capacity) { if (new_capacity <= capacity) return; T* new_data = (T*)malloc((size_t)new_capacity * sizeof(T)); if (data) { memcpy(new_data, data, (size_t)size * sizeof(T)); free(data); } data = new_data; capacity = new_capacity; }
+
+	inline void     push_back(const T& v)      { if (size == capacity) reserve(_grow_capacity(size*2)); memcpy(&data[size], &v, sizeof(v)); size++;}
+	inline void     pop_back()                 { assert(size > 0); size--; }
+	inline bool     contains(const T& v) const { const T* data = this->data;  const T* data_end = this->data + size; while (data < data_end) if (*data++ == v) return true; return false; }
+	inline T*       find(const T& v)           { T* data = this->data;  const T* data_end = this->data + size; while (data < data_end) if (*data == v) break; else ++data; return data; }
+	inline const T* find(const T& v) const     { const T* data = this->data;  const T* data_end = this->data + size; while (data < data_end) if (*data == v) break; else ++data; return data; }
+};
+
 struct mvGLTFAttribute
 {
-	std::string semantic;
-	mvS32       index = -1; // accessor index
+	char  semantic[MV_IMPORTER_MAX_NAME_LENGTH];
+	mvS32 index = -1; // accessor index
 };
 
 struct mvGLTFAccessor
@@ -184,18 +232,18 @@ struct mvGLTFSampler
 
 struct mvGLTFImage
 {
-	std::string                mimeType;
-	std::string                uri;
-	std::vector<unsigned char> data;
-	bool                       embedded;
-	mvS32                      buffer_view_index = -1;
+	std::string             mimeType;
+	std::string             uri;
+	mvVector<unsigned char> data;
+	bool                    embedded;
+	mvS32                   buffer_view_index = -1;
 };
 
 struct mvGLTFBuffer
 {
-	mvU32                      byte_length = 0u;
-	std::string                uri;
-	std::vector<unsigned char> data;
+	mvU32                   byte_length = 0u;
+	std::string             uri;
+	mvVector<unsigned char> data;
 };
 
 struct mvGLTFBufferView
@@ -429,23 +477,23 @@ struct mvStack
 	bool empty();
 
 	int currentIndex = 0;
-	std::vector<int> data;
+	mvVector<int> data;
 };
 
 struct mvToken
 {
-	std::string value;
 	mvTokenType type = MV_JSON_NONE;
+	mvVector<char> value;
 };
 
 struct mvJsonValue
 {
-	std::string value;
+	mvVector<char> value;
 };
 
 struct mvJsonMember
 {
-	std::string name;
+	char        name[MV_IMPORTER_MAX_NAME_LENGTH];
 	mvJsonType  type = MV_JSON_TYPE_NONE;
 	int         index = -1;
 	mvJsonContext* context = nullptr;
@@ -459,9 +507,9 @@ struct mvJsonMember
 
 struct mvJsonObject
 {
-	mvJsonType                type = MV_JSON_TYPE_NONE;
-	std::vector<mvJsonMember> members;
-	mvJsonContext*            context = nullptr;
+	mvJsonType             type = MV_JSON_TYPE_NONE;
+	mvVector<mvJsonMember> members;
+	mvJsonContext*         context = nullptr;
 
 	mvJsonMember& getMember(const char* member);
 	bool          doesMemberExist(const char* member);
@@ -473,8 +521,8 @@ struct mvJsonObject
 
 struct mvJsonContext
 {
-	std::vector<mvJsonValue>  primitiveValues;
-	std::vector<mvJsonObject> jsonObjects;
+	mvVector<mvJsonValue>  primitiveValues;
+	mvVector<mvJsonObject> jsonObjects;
 
 	bool doesMemberExist(const char* member);
 	mvJsonObject& operator[](const char* member);
@@ -575,7 +623,7 @@ base64_decode(std::string const& encoded_string)
 }
 
 bool
-DecodeDataURI(std::vector<unsigned char>* out, std::string& mime_type,
+DecodeDataURI(mvVector<unsigned char>* out, std::string& mime_type,
 	const std::string& in, size_t reqBytes, bool checkSize)
 {
 	std::string header = "data:application/octet-stream;base64,";
@@ -650,14 +698,14 @@ DecodeDataURI(std::vector<unsigned char>* out, std::string& mime_type,
 }
 
 static void
-ParseForTokens(char* rawData, std::vector<mvToken>& tokens)
+ParseForTokens(char* rawData, mvVector<mvToken>& tokens)
 {
 	int currentPos = 0u;
 	char currentChar = rawData[currentPos];
 	char basicTokens[] = { '{', '}', '[', ']', ':', ',' };
 
 	bool inString = false;
-	std::vector<char> buffer;
+	mvVector<char> buffer;
 
 	while (currentChar != 0)
 	{
@@ -673,11 +721,12 @@ ParseForTokens(char* rawData, std::vector<mvToken>& tokens)
 						mvToken primitivetoken{};
 						primitivetoken.type = MV_JSON_PRIMITIVE;
 						buffer.push_back('\0');
-						for (int i = 0; i < buffer.size(); i++)
+						for (int i = 0; i < buffer.size; i++)
 						{
-							primitivetoken.value += buffer[i];
+							primitivetoken.value.push_back(buffer[i]);
 						}
-						tokens.push_back(primitivetoken);
+						tokens.push_back({ primitivetoken.type });
+						primitivetoken.value.swap(tokens.back().value);
 						buffer.clear();
 					}
 
@@ -689,11 +738,10 @@ ParseForTokens(char* rawData, std::vector<mvToken>& tokens)
 					else if (currentChar == ',') token.type = MV_JSON_COMMA;
 					else if (currentChar == ':') token.type = MV_JSON_COLON;
 
-					char cc[2];
-					cc[0] = currentChar;
-					cc[1] = 0;
-					token.value = std::string(cc);
-					tokens.push_back(token);
+					token.value.push_back(currentChar);
+					token.value.push_back(0);
+					tokens.push_back({ token.type });
+					token.value.swap(tokens.back().value);
 					tokenFound = true;
 					break;
 				}
@@ -709,9 +757,9 @@ ParseForTokens(char* rawData, std::vector<mvToken>& tokens)
 				{
 					mvToken token{};
 					buffer.push_back('\0');
-					for (int i = 0; i < buffer.size(); i++)
+					for (int i = 0; i < buffer.size; i++)
 					{
-						token.value += buffer[i];
+						token.value.push_back(buffer[i]);
 					}
 
 
@@ -719,7 +767,8 @@ ParseForTokens(char* rawData, std::vector<mvToken>& tokens)
 						token.type = MV_JSON_MEMBER;
 					else
 						token.type = MV_JSON_STRING;
-					tokens.push_back(token);
+					tokens.push_back({token.type});
+					token.value.swap(tokens.back().value);
 					tokenFound = true;
 					inString = false;
 					buffer.clear();
@@ -806,7 +855,7 @@ ParseJSON(char* rawData, int size)
 	char* spacesRemoved = new char[size];
 	RemoveWhiteSpace(rawData, spacesRemoved, size);
 
-	std::vector<mvToken>* tokens = new std::vector<mvToken>;
+	mvVector<mvToken>* tokens = new mvVector<mvToken>;
 	ParseForTokens(spacesRemoved, *tokens);
 
 	//for (auto& token : tokens)
@@ -823,7 +872,7 @@ ParseJSON(char* rawData, int size)
 	while (true)
 	{
 
-		if (i >= tokens->size())
+		if (i >= tokens->size)
 			break;
 
 		switch ((*tokens)[i].type)
@@ -838,7 +887,7 @@ ParseJSON(char* rawData, int size)
 			{
 				mvJsonObject jobject{};
 				jobject.type = MV_JSON_TYPE_OBJECT;
-				int newObjectIndex = context.jsonObjects.size();
+				int newObjectIndex = context.jsonObjects.size;
 				int memberId = jsonMemberStack.top();
 				parent.members[memberId].index = newObjectIndex;
 				context.jsonObjects.push_back(jobject);
@@ -853,7 +902,7 @@ ParseJSON(char* rawData, int size)
 
 				mvJsonObject jobject{};
 				jobject.type = MV_JSON_TYPE_OBJECT;
-				int newObjectIndex = context.jsonObjects.size();
+				int newObjectIndex = context.jsonObjects.size;
 
 				mvJsonMember member{};
 				member.type = MV_JSON_TYPE_PRIMITIVE;
@@ -871,7 +920,7 @@ ParseJSON(char* rawData, int size)
 		{
 			mvJsonObject jobject{};
 			jobject.type = MV_JSON_TYPE_ARRAY;
-			int newObjectIndex = context.jsonObjects.size();
+			int newObjectIndex = context.jsonObjects.size;
 			context.jsonObjects.push_back(jobject);
 			jsonObjectStack.push(newObjectIndex);
 			jsonMemberStack.pop();
@@ -900,30 +949,31 @@ ParseJSON(char* rawData, int size)
 			int parentId = jsonObjectStack.top();
 			mvJsonObject& parent = context.jsonObjects[parentId];
 			mvJsonMember member{};
-			member.name = (*tokens)[i].value;
-			//if(i+)
+			memcpy(member.name, (*tokens)[i].value.data, (*tokens)[i].value.size_in_bytes());
+
+
 			mvTokenType valueType = (*tokens)[i + 2].type;
 			if (valueType == MV_JSON_LEFT_BRACKET)
 			{
-				member.index = context.jsonObjects.size();
+				member.index = context.jsonObjects.size;
 				member.type = MV_JSON_TYPE_ARRAY;
 			}
 			else if (valueType == MV_JSON_LEFT_BRACE)
 			{
-				member.index = context.jsonObjects.size();
+				member.index = context.jsonObjects.size;
 				member.type = MV_JSON_TYPE_OBJECT;
 			}
 			else if (valueType == MV_JSON_PRIMITIVE)
 			{
-				member.index = context.primitiveValues.size();
+				member.index = context.primitiveValues.size;
 				member.type = MV_JSON_TYPE_PRIMITIVE;
 			}
 			else if (valueType == MV_JSON_STRING)
 			{
-				member.index = context.primitiveValues.size();
+				member.index = context.primitiveValues.size;
 				member.type = MV_JSON_TYPE_STRING;
 			}
-			int memberId = parent.members.size();
+			int memberId = parent.members.size;
 			parent.members.push_back(member);
 			jsonMemberStack.push(memberId);
 			i++;
@@ -937,7 +987,7 @@ ParseJSON(char* rawData, int size)
 
 			if (parent.type == MV_JSON_TYPE_OBJECT)
 			{
-				int valueId = context.primitiveValues.size();
+				int valueId = context.primitiveValues.size;
 				context.primitiveValues.push_back({});
 				context.primitiveValues.back().value = (*tokens)[i].value;
 				int memberId = jsonMemberStack.top();
@@ -947,7 +997,7 @@ ParseJSON(char* rawData, int size)
 			else if (parent.type == MV_JSON_TYPE_ARRAY)
 			{
 
-				int valueId = context.primitiveValues.size();
+				int valueId = context.primitiveValues.size;
 				context.primitiveValues.push_back({});
 				context.primitiveValues.back().value = (*tokens)[i].value;
 
@@ -966,9 +1016,10 @@ ParseJSON(char* rawData, int size)
 			mvJsonObject& parent = context.jsonObjects[parentId];
 			if (parent.type == MV_JSON_TYPE_OBJECT)
 			{
-				int valueId = context.primitiveValues.size();
+				int valueId = context.primitiveValues.size;
 				context.primitiveValues.push_back({});
 				context.primitiveValues.back().value = (*tokens)[i].value;
+
 				int memberId = jsonMemberStack.top();
 				parent.members[memberId].index = valueId;
 				jsonMemberStack.pop();
@@ -977,7 +1028,7 @@ ParseJSON(char* rawData, int size)
 			else if (parent.type == MV_JSON_TYPE_ARRAY)
 			{
 
-				int valueId = context.primitiveValues.size();
+				int valueId = context.primitiveValues.size;
 				context.primitiveValues.push_back({});
 				context.primitiveValues.back().value = (*tokens)[i].value;
 
@@ -1011,11 +1062,9 @@ ParseJSON(char* rawData, int size)
 bool
 mvJsonContext::doesMemberExist(const char* member)
 {
-	for (int i = 0; i < jsonObjects[1].members.size(); i++)
+	for (int i = 0; i < jsonObjects[1].members.size; i++)
 	{
-		const char* name = jsonObjects[1].members[i].name.c_str();
-
-		if (strcmp(member, name) == 0)
+		if (strcmp(member, jsonObjects[1].members[i].name) == 0)
 			return true;
 	}
 
@@ -1025,11 +1074,10 @@ mvJsonContext::doesMemberExist(const char* member)
 mvJsonObject&
 mvJsonContext::operator[](const char* member)
 {
-	for (int i = 0; i < jsonObjects[1].members.size(); i++)
+	for (int i = 0; i < jsonObjects[1].members.size; i++)
 	{
-		const char* name = jsonObjects[1].members[i].name.c_str();
 
-		if (strcmp(member, name) == 0)
+		if (strcmp(member, jsonObjects[1].members[i].name) == 0)
 		{
 			int index = jsonObjects[1].members[i].index;
 			return jsonObjects[index];
@@ -1045,7 +1093,7 @@ mvStack::push(int value)
 	if (data.empty())
 		data.resize(2048);
 
-	if (value == data.size())
+	if (value == data.size)
 	{
 		data.resize(value * 2);
 	}
@@ -1075,11 +1123,9 @@ mvStack::empty()
 bool
 mvJsonObject::doesMemberExist(const char* member)
 {
-	for (int i = 0; i < members.size(); i++)
+	for (int i = 0; i < members.size; i++)
 	{
-		const char* name = members[i].name.c_str();
-
-		if (strcmp(member, name) == 0)
+		if (strcmp(member, members[i].name) == 0)
 			return true;
 	}
 
@@ -1095,11 +1141,10 @@ mvJsonObject::operator[](int i)
 mvJsonObject&
 mvJsonObject::operator[](const char* member)
 {
-	for (int i = 0; i < members.size(); i++)
+	for (int i = 0; i < members.size; i++)
 	{
-		const char* name = members[i].name.c_str();
 
-		if (strcmp(member, name) == 0)
+		if (strcmp(member, members[i].name) == 0)
 			return context->jsonObjects[members[i].index];
 	}
 
@@ -1109,11 +1154,9 @@ mvJsonObject::operator[](const char* member)
 mvJsonMember&
 mvJsonObject::getMember(const char* member)
 {
-	for (int i = 0; i < members.size(); i++)
+	for (int i = 0; i < members.size; i++)
 	{
-		const char* name = members[i].name.c_str();
-
-		if (strcmp(member, name) == 0)
+		if (strcmp(member, members[i].name) == 0)
 			return members[i];
 	}
 
@@ -1122,23 +1165,23 @@ mvJsonObject::getMember(const char* member)
 
 mvJsonMember::operator int()
 {
-	return atoi(context->primitiveValues[index].value.c_str());
+	return atoi(context->primitiveValues[index].value.data);
 }
 
 mvJsonMember::operator mvU32()
 {
-	int value = atoi(context->primitiveValues[index].value.c_str());
+	int value = atoi(context->primitiveValues[index].value.data);
 	return (mvU32)value;
 }
 
 mvJsonMember::operator float()
 {
-	return atof(context->primitiveValues[index].value.c_str());
+	return atof(context->primitiveValues[index].value.data);
 }
 
 mvJsonMember::operator char* ()
 {
-	return (char*)context->primitiveValues[index].value.c_str();
+	return (char*)context->primitiveValues[index].value.data;
 }
 
 mvJsonMember::operator mvJsonObject& ()
@@ -1154,7 +1197,7 @@ namespace mvImp {
 		if (!j.doesMemberExist("extensionsUsed"))
 			return nullptr;
 
-		mvU32 extensionCount = j["extensionsUsed"].members.size();
+		mvU32 extensionCount = j["extensionsUsed"].members.size;
 
 		std::string* extensions = new std::string[extensionCount];
 
@@ -1174,7 +1217,7 @@ namespace mvImp {
 		if (!j.doesMemberExist("animations"))
 			return nullptr;
 
-		mvU32 animationCount = j["animations"].members.size();
+		mvU32 animationCount = j["animations"].members.size;
 
 		mvGLTFAnimation* animations = new mvGLTFAnimation[animationCount];
 
@@ -1190,7 +1233,7 @@ namespace mvImp {
 
 			if (janimation.doesMemberExist("samplers"))
 			{
-				mvU32 samplerCount = janimation["samplers"].members.size();
+				mvU32 samplerCount = janimation["samplers"].members.size;
 				animation.samplers = new mvGLTFAnimationSampler[samplerCount];
 				animation.sampler_count = samplerCount;
 
@@ -1218,7 +1261,7 @@ namespace mvImp {
 
 			if (janimation.doesMemberExist("channels"))
 			{
-				mvU32 channelCount = janimation["channels"].members.size();
+				mvU32 channelCount = janimation["channels"].members.size;
 				animation.channels = new mvGLTFAnimationChannel[channelCount];
 				animation.channel_count = channelCount;
 
@@ -1264,7 +1307,7 @@ namespace mvImp {
 		if (!j.doesMemberExist("cameras"))
 			return nullptr;
 
-		mvU32 cameraCount = j["cameras"].members.size();
+		mvU32 cameraCount = j["cameras"].members.size;
 
 		mvGLTFCamera* cameras = new mvGLTFCamera[cameraCount];
 
@@ -1343,7 +1386,7 @@ namespace mvImp {
 		if (!j.doesMemberExist("scenes"))
 			return nullptr;
 
-		mvU32 count = j["scenes"].members.size();
+		mvU32 count = j["scenes"].members.size;
 		mvGLTFScene* scenes = new mvGLTFScene[count];
 
 		for (int i = 0; i < count; i++)
@@ -1353,7 +1396,7 @@ namespace mvImp {
 
 			if (jscene.doesMemberExist("nodes"))
 			{
-				mvU32 nodeCount = jscene["nodes"].members.size();
+				mvU32 nodeCount = jscene["nodes"].members.size;
 				scene.nodes = new mvU32[nodeCount];
 				for (int j = 0; j < nodeCount; j++)
 				{
@@ -1375,7 +1418,7 @@ namespace mvImp {
 		if (!j.doesMemberExist("nodes"))
 			return nullptr;
 
-		mvU32 count = j["nodes"].members.size();
+		mvU32 count = j["nodes"].members.size;
 		mvGLTFNode* nodes = new mvGLTFNode[count];
 
 		for (int i = 0; i < count; i++)
@@ -1397,7 +1440,7 @@ namespace mvImp {
 
 			if (jnode.doesMemberExist("children"))
 			{
-				mvU32 childCount = jnode["children"].members.size();
+				mvU32 childCount = jnode["children"].members.size;
 				node.children = new mvU32[childCount];
 
 				for (int j = 0; j < childCount; j++)
@@ -1410,7 +1453,7 @@ namespace mvImp {
 
 			if (jnode.doesMemberExist("translation"))
 			{
-				mvU32 compCount = jnode["translation"].members.size();
+				mvU32 compCount = jnode["translation"].members.size;
 
 				for (int j = 0; j < compCount; j++)
 				{
@@ -1420,7 +1463,7 @@ namespace mvImp {
 
 			if (jnode.doesMemberExist("scale"))
 			{
-				mvU32 compCount = jnode["scale"].members.size();
+				mvU32 compCount = jnode["scale"].members.size;
 
 				for (int j = 0; j < compCount; j++)
 				{
@@ -1430,7 +1473,7 @@ namespace mvImp {
 
 			if (jnode.doesMemberExist("rotation"))
 			{
-				mvU32 compCount = jnode["rotation"].members.size();
+				mvU32 compCount = jnode["rotation"].members.size;
 
 				for (int j = 0; j < compCount; j++)
 				{
@@ -1441,7 +1484,7 @@ namespace mvImp {
 			if (jnode.doesMemberExist("matrix"))
 			{
 				node.hadMatrix = true;
-				mvU32 compCount = jnode["matrix"].members.size();
+				mvU32 compCount = jnode["matrix"].members.size;
 
 				for (int j = 0; j < compCount; j++)
 				{
@@ -1461,7 +1504,7 @@ namespace mvImp {
 		if (!j.doesMemberExist("meshes"))
 			return nullptr;
 
-		mvU32 meshCount = j["meshes"].members.size();
+		mvU32 meshCount = j["meshes"].members.size;
 
 		mvGLTFMesh* meshes = new mvGLTFMesh[meshCount];
 
@@ -1475,7 +1518,7 @@ namespace mvImp {
 
 			if (jmesh.doesMemberExist("weights"))
 			{
-				mesh.weights_count = jmesh["weights"].members.size();
+				mesh.weights_count = jmesh["weights"].members.size;
 				mesh.weights = new mvF32[mesh.weights_count];
 				for (int j = 0; j < mesh.weights_count; j++)
 				{
@@ -1488,7 +1531,7 @@ namespace mvImp {
 			if (jmesh.doesMemberExist("primitives"))
 			{
 
-				mesh.primitives_count = jmesh["primitives"].members.size();
+				mesh.primitives_count = jmesh["primitives"].members.size;
 				mesh.primitives = new mvGLTFMeshPrimitive[mesh.primitives_count];
 
 				for (int j = 0; j < mesh.primitives_count; j++)
@@ -1507,7 +1550,7 @@ namespace mvImp {
 					if (jprimitive.doesMemberExist("attributes"))
 					{
 						mvJsonObject jattributes = jprimitive["attributes"];
-						mvU32 attrCount = jattributes.members.size();
+						mvU32 attrCount = jattributes.members.size;
 						primitive.attributes = new mvGLTFAttribute[attrCount];
 						
 
@@ -1515,7 +1558,10 @@ namespace mvImp {
 						{
 							mvJsonMember m = jattributes.members[k];
 							
-							primitive.attributes[primitive.attribute_count] = { m.name , (int)m };
+							//primitive.attributes[primitive.attribute_count] = { m.name , (int)m };
+							//primitive.attributes[primitive.attribute_count].semantic = m.name;
+							memcpy(primitive.attributes[primitive.attribute_count].semantic, m.name, MV_IMPORTER_MAX_NAME_LENGTH);
+							primitive.attributes[primitive.attribute_count].index = (int)m;
 							primitive.attribute_count++;
 						}
 
@@ -1524,7 +1570,7 @@ namespace mvImp {
 					if (jprimitive.doesMemberExist("targets"))
 					{
 						mvJsonObject jtargets = jprimitive["targets"];
-						mvU32 targetCount = jtargets.members.size();
+						mvU32 targetCount = jtargets.members.size;
 						primitive.targets = new mvGLTFMorphTarget[targetCount];
 
 						for (int k = 0; k < targetCount; k++)
@@ -1533,12 +1579,13 @@ namespace mvImp {
 
 							mvJsonObject jtarget = jtargets.members[k];
 							
-							mvU32 attrCount = jtarget.members.size();
+							mvU32 attrCount = jtarget.members.size;
 							target.attributes = new mvGLTFAttribute[attrCount];
 							for (int x = 0; x < attrCount; x++)
 							{
 								mvJsonMember jattribute = jtarget.members[x];
-								target.attributes[target.attribute_count] = { jattribute.name , (int)jattribute };
+								memcpy(target.attributes[target.attribute_count].semantic, jattribute.name, MV_IMPORTER_MAX_NAME_LENGTH);
+								target.attributes[target.attribute_count].index = (int)jattribute;
 								target.attribute_count++;
 							}
 
@@ -1563,7 +1610,7 @@ namespace mvImp {
 		if (!j.doesMemberExist("materials"))
 			return nullptr;
 
-		mvU32 count = j["materials"].members.size();
+		mvU32 count = j["materials"].members.size;
 		mvGLTFMaterial* materials = new mvGLTFMaterial[count];
 
 		for (int i = 0; i < count; i++)
@@ -1716,7 +1763,7 @@ namespace mvImp {
 		if (!j.doesMemberExist("textures"))
 			return nullptr;
 
-		mvU32 count = j["textures"].members.size();
+		mvU32 count = j["textures"].members.size;
 		mvGLTFTexture* textures = new mvGLTFTexture[count];
 
 		for (int i = 0; i < count; i++)
@@ -1745,7 +1792,7 @@ namespace mvImp {
 		if (!j.doesMemberExist("samplers"))
 			return nullptr;
 
-		mvU32 count = j["samplers"].members.size();
+		mvU32 count = j["samplers"].members.size;
 		mvGLTFSampler* samplers = new mvGLTFSampler[count];
 
 		for (int i = 0; i < count; i++)
@@ -1780,7 +1827,7 @@ namespace mvImp {
 		if (!j.doesMemberExist("images"))
 			return nullptr;
 
-		mvU32 count = j["images"].members.size();
+		mvU32 count = j["images"].members.size;
 		mvGLTFImage* images = new mvGLTFImage[count];
 
 		for (int i = 0; i < count; i++)
@@ -1809,7 +1856,7 @@ namespace mvImp {
 		if (!j.doesMemberExist("buffers"))
 			return nullptr;
 
-		mvU32 count = j["buffers"].members.size();
+		mvU32 count = j["buffers"].members.size;
 		mvGLTFBuffer* buffers = new mvGLTFBuffer[count];
 
 		for (int i = 0; i < count; i++)
@@ -1835,7 +1882,7 @@ namespace mvImp {
 		if (!j.doesMemberExist("bufferViews"))
 			return nullptr;
 
-		mvU32 count = j["bufferViews"].members.size();
+		mvU32 count = j["bufferViews"].members.size;
 		mvGLTFBufferView* bufferviews = new mvGLTFBufferView[count];
 
 		for (int i = 0; i < count; i++)
@@ -1871,7 +1918,7 @@ namespace mvImp {
 		if (!j.doesMemberExist("accessors"))
 			return nullptr;
 
-		mvU32 count = j["accessors"].members.size();
+		mvU32 count = j["accessors"].members.size;
 		mvGLTFAccessor* accessors = new mvGLTFAccessor[count];
 
 		for (int i = 0; i < count; i++)
@@ -1925,7 +1972,7 @@ namespace mvImp {
 			if (jaccessor.doesMemberExist("max"))
 			{
 
-				mvU32 min_count = jaccessor["max"].members.size();
+				mvU32 min_count = jaccessor["max"].members.size;
 				for (mvU32 min_entry = 0u; min_entry < min_count; min_entry++)
 				{
 					accessor.maxes[min_entry] = jaccessor["max"][min_entry];
@@ -1935,7 +1982,7 @@ namespace mvImp {
 			if (jaccessor.doesMemberExist("min"))
 			{
 
-				mvU32 min_count = jaccessor["min"].members.size();
+				mvU32 min_count = jaccessor["min"].members.size;
 				for (mvU32 min_entry = 0u; min_entry < min_count; min_entry++)
 				{
 					accessor.mins[min_entry] = jaccessor["min"][min_entry];
@@ -1954,7 +2001,7 @@ namespace mvImp {
 		if (!j.doesMemberExist("skins"))
 			return nullptr;
 
-		mvU32 count = j["skins"].members.size();
+		mvU32 count = j["skins"].members.size;
 		mvGLTFSkin* skins = new mvGLTFSkin[count];
 
 		for (int i = 0; i < count; i++)
@@ -1973,7 +2020,7 @@ namespace mvImp {
 
 			if (jnode.doesMemberExist("joints"))
 			{
-				mvU32 childCount = jnode["joints"].members.size();
+				mvU32 childCount = jnode["joints"].members.size;
 				skin.joints = new mvU32[childCount];
 
 				for (int j = 0; j < childCount; j++)
@@ -2059,15 +2106,13 @@ mvLoadBinaryGLTF(const char* root, const char* file)
 
 	if (context.doesMemberExist("scene"))
 	{
-		for (int i = 0; i < context.jsonObjects[1].members.size(); i++)
+		for (int i = 0; i < context.jsonObjects[1].members.size; i++)
 		{
-			const char* name = context.jsonObjects[1].members[i].name.c_str();
-
-			if (strcmp("scene", name) == 0)
+			if (strcmp("scene", context.jsonObjects[1].members[i].name) == 0)
 			{
 				int index = context.jsonObjects[1].members[i].index;
 				mvJsonValue value = context.primitiveValues[index];
-				model.scene = stoi(value.value);
+				model.scene = std::stoi(value.value.data);
 			}
 		}
 	}
@@ -2094,7 +2139,7 @@ mvLoadBinaryGLTF(const char* root, const char* file)
 		char* datachunkData = &data[28 + chunkLength];
 
 		model.buffers[0].data.resize(model.buffers[0].byte_length);
-		memcpy(model.buffers[0].data.data(), datachunkData, model.buffers[0].byte_length);
+		memcpy(model.buffers[0].data.data, datachunkData, model.buffers[0].byte_length);
 		int a = 6;
 	}
 
@@ -2107,10 +2152,10 @@ mvLoadBinaryGLTF(const char* root, const char* file)
 			image.embedded = true;
 			//image.data = model.buffers
 			mvGLTFBufferView bufferView = model.bufferviews[image.buffer_view_index];
-			char* bufferRawData = (char*)model.buffers[bufferView.buffer_index].data.data();
+			char* bufferRawData = (char*)model.buffers[bufferView.buffer_index].data.data;
 			char* bufferRawSection = &bufferRawData[bufferView.byte_offset]; // start of buffer section
 			image.data.resize(bufferView.byte_length);
-			memcpy(image.data.data(), bufferRawSection, bufferView.byte_length);
+			memcpy(image.data.data, bufferRawSection, bufferView.byte_length);
 			continue;
 		}
 
@@ -2152,7 +2197,7 @@ mvLoadBinaryGLTF(const char* root, const char* file)
 			mvU32 dataSize = 0u;
 			void* data = mvImp::_ReadFile(combinedFile.c_str(), dataSize, "rb");
 			buffer.data.resize(dataSize);
-			memcpy(buffer.data.data(), data, dataSize);
+			memcpy(buffer.data.data, data, dataSize);
 		}
 
 	}
@@ -2185,21 +2230,21 @@ mvLoadGLTF(const char* root, const char* file)
 
 	mvJsonContext& context = *ParseJSON(data, dataSize);
 	delete[] data;
-
+	
 	if (context.doesMemberExist("scene"))
 	{
-		for (int i = 0; i < context.jsonObjects[1].members.size(); i++)
+		for (int i = 0; i < context.jsonObjects[1].members.size; i++)
 		{
-			const char* name = context.jsonObjects[1].members[i].name.c_str();
-
-			if (strcmp("scene", name) == 0)
+			if (strcmp("scene", context.jsonObjects[1].members[i].name) == 0)
 			{
 				int index = context.jsonObjects[1].members[i].index;
 				mvJsonValue value = context.primitiveValues[index];
-				model.scene = stoi(value.value);
+				model.scene = std::stoi(value.value.data);
 			}
 		}
 	}
+
+
 
 	model.scenes = mvImp::_LoadScenes(context, model.scene_count);
 	model.nodes = mvImp::_LoadNodes(context, model.node_count);
@@ -2255,7 +2300,7 @@ mvLoadGLTF(const char* root, const char* file)
 			mvU32 dataSize = 0u;
 			void* data = mvImp::_ReadFile(combinedFile.c_str(), dataSize, "rb");
 			buffer.data.resize(dataSize);
-			memcpy(buffer.data.data(), data, dataSize);
+			memcpy(buffer.data.data, data, dataSize);
 		}
 
 	}
