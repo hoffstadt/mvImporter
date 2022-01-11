@@ -101,8 +101,8 @@ interpolate_quat(mvAnimationChannel& channel, f32 tcurrent, f32 tmax)
 
 }
 
-static mvVec3
-interpolate(mvAnimationChannel& channel, f32 tcurrent, f32 tmax)
+static void
+interpolate(mvAnimationChannel& channel, f32 tcurrent, f32 tmax, u32 stride, f32* out)
 {
 
     // Wrap t around, so the animation loops.
@@ -137,49 +137,51 @@ interpolate(mvAnimationChannel& channel, f32 tcurrent, f32 tmax)
 
     if (channel.interpolation == "LINEAR")
     {
-        mvVec3 result{};
-        mvVec3 prev = *(mvVec3*)&channel.outputdata[channel.prevKey * 3];
-        mvVec3 next = *(mvVec3*)&channel.outputdata[nextKey * 3];
 
-        result.x = prev.x * (1.0f - tn) + next.x * tn;
-        result.y = prev.y * (1.0f - tn) + next.y * tn;
-        result.z = prev.z * (1.0f - tn) + next.z * tn;
+        for (i32 i = 0; i < stride; i++)
+        {
+            f32 prev = channel.outputdata[channel.prevKey * stride + i];
+            f32 next = channel.outputdata[nextKey * stride + i];
+            out[i] = prev * (1.0f - tn) + next * tn;
+        }
 
-        return result;
     }
     else if (channel.interpolation == "STEP")
     {
-        return *(mvVec3*)&channel.outputdata[channel.prevKey * 3];
+        //return *(mvVec3*)&channel.outputdata[channel.prevKey * 3];
+        for (i32 i = 0; i < stride; i++)
+        {
+            out[i] = channel.outputdata[channel.prevKey * stride + i];
+        }
     }
     else if (channel.interpolation == "CUBICSPLINE")
     {
-        i32 prevIndex = channel.prevKey * 3 * 3;
-        i32 nextIndex = nextKey * 3 * 3;
+        i32 prevIndex = channel.prevKey * stride * 3;
+        i32 nextIndex = nextKey * stride * 3;
         i32 A = 0;
-        i32 V = 1 * 3;
-        i32 B = 2 * 3;
+        i32 V = 1 * stride;
+        i32 B = 2 * stride;
 
         f32 tSq = tn * tn;
         f32 tCub = tSq * tn;
 
         mvVec3 result{};
 
-        for (i32 i = 0; i < 3; i++)
+        for (i32 i = 0; i < stride; i++)
         {
             f32 v0 = *(float*)&channel.outputdata[prevIndex + i + V];
             f32 a = keyDelta * *(float*)&channel.outputdata[nextIndex + i + A];
             f32 b = keyDelta * *(float*)&channel.outputdata[prevIndex + i + B];
             f32 v1 = *(float*)&channel.outputdata[nextIndex + i + V];
 
-            result[i] = ((2 * tCub - 3 * tSq + 1) * v0) + ((tCub - 2 * tSq + tn) * b) + ((-2 * tCub + 3 * tSq) * v1) + ((tCub - tSq) * a);
+            out[i] = ((2 * tCub - 3 * tSq + 1) * v0) + ((tCub - 2 * tSq + tn) * b) + ((-2 * tCub + 3 * tSq) * v1) + ((tCub - tSq) * a);
+            //result[i] = ((2 * tCub - 3 * tSq + 1) * v0) + ((tCub - 2 * tSq + tn) * b) + ((-2 * tCub + 3 * tSq) * v1) + ((tCub - tSq) * a);
         }
 
-        return result;
     }
     else
     {
         assert(false);
-        return *(mvVec3*)&channel.outputdata[channel.prevKey * 3];
     }
 
 
@@ -210,13 +212,25 @@ advance_animations(mvAssetManager& am, mvAnimation& animation, f32 tcurrent)
         }
         else if (channel.path == "translation")
         {
-            node.animationTranslation = interpolate(channel, tcurrent, animation.tmax);
+            interpolate(channel, tcurrent, animation.tmax, 3, &node.animationTranslation.x);
             node.translationAnimated = true;
         }
         else if (channel.path == "scale")
         {
-            node.animationScale = interpolate(channel, tcurrent, animation.tmax);
+            interpolate(channel, tcurrent, animation.tmax, 3, &node.animationScale.x);
             node.scaleAnimated = true;
+
+        }
+        else if (channel.path == "weights")
+        {
+            mvMesh& mesh = am.meshes[node.mesh].asset;
+            std::vector<f32> weightsAnimated;
+            weightsAnimated.resize(mesh.weightCount);
+            interpolate(channel, tcurrent, animation.tmax, mesh.weightCount, weightsAnimated.data());
+            for (i32 j = 0; j < mesh.weightCount; j++)
+            {
+                mesh.weightsAnimated[j * 4] = weightsAnimated[j];
+            }
 
         }
         else

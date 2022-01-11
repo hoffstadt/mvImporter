@@ -268,6 +268,8 @@ submit_mesh(mvAssetManager& am, mvRendererContext& ctx, mvMesh& mesh, mvMat4 tra
 
         mvMaterial* material = &am.materials[primitive.materialID].asset;
 
+        update_const_buffer(mesh.morphBuffer, mesh.weightsAnimated.data());
+
         if (material->alphaMode == 2)
         {
             ctx.transparentJobs[ctx.transparentJobCount] = { &primitive, transform, skin, mesh.morphBuffer.buffer };
@@ -415,8 +417,10 @@ render_job(mvAssetManager& am, mvRenderJob& job, mvMat4 cam, mvMat4 proj)
     // mesh
     static const UINT offset = 0u;
     device->VSSetConstantBuffers(0u, 1u, GContext->graphics.tranformCBuf.GetAddressOf());
-    if(job.morphBuffer)
+    if (job.morphBuffer)
+    {
         device->VSSetConstantBuffers(3u, 1u, &job.morphBuffer);
+    }
     device->IASetIndexBuffer(am.buffers[primitive.indexBuffer].asset.buffer, DXGI_FORMAT_R32_UINT, 0u);
     device->IASetVertexBuffers(0u, 1u,
         &am.buffers[primitive.vertexBuffer].asset.buffer,

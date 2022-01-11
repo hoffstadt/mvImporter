@@ -170,7 +170,7 @@ float4 getDisplacement(int vertexID, int targetIndex, int texSize)
     //Rounding mode of integers is undefined:
     //https://www.khronos.org/registry/OpenGL/specs/es/3.0/GLSL_ES_Specification_3.00.pdf (section 12.33)
     int y = (vertexID - x) / texSize; 
-    return MorphTargetsTexture.Load(int4(x, y, targetIndex, targetIndex));
+    return MorphTargetsTexture.Load(int4(x, y, targetIndex, 0));
 }
 #endif
 
@@ -187,10 +187,8 @@ float4 getTargetPosition(int vertexID)
     MorphTargetsTexture.GetDimensions(0, texWidth, texHeight, elements, levels);
     for(int i = 0; i < WEIGHT_COUNT; i++)
     {
-        float4 displacement = getDisplacement(vertexID, MORPH_TARGET_POSITION_OFFSET + i, texHeight);
-        //displacement = clamp(displacement, 0.0, 1.0);
+        float4 displacement = getDisplacement(vertexID, MORPH_TARGET_POSITION_OFFSET + i, texWidth);
         pos += morphWeights[i] * displacement;
-        //pos += 0.5 * float4(texWidth*i, 0.0f, 0.0f, 0.0f);
     }
 #endif
 

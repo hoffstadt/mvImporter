@@ -13,6 +13,7 @@ mvTexture     create_texture     (std::vector<unsigned char> data);
 mvCubeTexture create_cube_texture(const std::string& path);
 
 mvTexture create_dynamic_texture(u32 width, u32 height, u32 arraySize = 1);
+mvTexture create_texture(u32 width, u32 height, u32 arraySize = 1, f32* data = nullptr);
 void      update_dynamic_texture(mvTexture& texture, u32 width, u32 height, f32* data);
 
 struct mvTexture

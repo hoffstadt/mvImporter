@@ -9,6 +9,71 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
+mvTexture 
+create_texture(u32 width, u32 height, u32 arraySize, f32* data)
+{
+	mvTexture texture{};
+
+	// Create Texture
+	D3D11_TEXTURE2D_DESC textureDesc = {};
+	textureDesc.Width = width;
+	textureDesc.Height = height;
+	textureDesc.MipLevels = 1;
+	textureDesc.ArraySize = arraySize;
+	textureDesc.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+	textureDesc.SampleDesc.Count = 1;
+	textureDesc.SampleDesc.Quality = 0;
+	textureDesc.Usage = D3D11_USAGE_DEFAULT;
+	textureDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+	textureDesc.CPUAccessFlags = 0;
+	textureDesc.MiscFlags = 0;
+
+	HRESULT hResult = GContext->graphics.device->CreateTexture2D(&textureDesc, nullptr, &texture.texture);
+	assert(SUCCEEDED(hResult));
+	i32 texBytesPerRow = 4 * width * sizeof(f32);
+
+	// subresource data
+	D3D11_SUBRESOURCE_DATA* sdata = new D3D11_SUBRESOURCE_DATA[arraySize];
+	for (int i = 0; i < arraySize; i++)
+	{
+		sdata[i].pSysMem = &data[i* width * height * 4];
+		//sdata[i].pSysMem = data;
+		sdata[i].SysMemPitch = texBytesPerRow;
+		sdata[i].SysMemSlicePitch = width * height * 4 * sizeof(f32);
+	}
+	// create the texture resource
+	GContext->graphics.device->CreateTexture2D(&textureDesc, sdata, &texture.texture);
+	delete[] sdata;
+
+	// create the resource view on the texture
+	D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+	srvDesc.Format = textureDesc.Format;
+	srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2DARRAY;
+	srvDesc.Texture2D.MostDetailedMip = 0;
+	srvDesc.Texture2D.MipLevels = textureDesc.MipLevels;
+	srvDesc.Texture2DArray.ArraySize = arraySize;
+	srvDesc.Texture2DArray.MostDetailedMip = 0;
+	srvDesc.Texture2DArray.MipLevels = textureDesc.MipLevels;
+
+	hResult = GContext->graphics.device->CreateShaderResourceView(texture.texture, &srvDesc, &texture.textureView);
+	assert(SUCCEEDED(hResult));
+
+	// Create Sampler State
+	D3D11_SAMPLER_DESC samplerDesc{};
+	samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
+	samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
+	samplerDesc.AddressW = samplerDesc.AddressV;
+	samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
+	samplerDesc.BorderColor[0] = 0.0f;
+	samplerDesc.MaxAnisotropy = D3D11_REQ_MAXANISOTROPY;
+	samplerDesc.MinLOD = -FLT_MAX;
+	samplerDesc.MaxLOD = FLT_MAX;
+	hResult = GContext->graphics.device->CreateSamplerState(&samplerDesc, &texture.sampler);
+	assert(SUCCEEDED(hResult));
+
+	return texture;
+}
+
 mvTexture
 create_dynamic_texture(u32 width, u32 height, u32 arraySize)
 {

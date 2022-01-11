@@ -1043,14 +1043,27 @@ load_gltf_meshes(mvAssetManager& assetManager, mvGLTFModel& model)
         mvMesh newMesh{};
         newMesh.name = glmesh.name;
         b8 useMorphing = false;
+        newMesh.weightCount = glmesh.weights_count;
         for (u32 currentWeight = 0; currentWeight < glmesh.weights_count; currentWeight++)
+        {
             newMesh.weights.push_back(glmesh.weights[currentWeight]);
+            newMesh.weights.push_back(0.0f);
+            newMesh.weights.push_back(0.0f);
+            newMesh.weights.push_back(0.0f);
+            newMesh.weightsAnimated.push_back(glmesh.weights[currentWeight]);
+            newMesh.weightsAnimated.push_back(0.0f);
+            newMesh.weightsAnimated.push_back(0.0f);
+            newMesh.weightsAnimated.push_back(0.0f);
+        }
 
         if (!newMesh.weights.empty())
         {
             useMorphing = true;
-            while (newMesh.weights.size() * sizeof(f32) % 16)
-                newMesh.weights.push_back(0.0f);
+            //while (newMesh.weights.size() * sizeof(f32) % 16)
+            //{
+            //    newMesh.weights.push_back(0.0f);
+            //    newMesh.weightsAnimated.push_back(0.0f);
+            //}
 
             // create transform constant buffer
             D3D11_BUFFER_DESC cbd;
@@ -1155,11 +1168,12 @@ load_gltf_meshes(mvAssetManager& assetManager, mvGLTFModel& model)
                     attributeOffset += glprimitive.target_count;
                 }
 
-                int vertexCount = model.accessors[glprimitive.targets[0].attributes[0].index].count;
+                //int vertexCount = model.accessors[glprimitive.targets[0].attributes[0].index].count;
+                int vertexCount = triangleCount * 3;
                 f32 textureWidth = ceil(sqrt(vertexCount));
                 f32 singleTextureSize = pow(textureWidth, 2) * 4;
                 newMesh.primitives.back().morphData = new f32[singleTextureSize * glprimitive.target_count * targetAttributes.size()];
-                ZeroMemory(newMesh.primitives.back().morphData, singleTextureSize* glprimitive.target_count* targetAttributes.size());
+                ZeroMemory(newMesh.primitives.back().morphData, sizeof(f32)*singleTextureSize* glprimitive.target_count* targetAttributes.size());
 
                 for (i32 i = 0; i < glprimitive.target_count; i++)
                 {
@@ -1175,9 +1189,46 @@ load_gltf_meshes(mvAssetManager& assetManager, mvGLTFModel& model)
                             if (item.first == semantic)
                             {
                                 std::vector<f32> data;
+                                
                                 mvGLTFAccessor& accessor = model.accessors[target.attributes[j].index];
                                 i32 offset = item.second * singleTextureSize;
                                 mvFillBuffer(model, accessor, data);
+
+                                std::vector<f32> rdata;
+                                if (accessor.type == MV_IMP_VEC2)
+                                {
+                                    rdata.resize(origIndexBuffer.size() * 2);
+                                    for (i32 k = 0; k < origIndexBuffer.size(); k++)
+                                    {
+                                        u32 i0 = origIndexBuffer[k];
+                                        rdata[k * 3] = data[i0 * 3];
+                                        rdata[k * 3 + 1] = data[i0 * 3 + 1];
+                                    }
+                                }
+                                else if (accessor.type == MV_IMP_VEC3)
+                                {
+                                    rdata.resize(origIndexBuffer.size() * 3);
+                                    for (i32 k = 0; k < origIndexBuffer.size(); k++)
+                                    {
+                                        u32 i0 = origIndexBuffer[k];
+                                        rdata[k * 3] = data[i0 * 3];
+                                        rdata[k * 3 + 1] = data[i0 * 3 + 1];
+                                        rdata[k * 3 + 2] = data[i0 * 3 + 2];
+                                    }
+                                }
+                                else if (accessor.type == MV_IMP_VEC4)
+                                {
+                                    rdata.resize(origIndexBuffer.size() * 4);
+                                    for (i32 k = 0; k < origIndexBuffer.size(); k++)
+                                    {
+                                        u32 i0 = origIndexBuffer[k];
+                                        rdata[k * 3] = data[i0 * 3];
+                                        rdata[k * 3 + 1] = data[i0 * 3 + 1];
+                                        rdata[k * 3 + 2] = data[i0 * 3 + 2];
+                                        rdata[k * 3 + 3] = data[i0 * 3 + 3];
+                                    }
+                                }
+
 
                                 switch (accessor.type)
                                 {
@@ -1187,9 +1238,9 @@ load_gltf_meshes(mvAssetManager& assetManager, mvGLTFModel& model)
                                     i32 paddingOffset = 0;
                                     i32 accessorOffset = 0;
                                     i32 componentCount = accessor.type == MV_IMP_VEC2 ? 2 : 3;
-                                    for (i32 k = 0; k < accessor.count; k++)
+                                    for (i32 k = 0; k < origIndexBuffer.size(); k++)
                                     {
-                                        memcpy(&newMesh.primitives.back().morphData[offset + paddingOffset], &data[accessorOffset], sizeof(f32)*componentCount);
+                                        memcpy(&newMesh.primitives.back().morphData[offset + paddingOffset], &rdata[accessorOffset], sizeof(f32)*componentCount);
                                         paddingOffset += 4;
                                         accessorOffset += componentCount;
                                     }
@@ -1197,7 +1248,7 @@ load_gltf_meshes(mvAssetManager& assetManager, mvGLTFModel& model)
                                 }
                                 case MV_IMP_VEC4:
                                 {
-                                    memcpy(&newMesh.primitives.back().morphData[offset], data.data(), data.size() * sizeof(f32));
+                                    memcpy(&newMesh.primitives.back().morphData[offset], rdata.data(), rdata.size() * sizeof(f32));
                                     break;
                                 }
 
@@ -1211,8 +1262,7 @@ load_gltf_meshes(mvAssetManager& assetManager, mvGLTFModel& model)
                         }
                     }
                 }
-                newMesh.primitives.back().morphTexture = create_dynamic_texture(textureWidth, textureWidth, glprimitive.target_count* targetAttributes.size());
-                update_dynamic_texture(newMesh.primitives.back().morphTexture, textureWidth, textureWidth, newMesh.primitives.back().morphData);
+                newMesh.primitives.back().morphTexture = create_texture(textureWidth, textureWidth, glprimitive.target_count* targetAttributes.size(), newMesh.primitives.back().morphData);
             }
 
             newMesh.primitives.back().layout = modifiedLayout;

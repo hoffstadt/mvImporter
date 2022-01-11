@@ -46,5 +46,7 @@ struct mvMesh
     std::string                  name;
     std::vector<mvMeshPrimitive> primitives;
     std::vector<f32>             weights;
+    std::vector<f32>             weightsAnimated;
+    u32                          weightCount;
     mvConstBuffer                morphBuffer;
 };
