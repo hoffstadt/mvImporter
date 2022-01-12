@@ -210,12 +210,12 @@ int main()
         for (u32 i = 0; i < 6; i++)
         {
             ctx->OMSetRenderTargets(0, nullptr, omniShadowMap.depthView[i]);
-            mvVec3 look_target = pointlight.camera.pos - omniShadowMap.cameraDirections[i];
+            mvVec3 look_target = pointlight.camera.pos + omniShadowMap.cameraDirections[i];
             mvMat4 camera_matrix = lookat(pointlight.camera.pos, look_target, omniShadowMap.cameraUps[i]);
 
             if (activeScene > -1)
                 Renderer::render_scene_shadows(am, am.scenes[activeScene].asset, 
-                    camera_matrix, perspective(M_PI_2, 1.0f, 0.1f, 100.0f), 
+                    camera_matrix, perspective(M_PI_2, 1.0f, 0.5f, 100.0f), 
                     session.scaleTransform, session.translationTransform);
         }
 

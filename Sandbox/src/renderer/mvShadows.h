@@ -234,17 +234,17 @@ struct mvOmniShadowPass
             GContext->graphics.device->CreateDepthStencilView(pTexture.Get(), &descView, &(depthView[face]));
         }
 
-        cameraDirections[0] = { 1.0f,  0.0f,  0.0f };
-        cameraDirections[1] = { -1.0f,  0.0f,  0.0f };
-        cameraDirections[2] = { 0.0f,  1.0f,  0.0f };
-        cameraDirections[3] = { 0.0f,  -1.0f,  0.0f };
-        cameraDirections[4] = { 0.0f,  0.0f,  1.0f };
-        cameraDirections[5] = { 0.0f,  0.0f,   -1.0f };
+        cameraDirections[0] = { 0.0f,  0.0f,  1.0f };
+        cameraDirections[1] = { 0.0f,  0.0f,  -1.0f };
+        cameraDirections[2] = { 0.0f,  -1.0f,  0.0f };
+        cameraDirections[3] = { 0.0f,  1.0f,  0.0f };
+        cameraDirections[4] = { 1.0f,  0.0f,  0.0f };
+        cameraDirections[5] = { -1.0f,  0.0f,   0.0f };
 
         cameraUps[0] = { 0.0f,  1.0f,  0.0f };
         cameraUps[1] = { 0.0f,  1.0f,  0.0f };
-        cameraUps[2] = { 0.0f, 0.0f,   -1.0f };
-        cameraUps[3] = { 0.0f, 0.0f,   1.0f };
+        cameraUps[2] = { 1.0f, 0.0f,   0.0f };
+        cameraUps[3] = { -1.0f, 0.0f,   0.0f };
         cameraUps[4] = { 0.0f,  1.0f,  0.0f };
         cameraUps[5] = { 0.0f,  1.0f,  0.0f };
 
@@ -260,8 +260,10 @@ struct mvOmniShadowPass
         comparisonSamplerDesc.BorderColor[3] = 1.0f;
         comparisonSamplerDesc.MinLOD = 0.f;
         comparisonSamplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
+        comparisonSamplerDesc.MipLODBias = 0.f;
         comparisonSamplerDesc.MaxAnisotropy = 0;
-        comparisonSamplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
+        comparisonSamplerDesc.ComparisonFunc = D3D11_COMPARISON_LESS;
+        comparisonSamplerDesc.Filter = D3D11_FILTER_COMPARISON_MIN_MAG_MIP_LINEAR;
         GContext->graphics.device->CreateSamplerState(&comparisonSamplerDesc, &sampler);
 
         D3D11_RASTERIZER_DESC shadowRenderStateDesc;
@@ -300,7 +302,7 @@ struct mvOmniShadowPass
         shadowRenderStateDesc.CullMode = D3D11_CULL_BACK;
         shadowRenderStateDesc.FrontCounterClockwise = true;
         shadowRenderStateDesc.FillMode = D3D11_FILL_SOLID;
-        shadowRenderStateDesc.DepthClipEnable = false;
+        shadowRenderStateDesc.DepthClipEnable = true;
         shadowRenderStateDesc.DepthBias = depthBias;
         shadowRenderStateDesc.DepthBiasClamp = 0.0f;
         shadowRenderStateDesc.SlopeScaledDepthBias = slopeBias;

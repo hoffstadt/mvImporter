@@ -9,10 +9,10 @@ create_point_light(mvAssetManager& am)
 
     light.camera = create_perspective_camera(
         light.info.viewLightPos.xyz(),
-        (f32)M_PI_2,
+        (f32)M_PI_4,
         1.0f,
         0.1f,
-        100.0f
+        400.0f
     );
 
     // create mesh
