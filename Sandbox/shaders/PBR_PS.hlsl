@@ -227,7 +227,7 @@ struct VSOut
 #include <material_info.hlsli>
 
 #ifdef SHADOWS_OMNI
-static const float zf = 100.0f;
+static const float zf = 400.0f;
 static const float zn = 0.5f;
 static const float c1 = (zf + zn) / (zf - zn);
 static const float c0 = -(2 * zn * zf) / (zf - zn);
@@ -432,8 +432,8 @@ float4 main(VSOut input) : SV_Target
         float x = input.oshadowWorldPos.x;
         float y = input.oshadowWorldPos.y;
         float z = input.oshadowWorldPos.z;
-        input.oshadowWorldPos.x = -x;
-        input.oshadowWorldPos.y = -y;
+        input.oshadowWorldPos.x = x;
+        input.oshadowWorldPos.y = y;
         input.oshadowWorldPos.z = -z;
         float shadowLevel = 1.0f;
         float3 pointToLight = PointLight.viewLightPos - input.WorldPos;

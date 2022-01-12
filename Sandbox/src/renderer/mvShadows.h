@@ -187,8 +187,8 @@ struct mvOmniShadowPass
     D3D11_VIEWPORT            viewport;
     mvConstBuffer             buffer;
     OmniShadowTransformInfo   info;
-    i32                       depthBias = 50;
-    f32                       slopeBias = 2.0f;
+    i32                       depthBias = 40;
+    f32                       slopeBias = 2.1f;
 
     mvOmniShadowPass(mvAssetManager& am, u32 resolution)
     {
@@ -247,6 +247,7 @@ struct mvOmniShadowPass
         cameraUps[3] = { -1.0f, 0.0f,   0.0f };
         cameraUps[4] = { 0.0f,  1.0f,  0.0f };
         cameraUps[5] = { 0.0f,  1.0f,  0.0f };
+
 
         D3D11_SAMPLER_DESC comparisonSamplerDesc;
         ZeroMemory(&comparisonSamplerDesc, sizeof(D3D11_SAMPLER_DESC));

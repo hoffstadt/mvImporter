@@ -158,8 +158,8 @@ draw_ui(UISession& session, f32 dt, mvRendererContext& renderCtx,
         if (ImGui::Checkbox("Use Omni Shadows", (bool*)&GContext->IO.omniShadows))session.reloadMaterials = true;
         if (GContext->IO.omniShadows && GContext->IO.punctualLighting)
         {
-            if (ImGui::DragInt("Depth Bias", &omniShadowMap.depthBias, 1.0f, 0, 100)) session.recreateOShadowMapRS = true;
-            if (ImGui::DragFloat("Slope Bias", &omniShadowMap.slopeBias, 0.1f, 0.1f, 10.0f)) session.recreateOShadowMapRS = true;
+            if (ImGui::DragInt("Depth Bias##o", &omniShadowMap.depthBias, 1.0f, 0, 100)) session.recreateOShadowMapRS = true;
+            if (ImGui::DragFloat("Slope Bias##o", &omniShadowMap.slopeBias, 0.1f, 0.1f, 10.0f)) session.recreateOShadowMapRS = true;
         }
 
         ImGui::Dummy(ImVec2(50.0f, 25.0f));
