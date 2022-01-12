@@ -29,6 +29,8 @@ struct mvPointLightInfo
     char _pad1[4];
     //-------------------------- ( 16 bytes )
 
+    mvMat4 inverseProjection = identity_mat4();
+
     //-------------------------- ( 4*16 = 64 bytes )
 };
 

@@ -215,7 +215,7 @@ int main()
 
             if (activeScene > -1)
                 Renderer::render_scene_shadows(am, am.scenes[activeScene].asset, 
-                    camera_matrix, perspective(M_PI_2, 1.0f, 0.5f, 400.0f), 
+                    camera_matrix, perspective(M_PI_2, 1.0f, 0.1f, 100.0f), 
                     session.scaleTransform, session.translationTransform);
         }
 
@@ -230,6 +230,7 @@ int main()
 
         renderCtx.globalInfo.camPos = camera.pos;
         directionalLight.info.viewLightDir = directionalShadowMap.camera.dir;
+        pointlight.info.inverseProjection = perspective(M_PI_2, 1.0f, 0.1f, 100.0f);
 
         // update constant buffers
         update_const_buffer(pointlight.buffer, &pointlight.info);

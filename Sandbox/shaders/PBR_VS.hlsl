@@ -140,6 +140,7 @@ VSOut main(VSIn input)
     output.Pos = mul(modelViewProj, getPosition(input));
     output.dshadowWorldPos = ToDirectShadowHomoSpace(getPosition(input).xyz, model);
     output.oshadowWorldPos = ToShadowHomoSpace(getPosition(input).xyz, model);
+    //output.oshadowWorldPos.x = -output.oshadowWorldPos.x;
 
 
     #ifdef HAS_NORMALS

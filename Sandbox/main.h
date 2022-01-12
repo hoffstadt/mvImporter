@@ -88,7 +88,7 @@ blendCallback(const ImDrawList* parent_list, const ImDrawCmd* cmd)
 
 void 
 draw_ui(UISession& session, f32 dt, mvRendererContext& renderCtx, 
-    mvDirectionalShadowPass& directionalShadowMap, mvOmniShadowPass omniShadowMap, 
+    mvDirectionalShadowPass& directionalShadowMap, mvOmniShadowPass& omniShadowMap, 
     mvOffscreenPass& offscreen, mvPointLight& pointlight, mvDirectionalLight& directionalLight)
 {
     static ID3D11DeviceContext* ctx = GContext->graphics.imDeviceContext.Get();
