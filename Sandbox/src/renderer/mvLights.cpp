@@ -15,6 +15,8 @@ create_point_light(mvAssetManager& am)
         400.0f
     );
 
+    light.camera.front = { 0.0f, 0.0f, -1.0f };
+
     // create mesh
     light.mesh = create_cube(am, 0.25f);
 

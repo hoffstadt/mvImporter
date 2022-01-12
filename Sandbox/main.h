@@ -25,11 +25,11 @@ struct UISession
     ImVec2 oldContentRegion = ImVec2(500, 500);
 
     // scenes & models
-    i32       activeScene = -1;
-    i32       cacheIndex = 0;
-    i32       modelIndex = 0;
-    i32       cachedModel[MODEL_CACHE_SIZE];
-    mvAssetID cachedScenes[MODEL_CACHE_SIZE];
+    i32       cacheIndex = -1;   // current model from list
+    i32       modelIndex = 0;   // current model from list
+    i32       cacheRingIndex = 0;   // current cache index
+    i32       cachedModelIndex[MODEL_CACHE_SIZE];
+    mvModel   cachedModel[MODEL_CACHE_SIZE];
 
     // environments
     i32           activeEnv = -1;
@@ -68,8 +68,8 @@ create_ui_session()
 
     for (int i = 0; i < MODEL_CACHE_SIZE; i++)
     {
-        session.cachedModel[i] = -1;
-        session.cachedScenes[i] = -1;
+        session.cachedModelIndex[i] = -1;
+        session.cachedModel[i] = {};
     }
 
     for (int i = 0; i < ENV_CACHE_SIZE; i++)

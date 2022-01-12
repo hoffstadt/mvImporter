@@ -57,7 +57,6 @@ create_material(mvAssetManager& am, const std::string& vs, const std::string& ps
 		pipelineInfo.macros = materialInfo.macros;
 
 		if (GContext->IO.imageBasedLighting) pipelineInfo.macros.push_back({ "USE_IBL" , "0"});
-		if (GContext->IO.punctualLighting) pipelineInfo.macros.push_back({ "USE_PUNCTUAL", "0" });
 		if (materialInfo.extensionClearcoat && GContext->IO.clearcoat) pipelineInfo.macros.push_back({ "MATERIAL_CLEARCOAT", "0" });
 		if (materialInfo.pbrMetallicRoughness) pipelineInfo.macros.push_back({ "MATERIAL_METALLICROUGHNESS", "0" });
 		if (materialInfo.alphaMode == 0) pipelineInfo.macros.push_back({ "ALPHAMODE", "0" });
@@ -71,6 +70,13 @@ create_material(mvAssetManager& am, const std::string& vs, const std::string& ps
 		if (materialInfo.hasClearcoatMap)pipelineInfo.macros.push_back({ "HAS_CLEARCOAT_MAP", "0" });
 		if (materialInfo.hasClearcoatRoughnessMap)pipelineInfo.macros.push_back({ "HAS_CLEARCOAT_ROUGHNESS_MAP", "0" });
 		if (materialInfo.hasClearcoatNormalMap)pipelineInfo.macros.push_back({ "HAS_CLEARCOAT_NORMAL_MAP", "0" });
+
+		if (GContext->IO.punctualLighting)
+		{
+			pipelineInfo.macros.push_back({ "USE_PUNCTUAL", "0" });
+			if (GContext->IO.directionalShadows) pipelineInfo.macros.push_back({ "SHADOWS_DIRECTIONAL", "0" });
+			if (GContext->IO.omniShadows) pipelineInfo.macros.push_back({ "SHADOWS_OMNI", "0" });
+		}
 
 		for (auto& macro : materialInfo.extramacros)
 			pipelineInfo.macros.push_back(macro);
@@ -91,7 +97,7 @@ create_material(mvAssetManager& am, const std::string& vs, const std::string& ps
 	// shadow pipeline
 	{
 		mvPipelineInfo pipelineInfo{};
-		pipelineInfo.pixelShader = material.alphaMode == 0 ? "Shadow_PS.hlsl" : "";
+		pipelineInfo.pixelShader = material.alphaMode == MV_ALPHA_MODE_MASK || material.alphaMode == MV_ALPHA_MODE_BLEND ? "Shadow_PS.hlsl" : "";
 		pipelineInfo.vertexShader = "Shadow_VS.hlsl";
 		pipelineInfo.depthBias = 50;
 		pipelineInfo.slopeBias = 2.0f;

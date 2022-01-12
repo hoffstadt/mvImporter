@@ -36,7 +36,6 @@ struct mvMeshPrimitive
     mvAssetID      clearcoatRoughnessTexture = -1;
     mvAssetID      clearcoatNormalTexture = -1;
     mvAssetID      materialID = -1;
-    mvAssetID      shadowMaterialID = -1;   
     mvTexture      morphTexture;
     f32*           morphData = nullptr;
 };

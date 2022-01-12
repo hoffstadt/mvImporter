@@ -98,9 +98,9 @@ typedef unsigned long long  mvU64;  // 64-bit unsigned integer (post C++11)
 
 enum mvGLTFAlphaMode
 {
-	MV_ALPHA_MODE_OPAQUE,
-	MV_ALPHA_MODE_MASK,
-	MV_ALPHA_MODE_BLEND
+	MV_ALPHA_MODE_OPAQUE = 0,
+	MV_ALPHA_MODE_MASK   = 1,
+	MV_ALPHA_MODE_BLEND  =2
 };
 
 enum mvGLTFPrimMode

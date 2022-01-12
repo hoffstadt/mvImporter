@@ -62,8 +62,6 @@ struct mvMaterial
     mvMaterialData             data;
     mvAssetID                  pipeline; 
     mvAssetID                  spipeline; 
-    //std::vector<D3D_SHADER_MACRO> macros;
-    //std::vector<D3D_SHADER_MACRO> extramacros;
     std::vector<mvShaderMacro> macros;
     std::vector<mvShaderMacro> extramacros;
     mvVertexLayout             layout;

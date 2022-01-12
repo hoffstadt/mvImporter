@@ -1166,7 +1166,6 @@ load_gltf_meshes(mvAssetManager& assetManager, mvGLTFModel& model)
                     attributeOffset += glprimitive.target_count;
                 }
 
-                //int vertexCount = model.accessors[glprimitive.targets[0].attributes[0].index].count;
                 int vertexCount = triangleCount * 3;
                 f32 textureWidth = ceil(sqrt(vertexCount));
                 f32 singleTextureSize = pow(textureWidth, 2) * 4;
@@ -1447,25 +1446,26 @@ load_gltf_animations(mvAssetManager& assetManager, mvGLTFModel& model)
     return animationMapping;
 }
 
-mvAssetID
+mvModel
 load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
 {
-
-    std::vector<mvAssetID> skinMapping = load_gltf_skins(assetManager, model);
-    std::vector<mvAssetID> cameraMapping = load_gltf_cameras(assetManager, model);
-    std::vector<mvAssetID> meshMapping = load_gltf_meshes(assetManager, model);
-    std::vector<mvAssetID> nodeMapping = load_gltf_nodes(assetManager, model);
-    std::vector<mvAssetID> animationMapping = load_gltf_animations(assetManager, model);
+    mvModel mvmodel{};
+    mvmodel.loaded = true;
+    mvmodel.skins = load_gltf_skins(assetManager, model);
+    mvmodel.cameras = load_gltf_cameras(assetManager, model);
+    mvmodel.meshes = load_gltf_meshes(assetManager, model);
+    mvmodel.nodes = load_gltf_nodes(assetManager, model);
+    mvmodel.animations = load_gltf_animations(assetManager, model);
 
     // updates based on correct offset mapping
     for (u32 currentAnimation = 0u; currentAnimation < model.animation_count; currentAnimation++)
     {
-        mvAnimation& animation = assetManager.animations[animationMapping[currentAnimation]].asset;
+        mvAnimation& animation = assetManager.animations[mvmodel.animations[currentAnimation]].asset;
 
         for (u32 channel_index = 0u; channel_index < animation.channelCount; channel_index++)
         {
             mvAnimationChannel& channel = animation.channels[channel_index];
-            channel.node = nodeMapping[channel.node];
+            channel.node = mvmodel.nodes[channel.node];
             assetManager.nodes[channel.node].asset.animated = true;
         }
     }
@@ -1473,18 +1473,18 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
     for (u32 currentNode = 0u; currentNode < model.node_count; currentNode++)
     {
 
-        mvNode& node = assetManager.nodes[nodeMapping[currentNode]].asset;
+        mvNode& node = assetManager.nodes[mvmodel.nodes[currentNode]].asset;
         if(node.mesh > -1)
-            node.mesh = meshMapping[node.mesh];
+            node.mesh = mvmodel.meshes[node.mesh];
         if (node.skin > -1)
-            node.skin = skinMapping[node.skin];
+            node.skin = mvmodel.skins[node.skin];
         for (i32 i = 0; i < node.childCount; i++)
-            node.children[i] = nodeMapping[node.children[i]];
+            node.children[i] = mvmodel.nodes[node.children[i]];
 
         if (node.camera > -1)
         {
 
-            node.camera = cameraMapping[node.camera];
+            node.camera = mvmodel.cameras[node.camera];
             mvCamera& camera = assetManager.cameras[node.camera].asset;
 
             if (camera.type == MV_CAMERA_PERSPECTIVE)
@@ -1504,12 +1504,12 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
     for (u32 currentSkin = 0u; currentSkin < model.skin_count; currentSkin++)
     {
 
-        mvSkin& skin = assetManager.skins[skinMapping[currentSkin]].asset;
+        mvSkin& skin = assetManager.skins[mvmodel.skins[currentSkin]].asset;
         if (skin.skeleton != -1)
-            skin.skeleton = nodeMapping[skin.skeleton];
+            skin.skeleton = mvmodel.nodes[skin.skeleton];
         for (i32 i = 0; i < skin.jointCount; i++)
         {
-            skin.joints[i] = nodeMapping[skin.joints[i]];
+            skin.joints[i] = mvmodel.nodes[skin.joints[i]];
         }
     }
 
@@ -1523,14 +1523,47 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
         newScene.nodeCount = glscene.node_count;
 
         for (i32 i = 0; i < glscene.node_count; i++)
-            newScene.nodes[i] = nodeMapping[glscene.nodes[i]];
+            newScene.nodes[i] = mvmodel.nodes[glscene.nodes[i]];
 
 
-        mvAssetID sceneId = register_asset(&assetManager, model.name + "_scene_" + std::to_string(currentScene), newScene);
+        mvmodel.scenes.push_back(register_asset(&assetManager, model.name + "_scene_" + std::to_string(currentScene), newScene));
 
         if (currentScene == model.scene)
-            defaultScene = sceneId;
+            defaultScene = mvmodel.scenes.back();
     }
 
-    return defaultScene;
+    mvmodel.defaultScene = defaultScene;
+    return mvmodel;
+}
+
+void
+unload_gltf_assets(mvAssetManager& assetManager, mvModel& model)
+{
+    model.loaded = false;
+    model.defaultScene = -1;
+
+    for (i32 i = 0; i < model.cameras.size(); i++)
+        unregister_camera_asset(&assetManager, model.cameras[i]);
+
+    for (i32 i = 0; i < model.meshes.size(); i++)
+        unregister_mesh_asset(&assetManager, model.meshes[i]);
+
+    for (i32 i = 0; i < model.nodes.size(); i++)
+        unregister_node_asset(&assetManager, model.nodes[i]);
+
+    for (i32 i = 0; i < model.animations.size(); i++)
+        unregister_animation_asset(&assetManager, model.animations[i]);
+
+    for (i32 i = 0; i < model.skins.size(); i++)
+        unregister_skin_asset(&assetManager, model.skins[i]);
+
+    for (i32 i = 0; i < model.scenes.size(); i++)
+        unregister_scene_asset(&assetManager, model.scenes[i]);
+
+    model.skins.clear();
+    model.cameras.clear();
+    model.meshes.clear();
+    model.nodes.clear();
+    model.animations.clear();
+    model.scenes.clear();
 }

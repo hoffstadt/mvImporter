@@ -429,7 +429,12 @@ float4 main(VSOut input) : SV_Target
         //-----------------------------------------------------------------------------
         // point light
         //-----------------------------------------------------------------------------
-        input.oshadowWorldPos.z = -input.oshadowWorldPos.z;
+        float x = input.oshadowWorldPos.x;
+        float y = input.oshadowWorldPos.y;
+        float z = input.oshadowWorldPos.z;
+        input.oshadowWorldPos.x = -x;
+        input.oshadowWorldPos.y = -y;
+        input.oshadowWorldPos.z = -z;
         float shadowLevel = 1.0f;
         float3 pointToLight = PointLight.viewLightPos - input.WorldPos;
 #ifdef SHADOWS_OMNI

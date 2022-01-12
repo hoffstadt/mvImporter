@@ -48,6 +48,14 @@ initialize_asset_manager(mvAssetManager* manager)
 	manager->freescenes = new b8[manager->maxSceneCount];
 	for (i32 i = 0; i < manager->maxSceneCount; i++)
 		manager->freescenes[i] = true;
+
+	manager->freeskins = new b8[manager->maxSkinCount];
+	for (i32 i = 0; i < manager->maxSkinCount; i++)
+		manager->freeskins[i] = true;
+
+	manager->freeanimations = new b8[manager->maxAnimationCount];
+	for (i32 i = 0; i < manager->maxAnimationCount; i++)
+		manager->freeanimations[i] = true;
 }
 
 void 
@@ -185,6 +193,8 @@ cleanup_asset_manager(mvAssetManager* manager)
 	delete[] manager->freenodes;
 	delete[] manager->freematerials;
 	delete[] manager->freescenes;
+	delete[] manager->freeanimations;
+	delete[] manager->freeskins;
 }
 
 void
@@ -258,10 +268,24 @@ reload_materials(mvAssetManager* manager)
 mvAssetID
 register_asset(mvAssetManager* manager, const std::string& tag, mvSkin asset)
 {
-	manager->skins[manager->skinCount].asset = asset;
-	manager->skins[manager->skinCount].hash = tag;
+
+	s32 freeIndex = -1;
+	for (s32 i = 0; i < manager->maxSkinCount; i++)
+	{
+		if (manager->freeskins[i])
+		{
+			freeIndex = i;
+			manager->freeskins[i] = false;
+			break;
+		}
+	}
+
+	assert(freeIndex > -1 && "No free index available");
+
+	manager->skins[freeIndex].asset = asset;
+	manager->skins[freeIndex].hash = tag;
 	manager->skinCount++;
-	return manager->skinCount - 1;
+	return freeIndex;
 }
 
 mvAssetID
@@ -288,6 +312,31 @@ mvGetRawSkinAsset(mvAssetManager* manager, const std::string& tag)
 	return nullptr;
 }
 
+b8
+unregister_skin_asset(mvAssetManager* manager, mvAssetID asset)
+{
+	if (asset == -1) return false;
+	assert(asset < manager->maxSkinCount && "Asset ID outside range");
+	//assert(manager->freescenes[asset] && "Scene already freed.");
+
+	if (!manager->freeskins[asset])
+	{
+		manager->freeskins[asset] = true;
+		manager->skinCount--;
+		manager->skins[asset].hash.clear();
+		manager->skins[asset].asset.skeleton = 0u;
+		manager->skins[asset].asset.jointCount = 0u;
+		manager->skins[asset].asset.inverseBindMatrices.clear();
+		manager->skins[asset].asset.jointTexture.sampler->Release();
+		manager->skins[asset].asset.jointTexture.textureView->Release();
+		manager->skins[asset].asset.jointTexture.texture->Release();
+		if (manager->skins[asset].asset.textureData)
+			delete[] manager->skins[asset].asset.textureData;
+		return true;
+	}
+	return false;
+}
+
 //-----------------------------------------------------------------------------
 // animations
 //-----------------------------------------------------------------------------
@@ -295,10 +344,23 @@ mvGetRawSkinAsset(mvAssetManager* manager, const std::string& tag)
 mvAssetID
 register_asset(mvAssetManager* manager, const std::string& tag, mvAnimation asset)
 {
-	manager->animations[manager->animationCount].asset = asset;
-	manager->animations[manager->animationCount].hash = tag;
+	s32 freeIndex = -1;
+	for (s32 i = 0; i < manager->maxAnimationCount; i++)
+	{
+		if (manager->freeanimations[i])
+		{
+			freeIndex = i;
+			manager->freeanimations[i] = false;
+			break;
+		}
+	}
+
+	assert(freeIndex > -1 && "No free index available");
+
+	manager->animations[freeIndex].asset = asset;
+	manager->animations[freeIndex].hash = tag;
 	manager->animationCount++;
-	return manager->animationCount - 1;
+	return freeIndex;
 }
 
 mvAssetID
@@ -325,6 +387,26 @@ mvGetRawAnimationAsset(mvAssetManager* manager, const std::string& tag)
 	return nullptr;
 }
 
+b8 
+unregister_animation_asset(mvAssetManager* manager, mvAssetID asset)
+{
+	if (asset == -1) return false;
+	assert(asset < manager->maxAnimationCount && "Asset ID outside range");
+	//assert(manager->freescenes[asset] && "Scene already freed.");
+
+	if (!manager->freeanimations[asset])
+	{
+		manager->freeanimations[asset] = true;
+		manager->animationCount--;
+		manager->animations[asset].hash.clear();
+		manager->animations[asset].asset.channelCount = 0u;
+		manager->animations[asset].asset.tmax = 0.0f;
+		delete[] manager->animations[asset].asset.channels;
+		manager->animations[asset].asset.channels = nullptr;
+		return true;
+	}
+	return false;
+}
 
 //-----------------------------------------------------------------------------
 // render target views
@@ -499,6 +581,8 @@ unregister_scene_asset(mvAssetManager* manager, mvAssetID asset)
 		manager->freescenes[asset] = true;
 		manager->sceneCount--;
 		manager->scenes[asset].hash.clear();
+		manager->scenes[asset].asset.meshOffset = 0u;
+		manager->scenes[asset].asset.nodeCount = 0u;
 		return true;
 	}
 	return false;
@@ -673,6 +757,42 @@ unregister_mesh_asset(mvAssetManager* manager, mvAssetID asset)
 		manager->freemeshes[asset] = true;
 		manager->meshCount--;
 		manager->meshes[asset].hash.clear();
+
+		if (manager->meshes[asset].asset.morphBuffer.buffer)
+			manager->meshes[asset].asset.morphBuffer.buffer->Release();
+
+		for (int j = 0; j < manager->meshes[asset].asset.primitives.size(); j++)
+		{
+			if (manager->meshes[asset].asset.primitives[j].morphTexture.texture)
+			{
+				manager->meshes[asset].asset.primitives[j].morphTexture.sampler->Release();
+				manager->meshes[asset].asset.primitives[j].morphTexture.texture->Release();
+				manager->meshes[asset].asset.primitives[j].morphTexture.textureView->Release();
+			}
+			manager->meshes[asset].asset.primitives[j].layout = {};
+			manager->meshes[asset].asset.primitives[j].indexBuffer = -1;
+			manager->meshes[asset].asset.primitives[j].vertexBuffer = -1;
+			manager->meshes[asset].asset.primitives[j].normalTexture = -1;
+			manager->meshes[asset].asset.primitives[j].specularTexture = -1;
+			manager->meshes[asset].asset.primitives[j].albedoTexture = -1;
+			manager->meshes[asset].asset.primitives[j].emissiveTexture = -1;
+			manager->meshes[asset].asset.primitives[j].occlusionTexture = -1;
+			manager->meshes[asset].asset.primitives[j].metalRoughnessTexture = -1;
+			manager->meshes[asset].asset.primitives[j].clearcoatTexture = -1;
+			manager->meshes[asset].asset.primitives[j].clearcoatRoughnessTexture = -1;
+			manager->meshes[asset].asset.primitives[j].clearcoatNormalTexture = -1;
+			manager->meshes[asset].asset.primitives[j].materialID = -1;
+			if(manager->meshes[asset].asset.primitives[j].morphData)
+				delete[] manager->meshes[asset].asset.primitives[j].morphData;
+			manager->meshes[asset].asset.primitives[j].morphData = nullptr;
+		}
+
+		manager->meshes[asset].asset.name.clear();
+		manager->meshes[asset].asset.primitives.clear();
+		manager->meshes[asset].asset.weights.clear();
+		manager->meshes[asset].asset.weightsAnimated.clear();
+		manager->meshes[asset].asset.weightCount = 0u;
+
 		return true;
 	}
 	return false;
@@ -905,6 +1025,26 @@ unregister_node_asset(mvAssetManager* manager, mvAssetID asset)
 		manager->freenodes[asset] = true;
 		manager->nodeCount--;
 		manager->nodes[asset].hash.clear();
+		manager->nodes[asset].asset.name.clear();
+		manager->nodes[asset].asset.skin = -1;
+		manager->nodes[asset].asset.mesh = -1;
+		manager->nodes[asset].asset.camera = -1;
+		manager->nodes[asset].asset.children[256];
+		manager->nodes[asset].asset.childCount = 0u;
+		manager->nodes[asset].asset.matrix = identity_mat4();
+		manager->nodes[asset].asset.translation = { 0.0f, 0.0f, 0.0f };
+		manager->nodes[asset].asset.rotation = { 0.0f, 0.0f, 0.0f, 1.0f };
+		manager->nodes[asset].asset.scale = { 1.0f, 1.0f, 1.0f };
+		manager->nodes[asset].asset.animationTranslation = { 0.0f, 0.0f, 0.0f };
+		manager->nodes[asset].asset.animationRotation = { 0.0f, 0.0f, 0.0f, 1.0f };
+		manager->nodes[asset].asset.animationScale = { 1.0f, 1.0f, 1.0f };
+		manager->nodes[asset].asset.translationAnimated = false;
+		manager->nodes[asset].asset.rotationAnimated = false;
+		manager->nodes[asset].asset.scaleAnimated = false;
+		manager->nodes[asset].asset.animated = false;
+		manager->nodes[asset].asset.transform = identity_mat4();
+		manager->nodes[asset].asset.worldTransform = identity_mat4();
+		manager->nodes[asset].asset.inverseWorldTransform = identity_mat4();
 		return true;
 	}
 	return false;
@@ -965,13 +1105,23 @@ unregister_camera_asset(mvAssetManager* manager, mvAssetID asset)
 {
 	if (asset == -1) return false;
 	assert(asset < manager->maxCameraCount && "Asset ID outside range");
-	assert(manager->freecameras[asset] && "Camera already freed.");
+	//assert(manager->freecameras[asset] && "Camera already freed.");
 	
 	if (!manager->freecameras[asset])
 	{
 		manager->freecameras[asset] = true;
 		manager->cameraCount--;
 		manager->cameras[asset].hash.clear();
+		manager->cameras[asset].asset.type = MV_CAMERA_PERSPECTIVE;
+		manager->cameras[asset].asset.pos = { 0.0f, 0.0f, 0.0f };
+		manager->cameras[asset].asset.up = { 0.0f, 1.0f, 0.0f };
+		manager->cameras[asset].asset.pitch = 0.0f;
+		manager->cameras[asset].asset.yaw = 0.0f;
+		manager->cameras[asset].asset.nearZ = 0.1f;
+		manager->cameras[asset].asset.farZ = 400.0f;
+		manager->cameras[asset].asset.width = 0.0f;
+		manager->cameras[asset].asset.height = 0.0f;
+		manager->cameras[asset].asset.front = { 0.0f, 0.0f, 1.0f };
 		return true;
 	}
 	return false;

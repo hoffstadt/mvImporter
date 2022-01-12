@@ -234,12 +234,12 @@ struct mvOmniShadowPass
             GContext->graphics.device->CreateDepthStencilView(pTexture.Get(), &descView, &(depthView[face]));
         }
 
-        cameraDirections[0] = { 0.0f,  0.0f,  1.0f };
-        cameraDirections[1] = { 0.0f,  0.0f,  -1.0f };
-        cameraDirections[2] = { 0.0f,  -1.0f,  0.0f };
-        cameraDirections[3] = { 0.0f,  1.0f,  0.0f };
-        cameraDirections[4] = { 1.0f,  0.0f,  0.0f };
-        cameraDirections[5] = { -1.0f,  0.0f,   0.0f };
+        cameraDirections[0] = { 1.0f,  0.0f,  0.0f };
+        cameraDirections[1] = { -1.0f,  0.0f,  0.0f };
+        cameraDirections[2] = { 0.0f,  1.0f,  0.0f };
+        cameraDirections[3] = { 0.0f,  -1.0f,  0.0f };
+        cameraDirections[4] = { 0.0f,  0.0f,  1.0f };
+        cameraDirections[5] = { 0.0f,  0.0f,   -1.0f };
 
         cameraUps[0] = { 0.0f,  1.0f,  0.0f };
         cameraUps[1] = { 0.0f,  1.0f,  0.0f };

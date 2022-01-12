@@ -31,8 +31,8 @@ struct mvNode
 
 struct mvScene
 {
-    mvAssetID     nodes[256];
-    u32           nodeCount = 0u;
-    u32           meshOffset = 0u;
+    mvAssetID nodes[256];
+    u32       nodeCount = 0u;
+    u32       meshOffset = 0u;
 };
 

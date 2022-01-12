@@ -127,9 +127,9 @@ int main()
             b8 cacheFound = false;
             for (int i = 0; i < MODEL_CACHE_SIZE; i++)
             {
-                if (session.cachedModel[i] == session.modelIndex)
+                if (session.cachedModelIndex[i] == session.modelIndex)
                 {
-                    session.activeScene = session.cachedScenes[i];
+                    session.cacheIndex = session.cachedModelIndex[i];
                     cacheFound = true;
                     break;
                 }
@@ -138,44 +138,18 @@ int main()
             if (!cacheFound)
             {
 
-                mvAssetID sceneToRemove = session.cachedScenes[session.cacheIndex];
+                i32 modelToRemove = session.cachedModelIndex[session.cacheRingIndex];
 
-                if (sceneToRemove > -1)
-                {
-                    mvScene* previousScene = &am.scenes[sceneToRemove].asset;
-                    for (int i = 0; i < previousScene->nodeCount; i++)
-                    {
-                        if (am.nodes[previousScene->nodes[i]].asset.mesh > -1)
-                        {
-                            mvMesh& mesh = am.meshes[am.nodes[previousScene->nodes[i]].asset.mesh].asset;
-                            for (int i = 0; i < mesh.primitives.size(); i++)
-                            {
-                                unregister_buffer_asset(&am, mesh.primitives[i].indexBuffer);
-                                unregister_buffer_asset(&am, mesh.primitives[i].vertexBuffer);
-                                unregister_texture_asset(&am, mesh.primitives[i].normalTexture);
-                                unregister_texture_asset(&am, mesh.primitives[i].specularTexture);
-                                unregister_texture_asset(&am, mesh.primitives[i].albedoTexture);
-                                unregister_texture_asset(&am, mesh.primitives[i].emissiveTexture);
-                                unregister_texture_asset(&am, mesh.primitives[i].occlusionTexture);
-                                unregister_texture_asset(&am, mesh.primitives[i].metalRoughnessTexture);
-                                unregister_material_asset(&am, mesh.primitives[i].materialID);
-                                unregister_material_asset(&am, mesh.primitives[i].shadowMaterialID);
-                            }
-                        }
-                        unregister_mesh_asset(&am, am.nodes[previousScene->nodes[i]].asset.mesh); // maybe do mesh offset?
-                        unregister_camera_asset(&am, am.nodes[previousScene->nodes[i]].asset.camera); // maybe do mesh offset?
-                        unregister_node_asset(&am, previousScene->nodes[i]);
-                    }
-                    unregister_scene_asset(&am, sceneToRemove);
-                }
+                if (modelToRemove > -1)
+                    unload_gltf_assets(am, session.cachedModel[modelToRemove]);
 
                 mvGLTFModel gltfmodel0 = mvLoadGLTF(gltf_directories[session.modelIndex], gltf_models[session.modelIndex]);
-                session.activeScene = load_gltf_assets(am, gltfmodel0);
+                session.cachedModel[session.cacheRingIndex] = load_gltf_assets(am, gltfmodel0);
                 mvCleanupGLTF(gltfmodel0);
-                session.cachedScenes[session.cacheIndex] = session.activeScene;
-                session.cachedModel[session.cacheIndex] = session.modelIndex;
-                session.cacheIndex++;
-                if (session.cacheIndex == MODEL_CACHE_SIZE) session.cacheIndex = 0;
+                session.cachedModelIndex[session.cacheRingIndex] = modelToRemove;
+                session.cacheIndex = session.cacheRingIndex;
+                session.cacheRingIndex++;
+                if (session.cacheRingIndex == MODEL_CACHE_SIZE) session.cacheRingIndex = 0;
 
             }
         }
@@ -216,9 +190,15 @@ int main()
         ctx->RSSetViewports(1u, &directionalShadowMap.viewport);
         ctx->RSSetState(directionalShadowMap.rasterizationState);
 
-        if(session.activeScene > -1)
-            Renderer::render_scene_shadows(am, am.scenes[session.activeScene].asset, 
-                directionalShadowMap.getViewMatrix(), directionalShadowMap.getProjectionMatrix(), 
+        i32 activeScene = -1;
+        if (session.cacheIndex > -1)
+        {
+            activeScene = session.cachedModel[session.cacheIndex].defaultScene;
+        }
+
+        if (activeScene > -1)
+            Renderer::render_scene_shadows(am, am.scenes[activeScene].asset,
+                directionalShadowMap.getViewMatrix(), directionalShadowMap.getProjectionMatrix(),
                 session.scaleTransform, session.translationTransform);
 
         //-----------------------------------------------------------------------------
@@ -233,8 +213,8 @@ int main()
             mvVec3 look_target = pointlight.camera.pos + omniShadowMap.cameraDirections[i];
             mvMat4 camera_matrix = lookat(pointlight.camera.pos, look_target, omniShadowMap.cameraUps[i]);
 
-            if (session.activeScene > -1)
-                Renderer::render_scene_shadows(am, am.scenes[session.activeScene].asset, 
+            if (activeScene > -1)
+                Renderer::render_scene_shadows(am, am.scenes[activeScene].asset, 
                     camera_matrix, perspective(M_PI_2, 1.0f, 0.5f, 100.0f), 
                     session.scaleTransform, session.translationTransform);
         }
@@ -295,9 +275,9 @@ int main()
 
         Renderer::render_mesh_solid(am, pointlight.mesh, translate(identity_mat4(), pointlight.camera.pos), viewMatrix, projMatrix);
 
-        if (session.activeScene > -1)
+        if (activeScene > -1)
         {
-            Renderer::submit_scene(am, renderCtx, am.scenes[session.activeScene].asset, session.scaleTransform, session.translationTransform);
+            Renderer::submit_scene(am, renderCtx, am.scenes[activeScene].asset, session.scaleTransform, session.translationTransform);
             //-----------------------------------------------------------------------------
             // update skins
             //-----------------------------------------------------------------------------
@@ -337,6 +317,11 @@ int main()
 
     for (int i = 0; i < ENV_CACHE_SIZE; i++)
         cleanup_environment(session.cachedEnvironments[i]);
+
+    for (int i = 0; i < MODEL_CACHE_SIZE; i++)
+    {
+        unload_gltf_assets(am, session.cachedModel[i]);
+    }
 
     ImGui_ImplDX11_Shutdown();
     ImGui_ImplWin32_Shutdown();

@@ -52,13 +52,15 @@ mvAssetID register_asset(mvAssetManager* manager, const std::string& tag, mvAnim
 mvAssetID register_asset(mvAssetManager* manager, const std::string& tag, mvSkin asset);
 
 // unregistering
-b8 unregister_texture_asset (mvAssetManager* manager, mvAssetID asset);
-b8 unregister_buffer_asset  (mvAssetManager* manager, mvAssetID asset);
-b8 unregister_mesh_asset    (mvAssetManager* manager, mvAssetID asset);
-b8 unregister_camera_asset  (mvAssetManager* manager, mvAssetID asset);
-b8 unregister_node_asset    (mvAssetManager* manager, mvAssetID asset);
-b8 unregister_material_asset(mvAssetManager* manager, mvAssetID asset);
-b8 unregister_scene_asset   (mvAssetManager* manager, mvAssetID asset);
+b8 unregister_texture_asset  (mvAssetManager* manager, mvAssetID asset);
+b8 unregister_buffer_asset   (mvAssetManager* manager, mvAssetID asset);
+b8 unregister_mesh_asset     (mvAssetManager* manager, mvAssetID asset);
+b8 unregister_camera_asset   (mvAssetManager* manager, mvAssetID asset);
+b8 unregister_node_asset     (mvAssetManager* manager, mvAssetID asset);
+b8 unregister_material_asset (mvAssetManager* manager, mvAssetID asset);
+b8 unregister_scene_asset    (mvAssetManager* manager, mvAssetID asset);
+b8 unregister_animation_asset(mvAssetManager* manager, mvAssetID asset);
+b8 unregister_skin_asset     (mvAssetManager* manager, mvAssetID asset);
 
 // ID retrieval
 mvAssetID mvGetSceneAssetID      (mvAssetManager* manager, const std::string& tag);
@@ -171,11 +173,13 @@ struct mvAssetManager
 	u32                 maxAnimationCount = 100u;
 	u32                 animationCount = 0u;
 	mvAnimationAsset*   animations = nullptr;
+	b8*                 freeanimations = nullptr;
 
 	// skins
 	u32                 maxSkinCount = 100u;
 	u32                 skinCount = 0u;
-	mvSkinAsset*        skins = nullptr;
+	mvSkinAsset*        skins = nullptr; 
+	b8*                 freeskins = nullptr;
 };
 
 struct mvDepthViewAsset
