@@ -9,7 +9,7 @@ create_point_light(mvAssetManager& am)
 
     light.camera = create_perspective_camera(
         light.info.viewLightPos.xyz(),
-        (f32)M_PI_4,
+        (f32)M_PI_2,
         1.0f,
         0.1f,
         400.0f
