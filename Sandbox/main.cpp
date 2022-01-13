@@ -30,7 +30,7 @@ int main()
 
     // main camera
     mvCamera camera = create_perspective_camera({ -13.5f, 6.0f, 3.5f }, (f32)M_PI_4, 1.0f, 0.1f, 400.0f);
-    camera.yaw = (f32)M_PI;
+    //camera.yaw = (f32)M_PI;
     renderCtx.camera = &camera;
 
     // lights
@@ -42,6 +42,7 @@ int main()
     mvDirectionalShadowPass directionalShadowMap = mvDirectionalShadowPass(am, 4096, 95.0f);
     mvOmniShadowPass omniShadowMap = mvOmniShadowPass(am, 2048);
     omniShadowMap.info.view = create_lookat_view(pointlight.camera);
+    //omniShadowMap.info.view = translate(identity_mat4(), { pointlight.info.viewLightPos.x, pointlight.info.viewLightPos.y, pointlight.info.viewLightPos.z });
 
     mvTimer timer;
     while (true)
@@ -230,7 +231,6 @@ int main()
 
         renderCtx.globalInfo.camPos = camera.pos;
         directionalLight.info.viewLightDir = directionalShadowMap.camera.dir;
-        pointlight.info.inverseProjection = perspective(M_PI_2, 1.0f, 0.1f, 100.0f);
 
         // update constant buffers
         update_const_buffer(pointlight.buffer, &pointlight.info);

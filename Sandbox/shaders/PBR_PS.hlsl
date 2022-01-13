@@ -15,8 +15,6 @@ struct mvPointLight
     float attQuad;
     //-------------------------- ( 16 bytes )
 
-    float4x4 inverseProjection;
-
     //-------------------------- ( 4*16 = 64 bytes )
 };
 
@@ -231,9 +229,8 @@ struct VSOut
 #ifdef SHADOWS_OMNI
 static const float zf = 100.0f;
 static const float zn = 0.5f;
-static const float c1 = (zf + zn) / (zf - zn);
-static const float c0 = -(2 * zn * zf) / (zf - zn);
-static const int PCFRANGE = 2;
+static const float c1 = zf/ (zf - zn);
+static const float c0 = -(zn * zf) / (zf - zn);
 
 float CalculateShadowDepth(const in float4 shadowPos)
 {
@@ -439,6 +436,7 @@ float4 main(VSOut input) : SV_Target
         input.oshadowWorldPos.x = x;
         input.oshadowWorldPos.y = y;
         input.oshadowWorldPos.z = -z;
+
         float3 pointToLight = PointLight.viewLightPos - input.WorldPos;
 #ifdef SHADOWS_OMNI
             shadowLevel = Shadow(input.oshadowWorldPos, ShadowMap, ShadowMapSampler);

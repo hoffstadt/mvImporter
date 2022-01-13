@@ -6,6 +6,7 @@
 #include "mvCamera.h"
 #include "mvSandbox.h"
 #include "mvAssetManager.h"
+#include <DirectXMath.h>
 
 struct DirectionalShadowTransformInfo
 {
@@ -253,7 +254,7 @@ struct mvOmniShadowPass
         //cameraDirections[2] = { 0.0f,  1.0f,  0.0f };
         //cameraDirections[3] = { 0.0f,  -1.0f,  0.0f };
         //cameraDirections[4] = { 0.0f,  0.0f,  1.0f };
-        //cameraDirections[5] = { 0.0f,  0.0f,   -1.0f };
+        //cameraDirections[5] = { 0.0f,  0.0f,  -1.0f };
 
         //cameraUps[0] = { 0.0f,  1.0f,  0.0f };
         //cameraUps[1] = { 0.0f,  1.0f,  0.0f };
@@ -292,6 +293,7 @@ struct mvOmniShadowPass
 
         GContext->graphics.device->CreateRasterizerState(&shadowRenderStateDesc, &rasterizationState);
 
+        info = {};
         buffer = create_const_buffer(&info, sizeof(OmniShadowTransformInfo));
 
         register_asset(&am, "oshadowmap_sampler", sampler);
