@@ -1,7 +1,6 @@
 #include "mvRenderer.h"
 #include <imgui_impl_win32.h>
 #include <imgui_impl_dx11.h>
-#include <implot.h>
 #include "mvSandbox.h"
 #include "mvGraphics.h"
 #include "mvBuffers.h"
@@ -379,11 +378,11 @@ render_job(mvAssetManager& am, mvRenderJob& job, mvMat4 cam, mvMat4 proj)
     device->PSSetSamplers(0, 1, albedoMap ? &albedoMap->sampler : &emptySamplers);
     device->PSSetSamplers(1, 1, normMap ? &normMap->sampler : &emptySamplers);
     device->PSSetSamplers(2, 1, metalRoughMap ? &metalRoughMap->sampler : &emptySamplers);
-    device->PSSetSamplers(3, 1, metalRoughMap ? &metalRoughMap->sampler : &emptySamplers);
+    device->PSSetSamplers(3, 1, emissiveMap ? &emissiveMap->sampler : &emptySamplers);
     device->PSSetSamplers(4, 1, occlussionMap ? &occlussionMap->sampler : &emptySamplers);
-    device->PSSetSamplers(10, 1, clearcoatMap ? &clearcoatMap->sampler : &emptySamplers);
-    device->PSSetSamplers(11, 1, clearcoatRoughnessMap ? &clearcoatRoughnessMap->sampler : &emptySamplers);
-    device->PSSetSamplers(12, 1, clearcoatNormalMap ? &clearcoatNormalMap->sampler : &emptySamplers);
+    device->PSSetSamplers(5, 1, clearcoatMap ? &clearcoatMap->sampler : &emptySamplers);
+    device->PSSetSamplers(6, 1, clearcoatRoughnessMap ? &clearcoatRoughnessMap->sampler : &emptySamplers);
+    device->PSSetSamplers(7, 1, clearcoatNormalMap ? &clearcoatNormalMap->sampler : &emptySamplers);
 
     device->VSSetSamplers(0, 1, skinTexture ? &skinTexture->sampler : &emptySamplers);
     device->VSSetSamplers(1, 1, morphTexture ? &morphTexture->sampler : &emptySamplers);
@@ -395,9 +394,9 @@ render_job(mvAssetManager& am, mvRenderJob& job, mvMat4 cam, mvMat4 proj)
     device->PSSetShaderResources(2, 1, metalRoughMap ? &metalRoughMap->textureView : pSRV);
     device->PSSetShaderResources(3, 1, emissiveMap ? &emissiveMap->textureView : pSRV);
     device->PSSetShaderResources(4, 1, occlussionMap ? &occlussionMap->textureView : pSRV);
-    device->PSSetShaderResources(10, 1, clearcoatMap ? &clearcoatMap->textureView : pSRV);
-    device->PSSetShaderResources(11, 1, clearcoatRoughnessMap ? &clearcoatRoughnessMap->textureView : pSRV);
-    device->PSSetShaderResources(12, 1, clearcoatNormalMap ? &clearcoatNormalMap->textureView : pSRV);
+    device->PSSetShaderResources(5, 1, clearcoatMap ? &clearcoatMap->textureView : pSRV);
+    device->PSSetShaderResources(6, 1, clearcoatRoughnessMap ? &clearcoatRoughnessMap->textureView : pSRV);
+    device->PSSetShaderResources(7, 1, clearcoatNormalMap ? &clearcoatNormalMap->textureView : pSRV);
 
     device->VSSetShaderResources(0, 1, skinTexture ? &skinTexture->textureView : pSRV);
     device->VSSetShaderResources(1, 1, morphTexture ? &morphTexture->textureView : pSRV);
@@ -517,93 +516,6 @@ render_mesh_solid(mvAssetManager& am, mvMesh& mesh, mvMat4 transform, mvMat4 cam
 
         // draw
         device->DrawIndexed(am.buffers[primitive.indexBuffer].asset.size / sizeof(u32), 0u, 0u);
-    }
-}
-
-void
-render_mesh_shadow(mvAssetManager& am, mvMesh& mesh, mvMat4 transform, mvMat4 cam, mvMat4 proj)
-{
-
-    auto device = GContext->graphics.imDeviceContext;
-
-    for (u32 i = 0; i < mesh.primitives.size(); i++)
-    {
-        mvMeshPrimitive& primitive = mesh.primitives[i];
-        mvMaterial* material = &am.materials[primitive.materialID].asset;
-        mvTexture* albedoMap = primitive.albedoTexture == -1 ? nullptr : &am.textures[primitive.albedoTexture].asset;
-
-        mvPipeline* pipeline = &am.pipelines[material->spipeline].asset;
-
-        // pipeline
-        device->IASetPrimitiveTopology(pipeline->topology);
-        device->OMSetBlendState(pipeline->blendState, nullptr, 0xFFFFFFFFu);
-        device->OMSetDepthStencilState(pipeline->depthStencilState, 0xFF);;
-        device->IASetInputLayout(pipeline->inputLayout);
-        device->VSSetShader(pipeline->vertexShader, nullptr, 0);
-        device->PSSetShader(pipeline->pixelShader, nullptr, 0);
-        device->HSSetShader(nullptr, nullptr, 0);
-        device->DSSetShader(nullptr, nullptr, 0);
-        device->GSSetShader(nullptr, nullptr, 0);
-        static ID3D11SamplerState* emptySamplers = nullptr;
-        device->PSSetSamplers(0, 1, albedoMap ? &albedoMap->sampler : &emptySamplers);
-
-        // material
-        ID3D11ShaderResourceView* const pSRV[1] = { NULL };
-        device->PSSetShaderResources(0, 1, albedoMap ? &albedoMap->textureView : pSRV);
-
-        update_const_buffer(material->buffer, &material->data);
-        GContext->graphics.imDeviceContext->PSSetConstantBuffers(1u, 1u, &material->buffer.buffer);
-
-        mvTransforms transforms{};
-        transforms.model = transform;
-        transforms.modelView = cam * transforms.model;
-        transforms.modelViewProjection = proj * cam * transforms.model;
-
-        D3D11_MAPPED_SUBRESOURCE mappedSubresource;
-        device->Map(GContext->graphics.tranformCBuf.Get(), 0u, D3D11_MAP_WRITE_DISCARD, 0u, &mappedSubresource);
-        memcpy(mappedSubresource.pData, &transforms, sizeof(mvTransforms));
-        device->Unmap(GContext->graphics.tranformCBuf.Get(), 0u);
-
-        // mesh
-        static const UINT offset = 0u;
-        device->VSSetConstantBuffers(0u, 1u, GContext->graphics.tranformCBuf.GetAddressOf());
-        device->IASetIndexBuffer(am.buffers[primitive.indexBuffer].asset.buffer, DXGI_FORMAT_R32_UINT, 0u);
-        device->IASetVertexBuffers(0u, 1u,
-            &am.buffers[primitive.vertexBuffer].asset.buffer,
-            &pipeline->info.layout.size, &offset);
-
-        // draw
-        device->DrawIndexed(am.buffers[primitive.indexBuffer].asset.size / sizeof(u32), 0u, 0u);
-    }
-}
-
-static void
-mvRenderNodeShadows(mvAssetManager& am, mvNode& node, mvMat4 accumulatedTransform, mvMat4 cam, mvMat4 proj)
-{
-
-    if (node.mesh > -1 && node.camera == -1)
-        render_mesh_shadow(am, am.meshes[node.mesh].asset, accumulatedTransform * node.matrix, cam, proj);
-
-    for (u32 i = 0; i < node.childCount; i++)
-    {
-        mvRenderNodeShadows(am, am.nodes[node.children[i]].asset, accumulatedTransform * node.matrix, cam, proj);
-    }
-}
-
-void
-render_scene_shadows(mvAssetManager& am, mvScene& scene, mvMat4 cam, mvMat4 proj, mvMat4 scale, mvMat4 trans)
-{
-    for (u32 i = 0; i < scene.nodeCount; i++)
-    {
-        mvNode& rootNode = am.nodes[scene.nodes[i]].asset;
-
-        if (rootNode.mesh > -1 && rootNode.camera == -1)
-            render_mesh_shadow(am, am.meshes[rootNode.mesh].asset, trans * rootNode.matrix * scale, cam, proj);
-
-        for (u32 j = 0; j < rootNode.childCount; j++)
-        {
-            mvRenderNodeShadows(am, am.nodes[rootNode.children[j]].asset, trans *rootNode.matrix * scale, cam, proj);
-        }
     }
 }
 

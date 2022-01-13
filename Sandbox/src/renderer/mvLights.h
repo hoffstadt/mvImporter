@@ -48,7 +48,6 @@ struct mvDirectionLightInfo
 
 struct mvPointLight
 {
-    mvCamera       camera{};
     mvConstBuffer  buffer{};
     mvPointLightInfo info{};
     mvMesh         mesh{};

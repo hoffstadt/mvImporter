@@ -19,10 +19,8 @@ struct mvIO
     std::string resourceDirectory;
 
     b8 punctualLighting = true;
-    b8 imageBasedLighting = false;
+    b8 imageBasedLighting = true;
     b8 clearcoat = true;
-    b8 directionalShadows = true;
-    b8 omniShadows = true;
 };
 
 struct mvContext

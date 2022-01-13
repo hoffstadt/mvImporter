@@ -8,17 +8,6 @@ cbuffer TransformCBuf : register(b0)
     matrix modelViewProj;
 };
 
-cbuffer DirectionalShadowTransformCBuf : register(b1)
-{
-    matrix directShadowView;
-    matrix directShadowProjection;
-};
-
-cbuffer OmniShadowTransformCBuf : register(b2)
-{
-    matrix pointShadowView;
-};
-
 struct VSOut
 {
 
@@ -48,23 +37,8 @@ struct VSOut
     float3 WorldNormal : NORMAL1;
     float2 UV0 : TEXCOORD0;
     float2 UV1 : TEXCOORD1;
-    float4 dshadowWorldPos : dshadowPosition; // light pos
-    float4 oshadowWorldPos : oshadowPosition; // light pos
 
 };
-
-float4 ToShadowHomoSpace(const in float3 pos, uniform matrix modelTransform)
-{
-    const float4 world = mul(modelTransform, float4(pos, 1.0f));
-    return mul(pointShadowView, world);
-}
-
-float4 ToDirectShadowHomoSpace(const in float3 pos, uniform matrix modelTransform)
-{
-    float4x4 fin = mul(directShadowView, modelTransform);
-    fin = mul(directShadowProjection, fin);
-    return mul(fin, float4(pos, 1.0f));
-}
 
 float4 getPosition(VSIn input)
 {
@@ -138,10 +112,6 @@ VSOut main(VSIn input)
 #endif
 
     output.Pos = mul(modelViewProj, getPosition(input));
-    output.dshadowWorldPos = ToDirectShadowHomoSpace(getPosition(input).xyz, model);
-    output.oshadowWorldPos = ToShadowHomoSpace(getPosition(input).xyz, model);
-    //output.oshadowWorldPos.x = -output.oshadowWorldPos.x;
-
 
     #ifdef HAS_NORMALS
         output.WorldNormal = mul((float3x3)model, getNormal(input));

@@ -117,59 +117,48 @@ Texture2D OcclusionTexture : register(t4);
 SamplerState OcclusionTextureSampler : register(s4);
 #endif
 
-#ifdef USE_PUNCTUAL
-#ifdef SHADOWS_DIRECTIONAL
-Texture2D DirectionalShadowMap : register(t5);
-SamplerComparisonState DirectionalShadowMapSampler : register(s5);
-#endif
-#ifdef SHADOWS_OMNI
-TextureCube ShadowMap : register(t6);
-SamplerComparisonState ShadowMapSampler : register(s6);
-#endif
-#endif
-
-#ifdef USE_IBL
-TextureCube IrradianceMap : register(t7);
-TextureCube SpecularMap : register(t8);
-Texture2D u_GGXLUT : register(t9);
-SamplerState IrradianceMapSampler : register(s7);
-SamplerState SpecularMapSampler : register(s8);
-SamplerState u_GGXLUTSampler : register(s9);
-#endif
-
 #ifdef HAS_CLEARCOAT_MAP
-Texture2D ClearCoatTexture : register(t10);
-SamplerState ClearCoatTextureSampler : register(s10);
+Texture2D ClearCoatTexture : register(t5);
+SamplerState ClearCoatTextureSampler : register(s5);
 #endif
 
 #ifdef HAS_CLEARCOAT_ROUGHNESS_MAP
-Texture2D ClearCoatRoughnessTexture : register(t11);
-SamplerState ClearCoatRoughnessTextureSampler : register(s11);
+Texture2D ClearCoatRoughnessTexture : register(t6);
+SamplerState ClearCoatRoughnessTextureSampler : register(s6);
 #endif
 
 #ifdef HAS_CLEARCOAT_NORMAL_MAP
-Texture2D ClearCoatNormalTexture : register(t12);
-SamplerState ClearCoatNormalTextureSampler : register(s12);
+Texture2D ClearCoatNormalTexture : register(t7);
+SamplerState ClearCoatNormalTextureSampler : register(s7);
 #endif
 
 #ifdef HAS_SHEEN_COLOR_MAP
-Texture2D SheenColorTexture : register(t13);
-SamplerState SheenColorTextureSampler : register(s13);
+Texture2D SheenColorTexture : register(t8);
+SamplerState SheenColorTextureSampler : register(s8);
 #endif
 
 #ifdef HAS_SHEEN_ROUGHNESS_MAP
-Texture2D SheenRoughnessTexture: register(t14);
-SamplerState SheenRoughnessTextureSampler : register(s14);
+Texture2D SheenRoughnessTexture: register(t9);
+SamplerState SheenRoughnessTextureSampler : register(s9);
 #endif
 
 #ifdef HAS_TRANSMISSION_MAP
-//Texture2D TransmissionTexture : register(t13);
-//SamplerState TransmissionSampler : register(s13);
+//Texture2D TransmissionTexture : register(t10);
+//SamplerState TransmissionSampler : register(s10);
 #endif
 
 #ifdef HAS_THICKNESS_MAP
-//Texture2D ThicknessTexture : register(t14);
-//SamplerState ThicknessTextureSampler : register(s14);
+//Texture2D ThicknessTexture : register(t11);
+//SamplerState ThicknessTextureSampler : register(s11);
+#endif
+
+#ifdef USE_IBL
+TextureCube IrradianceMap : register(t12);
+TextureCube SpecularMap : register(t13);
+Texture2D u_GGXLUT : register(t14);
+SamplerState IrradianceMapSampler : register(s12);
+SamplerState SpecularMapSampler : register(s13);
+SamplerState u_GGXLUTSampler : register(s14);
 #endif
 
 //-----------------------------------------------------------------------------
@@ -213,8 +202,6 @@ struct VSOut
     float3 WorldNormal : NORMAL1;
     float2 UV0 : TEXCOORD0;
     float2 UV1 : TEXCOORD1;
-    float4 dshadowWorldPos : dshadowPosition; // light pos
-    float4 oshadowWorldPos : oshadowPosition; // light pos
     bool frontFace : SV_IsFrontFace;
 
 };
@@ -225,55 +212,6 @@ struct VSOut
 #include <punctual.hlsli>
 #include <ibl.hlsli>
 #include <material_info.hlsli>
-
-#ifdef SHADOWS_OMNI
-static const float zf = 100.0f;
-static const float zn = 0.5f;
-static const float c1 = zf/ (zf - zn);
-static const float c0 = -(zn * zf) / (zf - zn);
-
-float CalculateShadowDepth(const in float4 shadowPos)
-{
-    // get magnitudes for each basis component
-    const float3 m = abs(shadowPos).xyz;
-    // get the length in the dominant axis
-    // (this correlates with shadow map face and derives comparison depth)
-    const float major = max(m.x, max(m.y, m.z));
-    // converting from distance in shadow light space to projected depth
-    return (c1 * major + c0) / major;
-}
-
-float Shadow(const in float4 shadowPos, uniform TextureCube map, uniform SamplerComparisonState smplr)
-{
-    return map.SampleCmpLevelZero(smplr, shadowPos.xyz, CalculateShadowDepth(shadowPos));
-}
-#endif
-
-#ifdef SHADOWS_DIRECTIONAL
-float filterPCF(const in float2 spos, float depthCheck)
-{
-    float shadowLevel = 0.0f;
-    float texWidth;
-    float texHeight;
-    float scale = 1.5;
-    DirectionalShadowMap.GetDimensions(texWidth, texHeight);
-    float dx = scale * 1.0 / texWidth;
-    float dy = scale * 1.0 / texHeight;
-    
-    int count = 0;
-    [loop]
-    for (int x = -ginfo.pcfRange; x <= ginfo.pcfRange; x++)
-    {
-        [loop]
-        for (int y = -ginfo.pcfRange; y <= ginfo.pcfRange; y++)
-        {
-            shadowLevel += DirectionalShadowMap.SampleCmpLevelZero(DirectionalShadowMapSampler, float2(spos.x + dx * x, spos.y + dy * y), depthCheck);
-            count++;
-        }
-    }
-    return shadowLevel / count;
-}
-#endif
 
 float4 main(VSOut input) : SV_Target
 {
@@ -429,18 +367,7 @@ float4 main(VSOut input) : SV_Target
         //-----------------------------------------------------------------------------
         // point light
         //-----------------------------------------------------------------------------
-        float shadowLevel = 1.0f;
-        float x = input.oshadowWorldPos.x;
-        float y = input.oshadowWorldPos.y;
-        float z = input.oshadowWorldPos.z;
-        input.oshadowWorldPos.x = x;
-        input.oshadowWorldPos.y = y;
-        input.oshadowWorldPos.z = -z;
-
         float3 pointToLight = PointLight.viewLightPos - input.WorldPos;
-#ifdef SHADOWS_OMNI
-            shadowLevel = Shadow(input.oshadowWorldPos, ShadowMap, ShadowMapSampler);
-#endif
         
         // BSTF
         float3 l = normalize(pointToLight); // Direction from surface point to light
@@ -457,18 +384,18 @@ float4 main(VSOut input) : SV_Target
         // https://github.com/KhronosGroup/glTF/tree/master/specification/2.0#acknowledgments AppendixB
         //float3 intensity = getLighIntensity(pointToLight);
         float3 intensity = DirectionalLight.diffuseIntensity * DirectionalLight.diffuseColor;
-        f_diffuse += shadowLevel * intensity * NdotL * BRDF_lambertian(materialInfo.f0, materialInfo.f90, materialInfo.c_diff, materialInfo.specularWeight, VdotH);
-        f_specular += shadowLevel * intensity * NdotL * BRDF_specularGGX(materialInfo.f0, materialInfo.f90, materialInfo.alphaRoughness, materialInfo.specularWeight, VdotH, NdotL, NdotV, NdotH);
-        f_clearcoat += shadowLevel * intensity * getPunctualRadianceClearCoat(materialInfo.clearcoatNormal, v, l, h, VdotH,
+        f_diffuse += intensity * NdotL * BRDF_lambertian(materialInfo.f0, materialInfo.f90, materialInfo.c_diff, materialInfo.specularWeight, VdotH);
+        f_specular += intensity * NdotL * BRDF_specularGGX(materialInfo.f0, materialInfo.f90, materialInfo.alphaRoughness, materialInfo.specularWeight, VdotH, NdotL, NdotV, NdotH);
+        f_clearcoat += intensity * getPunctualRadianceClearCoat(materialInfo.clearcoatNormal, v, l, h, VdotH,
             materialInfo.clearcoatF0, materialInfo.clearcoatF90, materialInfo.clearcoatRoughness);
 #ifdef MATERIAL_SHEEN
-        f_sheen += shadowLevel *intensity * getPunctualRadianceSheen(materialInfo.sheenColorFactor, materialInfo.sheenRoughnessFactor, NdotL, NdotV, NdotH);
+        f_sheen += intensity * getPunctualRadianceSheen(materialInfo.sheenColorFactor, materialInfo.sheenRoughnessFactor, NdotL, NdotV, NdotH);
         albedoSheenScaling = min(1.0 - max3(materialInfo.sheenColorFactor) * albedoSheenScalingLUT(NdotV, materialInfo.sheenRoughnessFactor),
             1.0 - max3(materialInfo.sheenColorFactor) * albedoSheenScalingLUT(NdotL, materialInfo.sheenRoughnessFactor));
 #endif
 
 #ifdef MATERIAL_CLEARCOAT
-        f_clearcoat += shadowLevel * intensity * getPunctualRadianceClearCoat(materialInfo.clearcoatNormal, v, l, h, VdotH,
+        f_clearcoat += intensity * getPunctualRadianceClearCoat(materialInfo.clearcoatNormal, v, l, h, VdotH,
             materialInfo.clearcoatF0, materialInfo.clearcoatF90, materialInfo.clearcoatRoughness);
 #endif
 
@@ -500,12 +427,7 @@ float4 main(VSOut input) : SV_Target
         //-----------------------------------------------------------------------------
         float2 projectTexCoord;
         float lightDepthValue;
-        float shadowLevel = 1.0f;
         float3 pointToLight = -DirectionalLight.viewLightDir;
-        
-        // Calculate the projected texture coordinates.
-        projectTexCoord.x = 0.5f * input.dshadowWorldPos.x / input.dshadowWorldPos.w + 0.5f;
-        projectTexCoord.y = -0.5f * input.dshadowWorldPos.y / input.dshadowWorldPos.w + 0.5f;
 
         // BSTF
         float3 l = normalize(pointToLight);   // Direction from surface point to light
@@ -517,44 +439,23 @@ float4 main(VSOut input) : SV_Target
         float VdotH = clampedDot(v, h);
         if (NdotL > 0.0 || NdotV > 0.0)
         {
-            
-#ifdef SHADOWS_DIRECTIONAL
-            // Calculate the depth of the light.
-            lightDepthValue = input.dshadowWorldPos.z / input.dshadowWorldPos.w;
-            
-            // Determine if the projected coordinates are in the 0 to 1 range.  If so then this pixel is in the view of the light.
-            if ((saturate(projectTexCoord.x) == projectTexCoord.x) && (saturate(projectTexCoord.y) == projectTexCoord.y))
-            {
-                
-                if (ginfo.pcfRange > 0)
-                {
-                    shadowLevel = filterPCF(projectTexCoord, lightDepthValue);
-                }
-                else
-                {
-                    shadowLevel = DirectionalShadowMap.SampleCmpLevelZero(DirectionalShadowMapSampler, projectTexCoord, lightDepthValue);
-                }
 
-                
-            }
-#endif
-          
             // Calculation of analytical light
             // https://github.com/KhronosGroup/glTF/tree/master/specification/2.0#acknowledgments AppendixB
             //float3 intensity = getLighIntensity(pointToLight);
             float3 intensity = DirectionalLight.diffuseIntensity * DirectionalLight.diffuseColor;
-            f_diffuse += shadowLevel * intensity * NdotL * BRDF_lambertian(materialInfo.f0, materialInfo.f90, materialInfo.c_diff, materialInfo.specularWeight, VdotH);
-            f_specular += shadowLevel * intensity * NdotL * BRDF_specularGGX(materialInfo.f0, materialInfo.f90, materialInfo.alphaRoughness, materialInfo.specularWeight, VdotH, NdotL, NdotV, NdotH);
-            f_clearcoat += shadowLevel * intensity * getPunctualRadianceClearCoat(materialInfo.clearcoatNormal, v, l, h, VdotH,
+            f_diffuse += intensity * NdotL * BRDF_lambertian(materialInfo.f0, materialInfo.f90, materialInfo.c_diff, materialInfo.specularWeight, VdotH);
+            f_specular += intensity * NdotL * BRDF_specularGGX(materialInfo.f0, materialInfo.f90, materialInfo.alphaRoughness, materialInfo.specularWeight, VdotH, NdotL, NdotV, NdotH);
+            f_clearcoat += intensity * getPunctualRadianceClearCoat(materialInfo.clearcoatNormal, v, l, h, VdotH,
                 materialInfo.clearcoatF0, materialInfo.clearcoatF90, materialInfo.clearcoatRoughness);
 #ifdef MATERIAL_SHEEN
-            f_sheen += shadowLevel * intensity * getPunctualRadianceSheen(materialInfo.sheenColorFactor, materialInfo.sheenRoughnessFactor, NdotL, NdotV, NdotH);
+            f_sheen += intensity * getPunctualRadianceSheen(materialInfo.sheenColorFactor, materialInfo.sheenRoughnessFactor, NdotL, NdotV, NdotH);
             albedoSheenScaling = min(1.0 - max3(materialInfo.sheenColorFactor) * albedoSheenScalingLUT(NdotV, materialInfo.sheenRoughnessFactor),
                 1.0 - max3(materialInfo.sheenColorFactor) * albedoSheenScalingLUT(NdotL, materialInfo.sheenRoughnessFactor));
 #endif
 
 #ifdef MATERIAL_CLEARCOAT
-            f_clearcoat += shadowLevel * intensity * getPunctualRadianceClearCoat(materialInfo.clearcoatNormal, v, l, h, VdotH,
+            f_clearcoat += intensity * getPunctualRadianceClearCoat(materialInfo.clearcoatNormal, v, l, h, VdotH,
                 materialInfo.clearcoatF0, materialInfo.clearcoatF90, materialInfo.clearcoatRoughness);
 #endif
         }

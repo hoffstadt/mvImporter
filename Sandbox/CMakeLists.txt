@@ -39,11 +39,6 @@ target_sources(mvimporter_sandbox
 		"src/renderer/mvEnvironment.cpp"
 		"src/renderer/mvShader.cpp"
 
-		# implot
-		"vendor/implot/implot.cpp"
-		"vendor/implot/implot_demo.cpp"
-		"vendor/implot/implot_items.cpp"
-
 		# imgui
 		"vendor/imgui/misc/cpp/imgui_stdlib.cpp"
 		"vendor/imgui/imgui.cpp"
@@ -53,7 +48,7 @@ target_sources(mvimporter_sandbox
 		"vendor/imgui/imgui_tables.cpp"
 		"vendor/imgui/backends/imgui_impl_win32.cpp"
 		"vendor/imgui/backends/imgui_impl_dx11.cpp"
- "src/renderer/mvAssetLoader.h" "src/renderer/mvAssetLoader.cpp")
+)
 
 target_include_directories(mvimporter_sandbox
 
@@ -68,7 +63,6 @@ target_include_directories(mvimporter_sandbox
 		"shaders/common/"
 
 		"vendor/"
-		"vendor/implot/"
 		"vendor/imgui/"
 		"vendor/imgui/backends/"
 		"vendor/stb/"

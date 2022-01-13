@@ -17,6 +17,8 @@ struct mvModel
     std::vector<mvAssetID> nodes;
     std::vector<mvAssetID> animations;
     std::vector<mvAssetID> scenes;
+    float                  minBoundary[3];
+    float                  maxBoundary[3];
 };
 
 mvModel load_gltf_assets  (mvAssetManager& assetManager, mvGLTFModel& model);

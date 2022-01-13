@@ -299,7 +299,7 @@ struct RawAttributeBuffers
 };
 
 static std::vector<mvVertexElement>
-load_raw_attribute_buffers(mvGLTFModel& model, mvGLTFMeshPrimitive& glprimitive, RawAttributeBuffers& rawBuffers)
+load_raw_attribute_buffers(mvGLTFModel& model, mvGLTFMeshPrimitive& glprimitive, RawAttributeBuffers& rawBuffers, float* minBoundary, float* maxBoundary)
 {
     std::vector<mvVertexElement> attributes;
     for (u32 i = 0; i < glprimitive.attribute_count; i++)
@@ -309,6 +309,12 @@ load_raw_attribute_buffers(mvGLTFModel& model, mvGLTFMeshPrimitive& glprimitive,
         {
             attributes.push_back(mvVertexElement::Position3D);
             mvFillBuffer(model, model.accessors[attribute.index], rawBuffers.positionAttributeBuffer);
+            if (model.accessors[attribute.index].mins[0] < minBoundary[0]) minBoundary[0] = model.accessors[attribute.index].mins[0];
+            if (model.accessors[attribute.index].mins[1] < minBoundary[1]) minBoundary[1] = model.accessors[attribute.index].mins[1];
+            if (model.accessors[attribute.index].mins[2] < minBoundary[2]) minBoundary[2] = model.accessors[attribute.index].mins[2];
+            if (model.accessors[attribute.index].maxes[0] > maxBoundary[0]) maxBoundary[0] = model.accessors[attribute.index].maxes[0];
+            if (model.accessors[attribute.index].maxes[1] > maxBoundary[1]) maxBoundary[1] = model.accessors[attribute.index].maxes[1];
+            if (model.accessors[attribute.index].maxes[2] > maxBoundary[2]) maxBoundary[2] = model.accessors[attribute.index].maxes[2];
         }
         else if (strcmp(attribute.semantic, "NORMAL") == 0)
         {
@@ -1030,7 +1036,7 @@ gather_target_attributes(mvGLTFModel& model, mvGLTFMeshPrimitive& glprimitive)
 }
 
 static std::vector<mvAssetID>
-load_gltf_meshes(mvAssetManager& assetManager, mvGLTFModel& model)
+load_gltf_meshes(mvAssetManager& assetManager, mvGLTFModel& model, float* minBoundary, float* maxBoundary)
 {
     std::vector<mvAssetID> meshMapping;
     meshMapping.resize(model.mesh_count);
@@ -1058,11 +1064,6 @@ load_gltf_meshes(mvAssetManager& assetManager, mvGLTFModel& model)
         if (!newMesh.weights.empty())
         {
             useMorphing = true;
-            //while (newMesh.weights.size() * sizeof(f32) % 16)
-            //{
-            //    newMesh.weights.push_back(0.0f);
-            //    newMesh.weightsAnimated.push_back(0.0f);
-            //}
 
             // create transform constant buffer
             D3D11_BUFFER_DESC cbd;
@@ -1093,7 +1094,7 @@ load_gltf_meshes(mvAssetManager& assetManager, mvGLTFModel& model)
             }
 
             RawAttributeBuffers rawBuffers{};
-            std::vector<mvVertexElement> attributes = load_raw_attribute_buffers(model, glprimitive, rawBuffers);
+            std::vector<mvVertexElement> attributes = load_raw_attribute_buffers(model, glprimitive, rawBuffers, minBoundary, maxBoundary);
 
             std::vector<u32> indexBuffer;
             std::vector<f32> vertexBuffer;
@@ -1450,12 +1451,20 @@ mvModel
 load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
 {
     mvModel mvmodel{};
+    float maxBoundary[3] = { -FLT_MAX , -FLT_MAX , -FLT_MAX };
+    float minBoundary[3] = { FLT_MAX , FLT_MAX , FLT_MAX };
     mvmodel.loaded = true;
     mvmodel.skins = load_gltf_skins(assetManager, model);
     mvmodel.cameras = load_gltf_cameras(assetManager, model);
-    mvmodel.meshes = load_gltf_meshes(assetManager, model);
+    mvmodel.meshes = load_gltf_meshes(assetManager, model, minBoundary, maxBoundary);
     mvmodel.nodes = load_gltf_nodes(assetManager, model);
     mvmodel.animations = load_gltf_animations(assetManager, model);
+
+    for (i32 i = 0; i < 3; i++)
+    {
+        mvmodel.minBoundary[i] = minBoundary[i];
+        mvmodel.maxBoundary[i] = maxBoundary[i];
+    }
 
     // updates based on correct offset mapping
     for (u32 currentAnimation = 0u; currentAnimation < model.animation_count; currentAnimation++)

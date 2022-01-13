@@ -45,6 +45,7 @@ create_perspective_camera(mvVec3 pos, f32 fov, f32 aspect, f32 nearZ, f32 farZ)
     return camera;
 }
 
+
 mvMat4 
 create_fps_view(mvCamera& camera)
 {
@@ -63,6 +64,16 @@ create_projection(mvCamera& camera)
     if(camera.type == MV_CAMERA_ORTHOGRAPHIC)
         return ortho(-camera.width/2.0f, camera.width / 2.0f, -camera.height / 2.0f, -camera.height / 2.0f, camera.nearZ, camera.farZ);
     return perspective(camera.fieldOfView, camera.aspectRatio, camera.nearZ, camera.farZ);
+}
+
+mvMat4
+create_arcball_view(mvCamera& camera)
+{
+    mvMat4 xRot = rotate(identity_mat4(), camera.xRot, mvVec3{ 1.0f, 0.0f, 0.0f });
+    mvMat4 yRot = rotate(identity_mat4(), camera.yRot, mvVec3{ 0.0f, 1.0f, 0.0f });
+    mvMat4 trans = translate(identity_mat4(), mvVec3{ camera.target.x, camera.target.y, camera.target.z - camera.radius });
+    mvMat4 view = trans * xRot * yRot;
+    return view;
 }
 
 mvMat4
@@ -120,6 +131,72 @@ update_fps_camera(mvCamera& camera, f32 dt, f32 travelSpeed, f32 rotationSpeed)
         camera.yaw = wrap_angle(camera.yaw + -ImGui::GetIO().MouseDelta.x * rotationSpeed);
         camera.pitch = std::clamp(camera.pitch + -ImGui::GetIO().MouseDelta.y * rotationSpeed, 0.995f * -PI / 2.0f, 0.995f * PI / 2.0f);
     }
+}
+
+static int 
+sgn(f32 val) {
+    return (0.0f < val) - (val < 0.0f);
+}
+
+void
+update_arcball_camera(mvCamera& camera, f32 dt, f32 translationSpeed, f32 rotationSpeed, f32 width, f32 height)
+{
+
+    if (!ImGui::GetIO().WantCaptureMouse)
+        return;
+
+    if (ImGui::IsMouseDragging(ImGuiMouseButton_Middle))
+    {
+        f32 xPosDelta = ImGui::GetIO().MouseDelta.x;
+        f32 yPosDelta = ImGui::GetIO().MouseDelta.y;
+
+        mvMat4 view = create_arcball_view(camera);
+        mvVec4 worldDelta{ xPosDelta*translationSpeed*dt, -yPosDelta*translationSpeed*dt, 0.0f, 0.0f };
+        mvMat4 projMatrix = create_projection(camera);
+
+        worldDelta = invert(projMatrix) * invert(view) * worldDelta;
+
+        camera.target.x += worldDelta.x;
+        camera.target.y += worldDelta.y;
+        camera.target.z += worldDelta.z;
+
+        camera.pos.z = camera.target.z + camera.radius * cos(camera.pitch) * cos(camera.yaw);
+        camera.pos.y = camera.target.y + camera.radius * sin(camera.pitch);
+        camera.pos.x = camera.target.x + camera.radius * cos(camera.xRot) * -sin(camera.yaw);
+
+    }
+
+    if (ImGui::GetIO().MouseWheel != 0.0f)
+    {
+        camera.radius += ImGui::GetIO().MouseWheel * camera.radius * 0.1f;
+        camera.radius = clamp(camera.radius, 0.0f, FLT_MAX);
+
+        camera.farZ = abs(camera.radius * 2.0F);
+        camera.nearZ = camera.radius / 100.0f;
+    }
+
+    // for now, we will just use imgui's input
+    if (ImGui::IsMouseDragging(ImGuiMouseButton_Left))
+    {
+        f32 xPosDelta = ImGui::GetIO().MouseDelta.x;
+        f32 yPosDelta = ImGui::GetIO().MouseDelta.y;
+
+        float deltaAngleX = (2 * M_PI / width); // a movement from left to right = 2*PI = 360 deg
+        float deltaAngleY = (M_PI / height);  // a movement from top to bottom = PI = 180 deg
+
+        camera.yaw = wrap_angle(camera.yaw + deltaAngleX*xPosDelta * rotationSpeed);
+        camera.pitch = std::clamp(camera.pitch + deltaAngleY*yPosDelta * rotationSpeed, 0.995f * -PI / 2.0f, 0.995f * PI / 2.0f);
+        camera.pos.z = camera.target.z + camera.radius * cos(camera.pitch) * cos(camera.yaw);
+        camera.pos.y = camera.target.y + camera.radius * sin(camera.pitch);
+        camera.pos.x = camera.target.x + camera.radius * cos(camera.xRot) * -sin(camera.yaw);
+    }
+    else if (ImGui::GetIO().MouseWheel != 0 || ImGui::IsMouseDragging(ImGuiMouseButton_Middle))
+    {
+        camera.pos.z = camera.target.z + camera.radius * cos(camera.pitch) * cos(camera.yaw);
+        camera.pos.y = camera.target.y + camera.radius * sin(camera.pitch);
+        camera.pos.x = camera.target.x + camera.radius * cos(camera.xRot) * -sin(camera.yaw);
+    }
+
 }
 
 static void

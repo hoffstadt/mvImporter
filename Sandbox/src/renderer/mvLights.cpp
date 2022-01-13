@@ -7,14 +7,6 @@ create_point_light(mvAssetManager& am)
 {
     mvPointLight light;
 
-    light.camera = create_perspective_camera(
-        light.info.viewLightPos.xyz(),
-        (f32)M_PI_2,
-        1.0f,
-        0.5f,
-        100.0f
-    );
-
     // create mesh
     light.mesh = create_cube(am, 0.25f);
 

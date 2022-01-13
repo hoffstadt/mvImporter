@@ -61,7 +61,6 @@ struct mvMaterial
     mvConstBuffer              buffer;
     mvMaterialData             data;
     mvAssetID                  pipeline; 
-    mvAssetID                  spipeline; 
     std::vector<mvShaderMacro> macros;
     std::vector<mvShaderMacro> extramacros;
     mvVertexLayout             layout;

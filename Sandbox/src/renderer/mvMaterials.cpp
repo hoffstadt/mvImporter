@@ -70,13 +70,7 @@ create_material(mvAssetManager& am, const std::string& vs, const std::string& ps
 		if (materialInfo.hasClearcoatMap)pipelineInfo.macros.push_back({ "HAS_CLEARCOAT_MAP", "0" });
 		if (materialInfo.hasClearcoatRoughnessMap)pipelineInfo.macros.push_back({ "HAS_CLEARCOAT_ROUGHNESS_MAP", "0" });
 		if (materialInfo.hasClearcoatNormalMap)pipelineInfo.macros.push_back({ "HAS_CLEARCOAT_NORMAL_MAP", "0" });
-
-		if (GContext->IO.punctualLighting)
-		{
-			pipelineInfo.macros.push_back({ "USE_PUNCTUAL", "0" });
-			if (GContext->IO.directionalShadows) pipelineInfo.macros.push_back({ "SHADOWS_DIRECTIONAL", "0" });
-			if (GContext->IO.omniShadows) pipelineInfo.macros.push_back({ "SHADOWS_OMNI", "0" });
-		}
+		if (GContext->IO.punctualLighting) pipelineInfo.macros.push_back({ "USE_PUNCTUAL", "0" });
 
 		for (auto& macro : materialInfo.extramacros)
 			pipelineInfo.macros.push_back(macro);
@@ -92,29 +86,6 @@ create_material(mvAssetManager& am, const std::string& vs, const std::string& ps
 
 		material.buffer = create_const_buffer(&material.data, sizeof(mvMaterialData));
 
-	}
-
-	// shadow pipeline
-	{
-		mvPipelineInfo pipelineInfo{};
-		pipelineInfo.pixelShader = material.alphaMode == MV_ALPHA_MODE_MASK || material.alphaMode == MV_ALPHA_MODE_BLEND ? "Shadow_PS.hlsl" : "";
-		pipelineInfo.vertexShader = "Shadow_VS.hlsl";
-		pipelineInfo.depthBias = 50;
-		pipelineInfo.slopeBias = 2.0f;
-		pipelineInfo.clamp = 0.1f;
-		pipelineInfo.cull = false;
-
-		pipelineInfo.layout = material.layout;
-
-		for (auto& macro : materialInfo.extramacros)
-			pipelineInfo.macros.push_back(macro);
-
-		std::string hash = hash_material(material, material.layout, pipelineInfo.pixelShader, pipelineInfo.vertexShader);
-
-		if (material.alphaMode != 0)
-			hash.append("alpha");
-
-		material.spipeline = register_asset(&am, hash + "shadow", finalize_pipeline(pipelineInfo));
 	}
 
 	return material;

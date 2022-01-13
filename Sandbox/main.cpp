@@ -1,23 +1,84 @@
-#include "main.h"
+#include <imgui.h>
+#include <imgui_internal.h>
+#include <imgui_impl_win32.h>
+#include <imgui_impl_dx11.h>
+#include "mvLights.h"
+#include "mvEnvironment.h"
+#include "mvOffscreenPass.h"
+#include "mvRenderer.h"
+#include "mvImporter.h"
+#include "mvTimer.h"
+#include "gltf_scene_info.h"
+#include "mvAnimation.h"
+#include "mvSandbox.h"
+#include "mvAssetLoader.h"
+#include "mvAssetManager.h"
+#include "mvViewport.h"
+
+#define MODEL_CACHE_SIZE 5
+#define ENV_CACHE_SIZE 3
+
+mvViewport* window = nullptr;
+ImVec2 oldContentRegion = ImVec2(500, 500);
+
+// scenes & models
+i32       cacheIndex     = -1;   // current model from list
+i32       modelIndex     = 27;   // current model from list
+i32       cacheRingIndex = 0;   // current cache index
+i32       cachedModelIndex[MODEL_CACHE_SIZE];
+mvModel   cachedModel[MODEL_CACHE_SIZE];
+
+// environments
+i32           activeEnv = 5;
+i32           envMapIndex = 5;
+i32           envCacheIndex = 0;
+mvEnvironment cachedEnvironments[ENV_CACHE_SIZE];
+i32           cachedEnvironmentsID[ENV_CACHE_SIZE];
+
+// misc
+f32    currentTime = 0.0f;
+f32    uniformScale = 1.0f;
+mvVec3 translation = { 0.0f, 0.0f, 0.0f };
+
+// prevent recalculating every frame
+mvMat4 scaleTransform = identity_mat4();
+mvMat4 translationTransform = identity_mat4();
+
+// flags
+b8 showSkybox = false;
+b8 blur = true;
+
+// per frame dirty flags
+bool reloadMaterials = false;
+bool recreatePrimary = false;
+bool recreateEnvironment = true;
+bool changeScene = true;
 
 int main()
 {    
-    UISession session = create_ui_session();
+    for (int i = 0; i < MODEL_CACHE_SIZE; i++)
+    {
+        cachedModelIndex[i] = -1;
+        cachedModel[i] = {};
+    }
+
+    for (int i = 0; i < ENV_CACHE_SIZE; i++)
+        cachedEnvironmentsID[i] = -1;
 
     create_context();
     GContext->IO.shaderDirectory = "../../Sandbox/shaders/";
     GContext->IO.resourceDirectory = "../../Resources/";
 
-    session.window = initialize_viewport(1850, 900);
-    setup_graphics(*session.window);
+    window = initialize_viewport(1850, 900);
+    setup_graphics(*window);
 
     // setup imgui
     ImGui::CreateContext();
-    ImPlot::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
-    ImGui_ImplWin32_Init(session.window->hWnd);
+    ImGui_ImplWin32_Init(window->hWnd);
     ImGui_ImplDX11_Init(GContext->graphics.device.Get(), GContext->graphics.imDeviceContext.Get());
+    ImGui::StyleColorsClassic();
 
     ID3D11DeviceContext* ctx = GContext->graphics.imDeviceContext.Get();
 
@@ -29,20 +90,16 @@ int main()
     mvRendererContext renderCtx = Renderer::create_renderer_context(am);
 
     // main camera
-    mvCamera camera = create_perspective_camera({ -13.5f, 6.0f, 3.5f }, (f32)M_PI_4, 1.0f, 0.1f, 400.0f);
-    //camera.yaw = (f32)M_PI;
+    mvCamera camera = create_perspective_camera({ 0.0f, 0.0f, 5.0f }, (f32)PI/4.0f, 1.0f, 0.1f, 400.0f);
     renderCtx.camera = &camera;
 
     // lights
     mvPointLight pointlight = create_point_light(am);
+    pointlight.info.viewLightPos = mvVec4{ -15.0f, 15.0f, 10.0f, 0.0f };
     mvDirectionalLight directionalLight = create_directional_light(am);
 
     // passes
     mvOffscreenPass offscreen = mvOffscreenPass(500.0f, 500.0f);
-    mvDirectionalShadowPass directionalShadowMap = mvDirectionalShadowPass(am, 4096, 95.0f);
-    mvOmniShadowPass omniShadowMap = mvOmniShadowPass(am, 2048);
-    omniShadowMap.info.view = create_lookat_view(pointlight.camera);
-    //omniShadowMap.info.view = translate(identity_mat4(), { pointlight.info.viewLightPos.x, pointlight.info.viewLightPos.y, pointlight.info.viewLightPos.z });
 
     mvTimer timer;
     while (true)
@@ -56,55 +113,41 @@ int main()
         // updates
         //-----------------------------------------------------------------------------
 
-        session.currentTime += dt;
+        currentTime += dt;
 
-        if (session.window->resized)
+        if (window->resized)
         {
-            recreate_swapchain(session.window->width, session.window->height);
-            session.window->resized = false;
+            recreate_swapchain(window->width, window->height);
+            window->resized = false;
         }
 
-        if (session.reloadMaterials)
+        if (reloadMaterials)
         {
             reload_materials(&am);
-            session.reloadMaterials = false;
+            reloadMaterials = false;
         }
 
-        if (session.recreatePrimary)
+        if (recreatePrimary)
         {
             offscreen.recreate();
-            session.recreatePrimary = false;
+            recreatePrimary = false;
         }
 
-        if (session.recreateShadowMapRS)
+        if (recreateEnvironment)
         {
-            directionalShadowMap.recreate();
-            session.recreateShadowMapRS = false;
-        }
-
-        if (session.recreateOShadowMapRS)
-        {
-            omniShadowMap.recreate();
-            session.recreateOShadowMapRS = false;
-        }
-
-        if (session.recreateEnvironment)
-        {
-            session.recreateEnvironment = false;
-            if (session.envMapIndex == 0)
-            {
-                session.showSkybox = false;
-            }
+            recreateEnvironment = false;
+            if (envMapIndex == 0)
+                showSkybox = false;
 
             else
             {
-                session.showSkybox = true;
+                showSkybox = true;
                 b8 cacheFound = false;
                 for (int i = 0; i < ENV_CACHE_SIZE; i++)
                 {
-                    if (session.cachedEnvironmentsID[i] == session.envMapIndex)
+                    if (cachedEnvironmentsID[i] == envMapIndex)
                     {
-                        session.activeEnv = i;
+                        activeEnv = i;
                         cacheFound = true;
                         break;
                     }
@@ -112,25 +155,25 @@ int main()
 
                 if (!cacheFound)
                 {
-                    std::string newMap = "../../data/glTF-Sample-Environments/" + std::string(env_maps[session.envMapIndex]) + ".hdr";
-                    cleanup_environment(session.cachedEnvironments[session.envCacheIndex]);
-                    session.cachedEnvironments[session.envCacheIndex] = create_environment(newMap, 1024, 1024, 1.0f, 7);
-                    session.cachedEnvironmentsID[session.envCacheIndex] = session.envMapIndex;
-                    session.activeEnv = session.envCacheIndex;
-                    session.envCacheIndex++;
-                    if (session.envCacheIndex == ENV_CACHE_SIZE) session.envCacheIndex = 0;
+                    std::string newMap = "../../data/glTF-Sample-Environments/" + std::string(env_maps[envMapIndex]) + ".hdr";
+                    cleanup_environment(cachedEnvironments[envCacheIndex]);
+                    cachedEnvironments[envCacheIndex] = create_environment(newMap, 1024, 1024, 1.0f, 7);
+                    cachedEnvironmentsID[envCacheIndex] = envMapIndex;
+                    activeEnv = envCacheIndex;
+                    envCacheIndex++;
+                    if (envCacheIndex == ENV_CACHE_SIZE) envCacheIndex = 0;
                 }
             }
         }
-        if (session.changeScene)
+        if (changeScene)
         {
-            session.changeScene = false;
+            changeScene = false;
             b8 cacheFound = false;
             for (int i = 0; i < MODEL_CACHE_SIZE; i++)
             {
-                if (session.cachedModelIndex[i] == session.modelIndex)
+                if (cachedModelIndex[i] == modelIndex)
                 {
-                    session.cacheIndex = session.cachedModelIndex[i];
+                    cacheIndex = cachedModelIndex[i];
                     cacheFound = true;
                     break;
                 }
@@ -139,20 +182,39 @@ int main()
             if (!cacheFound)
             {
 
-                i32 modelToRemove = session.cachedModelIndex[session.cacheRingIndex];
+                i32 modelToRemove = cachedModelIndex[cacheRingIndex];
 
                 if (modelToRemove > -1)
-                    unload_gltf_assets(am, session.cachedModel[modelToRemove]);
+                    unload_gltf_assets(am, cachedModel[modelToRemove]);
 
-                mvGLTFModel gltfmodel0 = mvLoadGLTF(gltf_directories[session.modelIndex], gltf_models[session.modelIndex]);
-                session.cachedModel[session.cacheRingIndex] = load_gltf_assets(am, gltfmodel0);
+                mvGLTFModel gltfmodel0 = mvLoadGLTF(gltf_directories[modelIndex], gltf_models[modelIndex]);
+                cachedModel[cacheRingIndex] = load_gltf_assets(am, gltfmodel0);
                 mvCleanupGLTF(gltfmodel0);
-                session.cachedModelIndex[session.cacheRingIndex] = modelToRemove;
-                session.cacheIndex = session.cacheRingIndex;
-                session.cacheRingIndex++;
-                if (session.cacheRingIndex == MODEL_CACHE_SIZE) session.cacheRingIndex = 0;
+                cachedModelIndex[cacheRingIndex] = modelToRemove;
+                cacheIndex = cacheRingIndex;
+                cacheRingIndex++;
+                if (cacheRingIndex == MODEL_CACHE_SIZE) cacheRingIndex = 0;
 
             }
+            camera.target.x = (cachedModel[cacheIndex].maxBoundary[0] + cachedModel[cacheIndex].minBoundary[0]) / 2.0f;
+            camera.target.y = (cachedModel[cacheIndex].maxBoundary[1] + cachedModel[cacheIndex].minBoundary[1]) / 2.0f;
+            camera.target.z = (cachedModel[cacheIndex].maxBoundary[2] + cachedModel[cacheIndex].minBoundary[2]) / 2.0f;
+            f32 sceneWidth = cachedModel[cacheIndex].maxBoundary[0] - cachedModel[cacheIndex].minBoundary[0];
+            f32 sceneHeight = cachedModel[cacheIndex].maxBoundary[1] - cachedModel[cacheIndex].minBoundary[1];
+            f32 aspect = sceneWidth / sceneHeight;
+            if(sceneHeight > sceneWidth)
+                camera.radius = 1.2*sceneHeight / (2.0f * tan(aspect*camera.fieldOfView / 2.0f));
+            else
+                camera.radius = 1.2*sceneWidth / (2.0f * tan(camera.fieldOfView / 2.0f));
+            camera.pos.x = camera.target.x;
+            camera.pos.y = camera.target.y;
+            camera.pos.z = camera.target.z + camera.radius;
+            camera.yaw = 0.0f;
+            camera.pitch = 0.0f;
+            camera.farZ = abs(camera.pos.z + 15.0f);
+            camera.nearZ = camera.radius/100.0f;
+
+
         }
 
         //-----------------------------------------------------------------------------
@@ -162,16 +224,13 @@ int main()
         static float backgroundColor2[] = { 0.2f, 0.2f, 0.2f, 1.0f };
         ctx->ClearRenderTargetView(*GContext->graphics.target.GetAddressOf(), backgroundColor);
         ctx->ClearRenderTargetView(offscreen.targetView, backgroundColor2);
-        ctx->ClearDepthStencilView(directionalShadowMap.depthView, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0u);
         ctx->ClearDepthStencilView(offscreen.depthView, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0u);
-        for (u32 i = 0; i < 6; i++)
-            ctx->ClearDepthStencilView(omniShadowMap.depthView[i], D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0u);
 
         //-----------------------------------------------------------------------------
         // update animations
         //-----------------------------------------------------------------------------
         for (i32 i = 0; i < am.animationCount; i++)
-            advance_animations(am, am.animations[i].asset, session.currentTime);
+            advance_animations(am, am.animations[i].asset, currentTime);
 
         //-----------------------------------------------------------------------------
         // begin frame
@@ -184,101 +243,46 @@ int main()
         for(int i = 0; i < 12; i++)
             ctx->PSSetShaderResources(i, 6, pSRV);
 
-        //-----------------------------------------------------------------------------
-        // directional shadow pass
-        //-----------------------------------------------------------------------------
-        ctx->OMSetRenderTargets(0, nullptr, directionalShadowMap.depthView);
-        ctx->RSSetViewports(1u, &directionalShadowMap.viewport);
-        ctx->RSSetState(directionalShadowMap.rasterizationState);
-
         i32 activeScene = -1;
-        if (session.cacheIndex > -1)
-        {
-            activeScene = session.cachedModel[session.cacheIndex].defaultScene;
-        }
-
-        if (activeScene > -1)
-            Renderer::render_scene_shadows(am, am.scenes[activeScene].asset,
-                directionalShadowMap.getViewMatrix(), directionalShadowMap.getProjectionMatrix(),
-                session.scaleTransform, session.translationTransform);
+        if (cacheIndex > -1)
+            activeScene = cachedModel[cacheIndex].defaultScene;
 
         //-----------------------------------------------------------------------------
-        // omni shadow pass
-        //-----------------------------------------------------------------------------
-        ctx->RSSetViewports(1u, &omniShadowMap.viewport);
-        ctx->RSSetState(omniShadowMap.rasterizationState);
-
-        for (u32 i = 0; i < 6; i++)
-        {
-            ctx->OMSetRenderTargets(0, nullptr, omniShadowMap.depthView[i]);
-            mvVec3 look_target = pointlight.camera.pos + omniShadowMap.cameraDirections[i];
-            mvMat4 camera_matrix = lookat(pointlight.camera.pos, look_target, omniShadowMap.cameraUps[i]);
-
-            if (activeScene > -1)
-                Renderer::render_scene_shadows(am, am.scenes[activeScene].asset, 
-                    camera_matrix, perspective(M_PI_2, 1.0f, 0.5f, 100.0f), 
-                    session.scaleTransform, session.translationTransform);
-        }
-
-        //-----------------------------------------------------------------------------
-        // main pass
+        // offscreen pass
         //-----------------------------------------------------------------------------
         ctx->OMSetRenderTargets(1, &offscreen.targetView, offscreen.depthView);
         ctx->RSSetViewports(1u, &offscreen.viewport);
 
-        mvMat4 viewMatrix = create_fps_view(camera);
+        mvMat4 viewMatrix = create_arcball_view(camera);
         mvMat4 projMatrix = create_projection(camera);
 
         renderCtx.globalInfo.camPos = camera.pos;
-        directionalLight.info.viewLightDir = directionalShadowMap.camera.dir;
 
         // update constant buffers
         update_const_buffer(pointlight.buffer, &pointlight.info);
         update_const_buffer(directionalLight.buffer, &directionalLight.info);
         update_const_buffer(renderCtx.globalInfoBuffer, &renderCtx.globalInfo);
-        update_const_buffer(directionalShadowMap.buffer, &directionalShadowMap.info);
-        update_const_buffer(omniShadowMap.buffer, &omniShadowMap.info);
-
-        // vertex constant buffers
-        ctx->VSSetConstantBuffers(1u, 1u, &directionalShadowMap.buffer.buffer);
-        ctx->VSSetConstantBuffers(2u, 1u, &omniShadowMap.buffer.buffer);
 
         // pixel constant buffers
         ctx->PSSetConstantBuffers(0u, 1u, &pointlight.buffer.buffer);
         ctx->PSSetConstantBuffers(2u, 1u, &directionalLight.buffer.buffer);
         ctx->PSSetConstantBuffers(3u, 1u, &renderCtx.globalInfoBuffer.buffer);
 
-        // samplers
-        ctx->PSSetSamplers(5u, 1, &directionalShadowMap.sampler);
-        ctx->PSSetSamplers(6u, 1, &omniShadowMap.sampler);
-
-        if (session.activeEnv > -1)
+        if (activeEnv > -1)
         {
-            ctx->PSSetSamplers(7u, 1, &session.cachedEnvironments[session.activeEnv].sampler);
-            ctx->PSSetSamplers(8u, 1, &session.cachedEnvironments[session.activeEnv].sampler);
-            ctx->PSSetSamplers(9u, 1, &session.cachedEnvironments[session.activeEnv].brdfSampler);
+            ctx->PSSetSamplers(12u, 1, &cachedEnvironments[activeEnv].sampler);
+            ctx->PSSetSamplers(13u, 1, &cachedEnvironments[activeEnv].sampler);
+            ctx->PSSetSamplers(14u, 1, &cachedEnvironments[activeEnv].brdfSampler);
+            ctx->PSSetShaderResources(12u, 1, &cachedEnvironments[activeEnv].irradianceMap.textureView);
+            ctx->PSSetShaderResources(13u, 1, &cachedEnvironments[activeEnv].specularMap.textureView);
+            ctx->PSSetShaderResources(14u, 1, &cachedEnvironments[activeEnv].brdfLUT.textureView);
         }
 
-        // textures
-        ctx->PSSetShaderResources(5u, 1, &directionalShadowMap.resourceView);
-        ctx->PSSetShaderResources(6u, 1, &omniShadowMap.resourceView);
-
-        if (session.activeEnv > -1)
-        {
-            ctx->PSSetShaderResources(7u, 1, &session.cachedEnvironments[session.activeEnv].irradianceMap.textureView);
-            ctx->PSSetShaderResources(8u, 1, &session.cachedEnvironments[session.activeEnv].specularMap.textureView);
-        }
-
-        if (session.activeEnv > -1)
-        {
-            ctx->PSSetShaderResources(9u, 1, &session.cachedEnvironments[session.activeEnv].brdfLUT.textureView);
-        }
-
-        Renderer::render_mesh_solid(am, pointlight.mesh, translate(identity_mat4(), pointlight.camera.pos), viewMatrix, projMatrix);
+        Renderer::render_mesh_solid(am, pointlight.mesh, translate(identity_mat4(), pointlight.info.viewLightPos.xyz()), viewMatrix, projMatrix);
 
         if (activeScene > -1)
         {
-            Renderer::submit_scene(am, renderCtx, am.scenes[activeScene].asset, session.scaleTransform, session.translationTransform);
+            Renderer::submit_scene(am, renderCtx, am.scenes[activeScene].asset, scaleTransform, translationTransform);
             //-----------------------------------------------------------------------------
             // update skins
             //-----------------------------------------------------------------------------
@@ -298,35 +302,163 @@ int main()
             Renderer::render_scenes(am, renderCtx, viewMatrix, projMatrix);
         }
 
-        if (session.showSkybox && session.activeEnv > -1)
-            Renderer::render_skybox(am, session.blur ? session.cachedEnvironments[session.activeEnv].specularMap : session.cachedEnvironments[session.activeEnv].skyMap, session.cachedEnvironments[session.activeEnv].sampler, viewMatrix, projMatrix);
+        if (showSkybox && activeEnv > -1)
+            Renderer::render_skybox(am,
+                blur ? cachedEnvironments[activeEnv].specularMap : cachedEnvironments[activeEnv].skyMap, 
+                cachedEnvironments[activeEnv].sampler, viewMatrix, projMatrix);
 
         //-----------------------------------------------------------------------------
         // ui
         //-----------------------------------------------------------------------------
-        draw_ui(session, dt, renderCtx, directionalShadowMap, omniShadowMap, offscreen,
-            pointlight, directionalLight);
+        ctx->OMSetRenderTargets(1, GContext->graphics.target.GetAddressOf(), *GContext->graphics.targetDepth.GetAddressOf());
+        ctx->RSSetViewports(1u, &GContext->graphics.viewport);
+
+        // styling to fill viewport 
+        ImGui::SetNextWindowBgAlpha(1.0f);
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f); // to prevent main window corners from showing
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0);
+        ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, ImVec2(0.0f, 0.0f));
+        ImGui::PushStyleColor(ImGuiCol_TableBorderLight, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
+        ImGui::PushStyleColor(ImGuiCol_TableBorderStrong, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
+        ImGui::SetNextWindowPos(ImVec2(0.0f, 0.0f));
+        ImGui::SetNextWindowSize(ImVec2((float)window->width, (float)window->height));
+        static ImGuiWindowFlags windowFlags = ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoDecoration;
+
+        ImGui::Begin("Main Window", 0, windowFlags);
+
+        static ImGuiTableFlags tableflags =
+            ImGuiTableFlags_Borders |
+            ImGuiTableFlags_Resizable |
+            ImGuiTableFlags_SizingStretchProp |
+            ImGuiTableFlags_NoHostExtendX;
+
+        if (ImGui::BeginTable("Main Table", 2, tableflags))
+        {
+
+            ImGui::TableSetupColumn("Primary Scene");
+            ImGui::TableSetupColumn("Scene Controls", ImGuiTableColumnFlags_WidthFixed, 400.0f);
+            ImGui::TableNextColumn();
+
+            //-----------------------------------------------------------------------------
+            // render panel
+            //-----------------------------------------------------------------------------
+            ImGui::TableSetColumnIndex(0);
+
+            ImGui::GetForegroundDrawList()->AddText(ImVec2(ImGui::GetWindowPos().x + 45, 15),
+                ImColor(0.0f, 1.0f, 0.0f), std::string(std::to_string(io.Framerate) + " FPS").c_str());
+
+            ImGui::GetForegroundDrawList()->AddText(ImVec2(ImGui::GetWindowPos().x + 45, 30),
+                ImColor(0.0f, 1.0f, 0.0f), std::string(std::to_string(camera.pos.x) + ", "
+                    + std::to_string(camera.pos.y) + ", " + std::to_string(camera.pos.z)).c_str());
+            ImGui::GetForegroundDrawList()->AddText(ImVec2(ImGui::GetWindowPos().x + 45, 45),
+                ImColor(0.0f, 1.0f, 0.0f), std::string(std::to_string(camera.pitch) + ", "
+                    + std::to_string(camera.yaw)).c_str());
+
+            ImVec2 contentSize = ImGui::GetContentRegionAvail();
+
+            if (ImGui::IsWindowHovered())
+                update_arcball_camera(*renderCtx.camera, dt, 1.0f, 1.0f, contentSize.x, contentSize.y);
+
+
+            offscreen.viewport = { 0.0f, 0.0f, contentSize.x, contentSize.y, 0.0f, 1.0f };
+            renderCtx.camera->aspectRatio = offscreen.viewport.Width / offscreen.viewport.Height;
+
+            auto blendCallback = [](const ImDrawList* parent_list, const ImDrawCmd* cmd) {
+                // Setup blend state
+                const float blend_factor[4] = { 0.f, 0.f, 0.f, 0.f };
+                GContext->graphics.imDeviceContext->OMSetBlendState((ID3D11BlendState*)cmd->UserCallbackData, blend_factor, 0xffffffff);
+            };
+
+            ImGui::GetWindowDrawList()->AddCallback(blendCallback, renderCtx.finalBlendState);
+            ImGui::Image(offscreen.resourceView, contentSize, ImVec2(0, 0), ImVec2(1, 1), ImVec4(1, 1, 1, 1), ImVec4(0, 0, 0, 0));
+            if (!(contentSize.x == oldContentRegion.x && contentSize.y == oldContentRegion.y))
+                recreatePrimary = true;
+            oldContentRegion = contentSize;
+            ImGui::GetWindowDrawList()->AddCallback(ImDrawCallback_ResetRenderState, nullptr);
+
+            //-----------------------------------------------------------------------------
+            // right panel
+            //-----------------------------------------------------------------------------
+            ImGui::TableSetColumnIndex(1);
+            ImGui::Dummy(ImVec2(50.0f, 25.0f));
+            ImGui::Indent(14.0f);
+            ImGui::Text("%s", "Scene");
+            if (ImGui::DragFloat("Scale", &uniformScale, 0.1f, 0.001f))
+            {
+                scaleTransform = scale(identity_mat4(), mvVec3{ uniformScale, uniformScale, uniformScale });
+            }
+            if (ImGui::DragFloat3("Translate", &translation.x, 1.0f, -200.0f, 200.0f))
+            {
+                translationTransform = translate(identity_mat4(), translation);
+            }
+
+            ImGui::Dummy(ImVec2(50.0f, 25.0f));
+            ImGui::Text("%s", "Environments");
+            if (ImGui::Combo("##environments", &envMapIndex, env_maps, 11, 11)) recreateEnvironment = true;
+
+            ImGui::Dummy(ImVec2(50.0f, 25.0f));
+
+            ImGui::Text("%s", "Models");
+            if (ImGui::Combo("##models", &modelIndex, gltf_names, 80 + 36 + 59, 20)) changeScene = true;
+
+            ImGui::Dummy(ImVec2(50.0f, 25.0f));
+            ImGui::Text("%s", "Lighting");
+            if (ImGui::Checkbox("Punctual Lighting", (bool*)&GContext->IO.punctualLighting))reloadMaterials = true;
+            if (ImGui::Checkbox("Image Based", (bool*)&GContext->IO.imageBasedLighting)) reloadMaterials = true;
+
+            ImGui::Dummy(ImVec2(50.0f, 25.0f));
+            ImGui::Text("%s", "Background");
+            ImGui::Checkbox("Blur##skybox", &blur);
+
+            ImGui::Dummy(ImVec2(50.0f, 25.0f));
+            ImGui::Text("%s", "Directional Light:");
+            static float dangle = 0.0f;
+            if (ImGui::SliderFloat("X Angle##d", &dangle, -45.0f, 45.0f))
+            {
+                f32 zcomponent = sinf(PI * dangle / 180.0f);
+                f32 ycomponent = cosf(PI * dangle / 180.0f);
+                directionalLight.info.viewLightDir = { 0.0f, -ycomponent, zcomponent };
+            }
+
+            ImGui::Dummy(ImVec2(50.0f, 25.0f));
+            ImGui::Text("%s", "Point Light:");
+            ImGui::SliderFloat3("Position##o", &pointlight.info.viewLightPos.x, -25.0f, 50.0f);
+
+            ImGui::Dummy(ImVec2(50.0f, 25.0f));
+            ImGui::Text("%s", "Extensions");
+            if (ImGui::Checkbox("KHR_materials_clearcoat", (bool*)&GContext->IO.clearcoat)) reloadMaterials = true;
+
+            ImGui::Unindent(14.0f);
+            ImGui::EndTable();
+
+            ImGui::End();
+            ImGui::PopStyleVar(4);
+            ImGui::PopStyleColor(2);
+
+            // render imgui
+            ImGui::Render();
+            ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
+
+            // present
+            GContext->graphics.swapChain->Present(1, 0);
+        }
     }
 
     offscreen.cleanup();
-    directionalShadowMap.cleanup();
-    omniShadowMap.cleanup();
 
     // Cleanup
     renderCtx.finalBlendState->Release();
     cleanup_asset_manager(&am);
 
     for (int i = 0; i < ENV_CACHE_SIZE; i++)
-        cleanup_environment(session.cachedEnvironments[i]);
+        cleanup_environment(cachedEnvironments[i]);
 
     for (int i = 0; i < MODEL_CACHE_SIZE; i++)
-    {
-        unload_gltf_assets(am, session.cachedModel[i]);
-    }
+        unload_gltf_assets(am, cachedModel[i]);
 
     ImGui_ImplDX11_Shutdown();
     ImGui_ImplWin32_Shutdown();
-    ImPlot::DestroyContext();
     ImGui::DestroyContext();
     destroy_context();
 }

@@ -16,19 +16,35 @@ mvCamera create_perspective_camera(mvVec3 pos, f32 fov, f32 aspect, f32 nearZ, f
 mvMat4   create_projection        (mvCamera& camera);                            
 mvMat4   create_ortho_view        (mvCamera& camera);
 mvMat4   create_fps_view          (mvCamera& camera);
+mvMat4   create_arcball_view      (mvCamera& camera);        
 mvMat4   create_lookat_view       (mvCamera& camera);        
 void     update_lookat_camera     (mvCamera& camera, f32 dt, f32 travelSpeed, f32 rotationSpeed);
 void     update_fps_camera        (mvCamera& camera, f32 dt, f32 travelSpeed, f32 rotationSpeed);
+void     update_arcball_camera    (mvCamera& camera, f32 dt, f32 translationSpeed, f32 rotationSpeed, f32 width, f32 height);
 
 struct mvCamera
 {
     mvCameraType type;
     mvVec3       pos;
     mvVec3       up          = {0.0f, 1.0f, 0.0f};
-    f32          pitch       = 0.0f;
-    f32          yaw         = 0.0f;
-    f32          nearZ       = 0.1f;
-    f32          farZ        = 400.0f;
+    f32          nearZ = 0.1f;
+    f32          farZ = 400.0f;
+    f32          radius = 5.0f;
+    union
+    {
+        f32 pitch = 0.0f;
+        f32 xRot;
+    };
+    union
+    {
+        f32 yaw = 0.0f;
+        f32 yRot;
+    };
+    union
+    {
+        f32 roll = 0.0f;
+        f32 zRot;
+    };
 
     union
     {
@@ -44,8 +60,9 @@ struct mvCamera
 
     union
     {
-        mvVec3 front;
+        mvVec3 front = { 0.0f, 0.0f, 0.0f };
         mvVec3 dir;
+        mvVec3 target;
     };
 };
 
