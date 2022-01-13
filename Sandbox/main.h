@@ -40,11 +40,11 @@ struct UISession
 
     // misc
     f32    currentTime = 0.0f;
-    f32    uniformScale = 1.0f;
+    f32    uniformScale = 5.0f;
     mvVec3 translation = { 0.0f, 0.0f, 0.0f };
 
     // prevent recalculating every frame
-    mvMat4 scaleTransform = identity_mat4();
+    mvMat4 scaleTransform = scale(identity_mat4(), { 5.0f, 5.0f, 5.0f });
     mvMat4 translationTransform = identity_mat4();
 
     // flags
@@ -254,6 +254,7 @@ draw_ui(UISession& session, f32 dt, mvRendererContext& renderCtx,
         {
             pointlight.camera.pos = { pointlight.info.viewLightPos.x, pointlight.info.viewLightPos.y, pointlight.info.viewLightPos.z };
             omniShadowMap.info.view = create_lookat_view(pointlight.camera);
+            //omniShadowMap.info.view = translate(identity_mat4(), { pointlight.info.viewLightPos.x, pointlight.info.viewLightPos.y, pointlight.info.viewLightPos.z });
         }
 
         ImGui::Unindent(14.0f);

@@ -488,6 +488,16 @@ ortho(f32 left, f32 right, f32 bottom, f32 top, f32 zNear, f32 zFar)
 	result[3][1] = -(top + bottom) / (top - bottom);
 	result[3][2] = -(zFar + zNear) / (zFar - zNear);
 	return result;
+
+	//mvMat4 result = identity_mat4();
+	//result[0][0] = 2.0f / (right - left);
+	//result[1][1] = 2.0f / (top - bottom);
+	//result[2][2] = 1.0f / (zFar - zNear);
+	//result[3][0] = -(right + left) / (right - left);
+	//result[3][1] = -(top + bottom) / (top - bottom);
+	//result[3][2] = -zNear / (zFar - zNear);
+	//result[3][3] = 1.0f;
+	//return result;
 }
 
 mvMat4
@@ -495,12 +505,19 @@ perspective(f32 fovy, f32 aspect, f32 zNear, f32 zFar)
 {
 	const f32 tanHalfFovy = tan(fovy / 2.0f);
 
+	//mvMat4 result{};
+	//result[0][0] = 1.0f / (aspect * tanHalfFovy);
+	//result[1][1] = 1.0f / (tanHalfFovy);
+	//result[2][2] = -(zFar + zNear) / (zFar - zNear);
+	//result[2][3] = -1.0f;
+	//result[3][2] = -(2.0f * zFar * zNear) / (zFar - zNear);
+
 	mvMat4 result{};
 	result[0][0] = 1.0f / (aspect * tanHalfFovy);
 	result[1][1] = 1.0f / (tanHalfFovy);
-	result[2][2] = -(zFar + zNear) / (zFar - zNear);
+	result[2][2] = -zFar/ (zFar - zNear);
 	result[2][3] = -1.0f;
-	result[3][2] = -(2.0f * zFar * zNear) / (zFar - zNear);
+	result[3][2] = -(zFar * zNear) / (zFar - zNear);
 	return result;
 }
 

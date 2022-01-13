@@ -15,8 +15,6 @@ struct mvPointLight
     float attQuad;
     //-------------------------- ( 16 bytes )
 
-    float4x4 inverseProjection;
-
     //-------------------------- ( 4*16 = 64 bytes )
 };
 
@@ -126,7 +124,7 @@ SamplerComparisonState DirectionalShadowMapSampler : register(s5);
 #endif
 #ifdef SHADOWS_OMNI
 TextureCube ShadowMap : register(t6);
-SamplerState ShadowMapSampler : register(s6);
+SamplerComparisonState ShadowMapSampler : register(s6);
 #endif
 #endif
 
@@ -229,15 +227,12 @@ struct VSOut
 #include <material_info.hlsli>
 
 #ifdef SHADOWS_OMNI
-#define EPSILON 0.15
-#define SHADOW_OPACITY 0.0
-
 static const float zf = 100.0f;
-static const float zn = 0.1f;
-static const float c1 = -(zf + zn) / (zf - zn);
-static const float c0 = -(2 * zn * zf) / (zf - zn);
+static const float zn = 0.5f;
+static const float c1 = zf/ (zf - zn);
+static const float c0 = -(zn * zf) / (zf - zn);
 
-float CalculateShadowDepth(const in float3 shadowPos)
+float CalculateShadowDepth(const in float4 shadowPos)
 {
     // get magnitudes for each basis component
     const float3 m = abs(shadowPos).xyz;
@@ -248,14 +243,9 @@ float CalculateShadowDepth(const in float3 shadowPos)
     return (c1 * major + c0) / major;
 }
 
-float Shadow(const in float4 shadowPos, uniform TextureCube map, uniform SamplerState smplr)
+float Shadow(const in float4 shadowPos, uniform TextureCube map, uniform SamplerComparisonState smplr)
 {
-    float sampledDistance = map.SampleLevel(smplr, shadowPos.xyz, 0).r*100.0f;
-    //float4 distvec = mul(float4(shadowPos.xyz, 1.0f), PointLight.inverseProjection);
-    //float dist = distvec.z/distvec.w;
-    float dist = length(shadowPos);
-    //float dist = CalculateShadowDepth(shadowPos.xyz);
-    return (dist > sampledDistance + EPSILON) ? SHADOW_OPACITY: 1.0;
+    return map.SampleCmpLevelZero(smplr, shadowPos.xyz, CalculateShadowDepth(shadowPos));
 }
 #endif
 
@@ -440,7 +430,13 @@ float4 main(VSOut input) : SV_Target
         // point light
         //-----------------------------------------------------------------------------
         float shadowLevel = 1.0f;
-        //input.oshadowWorldPos.z = -input.oshadowWorldPos.z;
+        float x = input.oshadowWorldPos.x;
+        float y = input.oshadowWorldPos.y;
+        float z = input.oshadowWorldPos.z;
+        input.oshadowWorldPos.x = x;
+        input.oshadowWorldPos.y = y;
+        input.oshadowWorldPos.z = -z;
+
         float3 pointToLight = PointLight.viewLightPos - input.WorldPos;
 #ifdef SHADOWS_OMNI
             shadowLevel = Shadow(input.oshadowWorldPos, ShadowMap, ShadowMapSampler);

@@ -40,7 +40,7 @@ create_perspective_camera(mvVec3 pos, f32 fov, f32 aspect, f32 nearZ, f32 farZ)
     camera.fieldOfView = fov;
     camera.nearZ = nearZ;
     camera.farZ = farZ;
-    camera.front = { 0.0f, 0.0f, 1.0f };
+    camera.front = { 0.0f, 0.0f, -1.0f };
 
     return camera;
 }
