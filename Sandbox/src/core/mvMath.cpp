@@ -212,6 +212,23 @@ operator*(mvMat4 left, mvVec4 right)
 	return Add2;
 }
 
+mvVec3
+operator*(mvMat4 left, mvVec3 right)
+{
+	mvVec4 Mov0 = { right[0], right[0], right[0], right[0] };
+	mvVec4 Mov1 = { right[1], right[1], right[1], right[1] };
+	mvVec4 Mul0 = left[0] * Mov0;
+	mvVec4 Mul1 = left[1] * Mov1;
+	mvVec4 Add0 = Mul0 + Mul1;
+	mvVec4 Mov2 = { right[2], right[2], right[2], right[2] };
+	mvVec4 Mov3 = { 1.0f, 1.0f, 1.0f, 1.0f};
+	mvVec4 Mul2 = left[2] * Mov2;
+	mvVec4 Mul3 = left[3] * Mov3;
+	mvVec4 Add1 = Mul2 + Mul3;
+	mvVec4 Add2 = Add0 + Add1;
+	return Add2.xyz();
+}
+
 mvVec4 
 operator*(mvVec4 left, f32 right)
 {
@@ -524,123 +541,40 @@ perspective(f32 fovy, f32 aspect, f32 zNear, f32 zFar)
 mvMat4
 invert(mvMat4& m)
 {
-	mvMat4 inv = identity_mat4();
 	mvMat4 invout = identity_mat4();
-	float det = 0.0f;
+	f32 det = 0.0f;
 
-	inv.at(0) = m.at(5) * m.at(10) * m.at(15) -
-		m.at(5) * m.at(11) * m.at(14) -
-		m.at(9) * m.at(6) * m.at(15) +
-		m.at(9) * m.at(7) * m.at(14) +
-		m.at(13) * m.at(6) * m.at(11) -
-		m.at(13) * m.at(7) * m.at(10);
+	f32 a00 = m.at(0);
+	f32 a01 = m.at(1);
+	f32 a02 = m.at(2);
+	f32 a03 = m.at(3);
+	f32 a10 = m.at(4);
+	f32 a11 = m.at(5);
+	f32 a12 = m.at(6);
+	f32 a13 = m.at(7);
+	f32 a20 = m.at(8);
+	f32 a21 = m.at(9);
+	f32 a22 = m.at(10);
+	f32 a23 = m.at(11);
+	f32 a30 = m.at(12);
+	f32 a31 = m.at(13);
+	f32 a32 = m.at(14);
+	f32 a33 = m.at(15);
 
-	inv.at(4) = -m.at(4) * m.at(10) * m.at(15) +
-		m.at(4) * m.at(11) * m.at(14) +
-		m.at(8) * m.at(6) * m.at(15) -
-		m.at(8) * m.at(7) * m.at(14) -
-		m.at(12) * m.at(6) * m.at(11) +
-		m.at(12) * m.at(7) * m.at(10);
+	f32 b00 = a00 * a11 - a01 * a10;
+	f32 b01 = a00 * a12 - a02 * a10;
+	f32 b02 = a00 * a13 - a03 * a10;
+	f32 b03 = a01 * a12 - a02 * a11;
+	f32 b04 = a01 * a13 - a03 * a11;
+	f32 b05 = a02 * a13 - a03 * a12;
+	f32 b06 = a20 * a31 - a21 * a30;
+	f32 b07 = a20 * a32 - a22 * a30;
+	f32 b08 = a20 * a33 - a23 * a30;
+	f32 b09 = a21 * a32 - a22 * a31;
+	f32 b10 = a21 * a33 - a23 * a31;
+	f32 b11 = a22 * a33 - a23 * a32;
 
-	inv.at(8) = m.at(4) * m.at(9) * m.at(15) -
-		m.at(4) * m.at(11) * m.at(13) -
-		m.at(8) * m.at(5) * m.at(15) +
-		m.at(8) * m.at(7) * m.at(13) +
-		m.at(12) * m.at(5) * m.at(11) -
-		m.at(12) * m.at(7) * m.at(9);
-
-	inv.at(12) = -m.at(4) * m.at(9) * m.at(14) +
-		m.at(4) * m.at(10) * m.at(13) +
-		m.at(8) * m.at(5) * m.at(14) -
-		m.at(8) * m.at(6) * m.at(13) -
-		m.at(12) * m.at(5) * m.at(10) +
-		m.at(12) * m.at(6) * m.at(9);
-
-	inv.at(1) = -m.at(1) * m.at(10) * m.at(15) +
-		m.at(1) * m.at(11) * m.at(14) +
-		m.at(9) * m.at(2) * m.at(15) -
-		m.at(9) * m.at(3) * m.at(14) -
-		m.at(13) * m.at(2) * m.at(11) +
-		m.at(13) * m.at(3) * m.at(10);
-
-	inv.at(5) = m.at(0) * m.at(10) * m.at(15) -
-		m.at(0) * m.at(11) * m.at(14) -
-		m.at(8) * m.at(2) * m.at(15) +
-		m.at(8) * m.at(3) * m.at(14) +
-		m.at(12) * m.at(2) * m.at(11) -
-		m.at(12) * m.at(3) * m.at(10);
-
-	inv.at(9) = -m.at(0) * m.at(9) * m.at(15) +
-		m.at(0) * m.at(11) * m.at(13) +
-		m.at(8) * m.at(1) * m.at(15) -
-		m.at(8) * m.at(3) * m.at(13) -
-		m.at(12) * m.at(1) * m.at(11) +
-		m.at(12) * m.at(3) * m.at(9);
-
-	inv.at(13) = m.at(0) * m.at(9) * m.at(14) -
-		m.at(0) * m.at(10) * m.at(13) -
-		m.at(8) * m.at(1) * m.at(14) +
-		m.at(8) * m.at(2) * m.at(13) +
-		m.at(12) * m.at(1) * m.at(10) -
-		m.at(12) * m.at(2) * m.at(9);
-
-	inv.at(2) = m.at(1) * m.at(6) * m.at(15) -
-		m.at(1) * m.at(7) * m.at(14) -
-		m.at(5) * m.at(2) * m.at(15) +
-		m.at(5) * m.at(3) * m.at(14) +
-		m.at(13) * m.at(2) * m.at(7) -
-		m.at(13) * m.at(3) * m.at(6);
-
-	inv.at(6) = -m.at(0) * m.at(6) * m.at(15) +
-		m.at(0) * m.at(7) * m.at(14) +
-		m.at(4) * m.at(2) * m.at(15) -
-		m.at(4) * m.at(3) * m.at(14) -
-		m.at(12) * m.at(2) * m.at(7) +
-		m.at(12) * m.at(3) * m.at(6);
-
-	inv.at(10) = m.at(0) * m.at(5) * m.at(15) -
-		m.at(0) * m.at(7) * m.at(13) -
-		m.at(4) * m.at(1) * m.at(15) +
-		m.at(4) * m.at(3) * m.at(13) +
-		m.at(12) * m.at(1) * m.at(7) -
-		m.at(12) * m.at(3) * m.at(5);
-
-	inv.at(14) = -m.at(0) * m.at(5) * m.at(14) +
-		m.at(0) * m.at(6) * m.at(13) +
-		m.at(4) * m.at(1) * m.at(14) -
-		m.at(4) * m.at(2) * m.at(13) -
-		m.at(12) * m.at(1) * m.at(6) +
-		m.at(12) * m.at(2) * m.at(5);
-
-	inv.at(3) = -m.at(1) * m.at(6) * m.at(11) +
-		m.at(1) * m.at(7) * m.at(10) +
-		m.at(5) * m.at(2) * m.at(11) -
-		m.at(5) * m.at(3) * m.at(10) -
-		m.at(9) * m.at(2) * m.at(7) +
-		m.at(9) * m.at(3) * m.at(6);
-
-	inv.at(7) = m.at(0) * m.at(6) * m.at(11) -
-		m.at(0) * m.at(7) * m.at(10) -
-		m.at(4) * m.at(2) * m.at(11) +
-		m.at(4) * m.at(3) * m.at(10) +
-		m.at(8) * m.at(2) * m.at(7) -
-		m.at(8) * m.at(3) * m.at(6);
-
-	inv.at(11) = -m.at(0) * m.at(5) * m.at(11) +
-		m.at(0) * m.at(7) * m.at(9) +
-		m.at(4) * m.at(1) * m.at(11) -
-		m.at(4) * m.at(3) * m.at(9) -
-		m.at(8) * m.at(1) * m.at(7) +
-		m.at(8) * m.at(3) * m.at(5);
-
-	inv.at(15) = m.at(0) * m.at(5) * m.at(10) -
-		m.at(0) * m.at(6) * m.at(9) -
-		m.at(4) * m.at(1) * m.at(10) +
-		m.at(4) * m.at(2) * m.at(9) +
-		m.at(8) * m.at(1) * m.at(6) -
-		m.at(8) * m.at(2) * m.at(5);
-
-	det = m.at(0) * inv.at(0) + m.at(1) * inv.at(4) + m.at(2) * inv.at(8) + m.at(3) * inv.at(12);
+	det = b00 * b11 - b01 * b10 + b02 * b09 + b03 * b08 - b04 * b07 + b05 * b06;
 
 	if (det == 0)
 	{
@@ -648,10 +582,25 @@ invert(mvMat4& m)
 		return invout;
 	}
 
-	det = 1.0 / det;
+	det = 1.0f / det;
 
-	for (i32 i = 0; i < 16; i++)
-		invout.at(i) = inv.at(i) * det;
+	invout.at(0) = (a11 * b11 - a12 * b10 + a13 * b09) * det;
+	invout.at(1) = (a02 * b10 - a01 * b11 - a03 * b09) * det;
+	invout.at(2) = (a31 * b05 - a32 * b04 + a33 * b03) * det;
+	invout.at(3) = (a22 * b04 - a21 * b05 - a23 * b03) * det;
+	invout.at(4) = (a12 * b08 - a10 * b11 - a13 * b07) * det;
+	invout.at(5) = (a00 * b11 - a02 * b08 + a03 * b07) * det;
+	invout.at(6) = (a32 * b02 - a30 * b05 - a33 * b01) * det;
+	invout.at(7) = (a20 * b05 - a22 * b02 + a23 * b01) * det;
+	invout.at(8) = (a10 * b10 - a11 * b08 + a13 * b06) * det;
+	invout.at(9) = (a01 * b08 - a00 * b10 - a03 * b06) * det;
+	invout.at(10) = (a30 * b04 - a31 * b02 + a33 * b00) * det;
+	invout.at(11) = (a21 * b02 - a20 * b04 - a23 * b00) * det;
+	invout.at(12) = (a11 * b07 - a10 * b09 - a12 * b06) * det;
+	invout.at(13) = (a00 * b09 - a01 * b07 + a02 * b06) * det;
+	invout.at(14) = (a31 * b01 - a30 * b03 - a32 * b00) * det;
+	invout.at(15) = (a20 * b03 - a21 * b01 + a22 * b00) * det;
+
 	return invout;
 }
 

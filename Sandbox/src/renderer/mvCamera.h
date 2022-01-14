@@ -20,7 +20,7 @@ mvMat4   create_arcball_view      (mvCamera& camera);
 mvMat4   create_lookat_view       (mvCamera& camera);        
 void     update_lookat_camera     (mvCamera& camera, f32 dt, f32 travelSpeed, f32 rotationSpeed);
 void     update_fps_camera        (mvCamera& camera, f32 dt, f32 travelSpeed, f32 rotationSpeed);
-void     update_arcball_camera    (mvCamera& camera, f32 dt, f32 translationSpeed, f32 rotationSpeed, f32 width, f32 height);
+void     update_arcball_camera    (mvCamera& camera, f32 dt);
 
 struct mvCamera
 {
@@ -29,7 +29,16 @@ struct mvCamera
     mvVec3       up          = {0.0f, 1.0f, 0.0f};
     f32          nearZ = 0.1f;
     f32          farZ = 400.0f;
-    f32          radius = 5.0f;
+
+    f32 orbitSpeed = 1.0f / 180.0f;
+    f32 panSpeed = 1.0f;
+    f32 distance = 1.0f;
+    f32 baseDistance = 1.0f;
+    f32 zoomExponent = 5.0f;
+    f32 zoomFactor = 0.01f;
+    mvVec3 minBound = {0.0f, 1.0f, 0.0f};
+    mvVec3 maxBound = {0.0f, 1.0f, 0.0f};
+
     union
     {
         f32 pitch = 0.0f;

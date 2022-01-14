@@ -196,23 +196,37 @@ int main()
                 if (cacheRingIndex == MODEL_CACHE_SIZE) cacheRingIndex = 0;
 
             }
-            camera.target.x = (cachedModel[cacheIndex].maxBoundary[0] + cachedModel[cacheIndex].minBoundary[0]) / 2.0f;
-            camera.target.y = (cachedModel[cacheIndex].maxBoundary[1] + cachedModel[cacheIndex].minBoundary[1]) / 2.0f;
-            camera.target.z = (cachedModel[cacheIndex].maxBoundary[2] + cachedModel[cacheIndex].minBoundary[2]) / 2.0f;
-            f32 sceneWidth = cachedModel[cacheIndex].maxBoundary[0] - cachedModel[cacheIndex].minBoundary[0];
-            f32 sceneHeight = cachedModel[cacheIndex].maxBoundary[1] - cachedModel[cacheIndex].minBoundary[1];
-            f32 aspect = sceneWidth / sceneHeight;
-            if(sceneHeight > sceneWidth)
-                camera.radius = 1.2*sceneHeight / (2.0f * tan(aspect*camera.fieldOfView / 2.0f));
-            else
-                camera.radius = 1.2*sceneWidth / (2.0f * tan(camera.fieldOfView / 2.0f));
-            camera.pos.x = camera.target.x;
-            camera.pos.y = camera.target.y;
-            camera.pos.z = camera.target.z + camera.radius;
+            camera.minBound = mvVec3{ cachedModel[cacheIndex].minBoundary[0], cachedModel[cacheIndex].minBoundary[1], cachedModel[cacheIndex].minBoundary[2] };
+            camera.maxBound = mvVec3{ cachedModel[cacheIndex].maxBoundary[0], cachedModel[cacheIndex].maxBoundary[1], cachedModel[cacheIndex].maxBoundary[2] };
+
+            camera.target.x = (camera.minBound.x + camera.maxBound.x) / 2.0f;
+            camera.target.y = (camera.minBound.y + camera.maxBound.y) / 2.0f;
+            camera.target.z = (camera.minBound.z + camera.maxBound.z) / 2.0f;
+
+            // fit radius
+            f32 maxAxisLength = std::max(camera.maxBound.x - camera.minBound.x, camera.maxBound.y - camera.minBound.y);
+            f32 yfov = camera.fieldOfView;
+            f32 xfov = camera.fieldOfView * camera.aspectRatio;
+            f32 yZoom = maxAxisLength / 2.0f / tan(yfov / 2.0f);
+            f32 xZoom = maxAxisLength / 2.0f / tan(xfov / 2.0f);
+            camera.distance = std::max(xZoom, yZoom);
+            camera.baseDistance = camera.distance;
+
+            // fit camera planes
+            f32 longestDistance = 10.0f * sqrt(camera.minBound.x * camera.minBound.x + camera.minBound.y * camera.minBound.y + camera.minBound.z * camera.minBound.z);
             camera.yaw = 0.0f;
             camera.pitch = 0.0f;
-            camera.farZ = abs(camera.pos.z + 15.0f);
-            camera.nearZ = camera.radius/100.0f;
+            camera.nearZ = camera.distance - longestDistance * 0.6;
+            camera.farZ = camera.distance + longestDistance * 0.6;
+            camera.nearZ = std::max(camera.nearZ, camera.farZ / 10000.0f);
+            camera.panSpeed = longestDistance / 3500;
+
+            // fit camera target
+            f32 target[3] = { 0.0f, 0.0f, 0.0f };
+            for (i32 i = 0; i < 3; i++)
+                target[i] = (camera.maxBound[i] + camera.minBound[i]) / 2.0f;
+            camera.pos = mvVec3{ target[0], target[1], target[2] + camera.distance };
+
 
 
         }
@@ -295,7 +309,7 @@ int main()
                     if(skeleton != -1)
                         compute_joints(am, am.nodes[skeleton].asset.inverseWorldTransform, am.skins[node.skin].asset);
                     else
-                        compute_joints(am, identity_mat4(), am.skins[node.skin].asset);
+                        compute_joints(am, viewMatrix, am.skins[node.skin].asset);
                 }
             }
 
@@ -358,7 +372,7 @@ int main()
             ImVec2 contentSize = ImGui::GetContentRegionAvail();
 
             if (ImGui::IsWindowHovered())
-                update_arcball_camera(*renderCtx.camera, dt, 1.0f, 1.0f, contentSize.x, contentSize.y);
+                update_arcball_camera(*renderCtx.camera, dt);
 
 
             offscreen.viewport = { 0.0f, 0.0f, contentSize.x, contentSize.y, 0.0f, 1.0f };

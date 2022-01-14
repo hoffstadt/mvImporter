@@ -81,6 +81,7 @@ mvVec4 operator-(mvVec4 left, mvVec4 right);
 mvVec4 operator*(mvVec4 left, mvVec4 right);
 mvVec4 operator*(mvVec4 left, f32 right);
 mvVec4 operator*(mvMat4 left, mvVec4 right);
+mvVec3 operator*(mvMat4 left, mvVec3 right);
 
 mvMat4 operator*(mvMat4 left, mvMat4 right);
 mvMat4 operator*(mvMat4 left, f32 right);
