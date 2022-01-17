@@ -2,8 +2,7 @@
  mvImporter, v0.0.1 (WIP)
    * no dependencies
    * assumes GLTF file is correct
-   * ignores animation for now
-   * contains a hackly put together json parser
+   * contains a hacky but minimal json parser
 
    Do this:
 	  #define MV_IMPORTER_IMPLEMENTATION
