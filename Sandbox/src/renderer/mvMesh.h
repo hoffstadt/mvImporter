@@ -3,7 +3,7 @@
 #include <string>
 #include "mvMath.h"
 #include "mvBuffers.h"
-#include "mvVertexLayout.h"
+#include "mvPipeline.h"
 #include "mvTextures.h"
 
 // forward declarations
@@ -13,6 +13,7 @@ struct mvMeshPrimitive;
 struct mvMesh;
 struct mvSkin;
 struct mvNode;
+
 
 mvMesh    create_cube         (mvAssetManager& assetManager, f32 size = 1.0f);
 mvMesh    create_textured_cube(mvAssetManager& assetManager, f32 size = 1.0f);

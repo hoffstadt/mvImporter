@@ -3,7 +3,7 @@
 #include "mvSandbox.h"
 #include <assert.h>
 #include "stb_image.h"
-#include "mvShader.h"
+#include "mvPipeline.h"
 
 static mvCubeTexture
 create_cube_map_from_hdr(const std::string& path)

@@ -30,14 +30,12 @@ target_sources(mvimporter_sandbox
 		"src/renderer/mvBuffers.cpp"
 		"src/renderer/mvRenderer.cpp"
 		"src/renderer/mvCamera.cpp"
-		"src/renderer/mvVertexLayout.cpp"
 		"src/renderer/mvMesh.cpp"
 		"src/renderer/mvTextures.cpp"
 		"src/renderer/mvPipeline.cpp"
 		"src/renderer/mvMaterials.cpp"
 		"src/renderer/mvLights.cpp"
 		"src/renderer/mvEnvironment.cpp"
-		"src/renderer/mvShader.cpp"
 
 		# imgui
 		"vendor/imgui/misc/cpp/imgui_stdlib.cpp"

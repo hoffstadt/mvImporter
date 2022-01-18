@@ -15,25 +15,12 @@
 #include "mvAssetManager.h"
 #include "mvViewport.h"
 
-#define MODEL_CACHE_SIZE 5
-#define ENV_CACHE_SIZE 3
-
 mvViewport* window = nullptr;
 ImVec2 oldContentRegion = ImVec2(500, 500);
 
 // scenes & models
-i32       cacheIndex     = -1;   // current model from list
-i32       modelIndex     = 27;   // current model from list
-i32       cacheRingIndex = 0;   // current cache index
-i32       cachedModelIndex[MODEL_CACHE_SIZE];
-mvModel   cachedModel[MODEL_CACHE_SIZE];
-
-// environments
-i32           activeEnv = 5;
-i32           envMapIndex = 5;
-i32           envCacheIndex = 0;
-mvEnvironment cachedEnvironments[ENV_CACHE_SIZE];
-i32           cachedEnvironmentsID[ENV_CACHE_SIZE];
+i32 modelIndex = 27;   // current model from list
+i32 envMapIndex = 5;
 
 // misc
 f32    currentTime = 0.0f;
@@ -56,15 +43,6 @@ bool changeScene = true;
 
 int main()
 {    
-    for (int i = 0; i < MODEL_CACHE_SIZE; i++)
-    {
-        cachedModelIndex[i] = -1;
-        cachedModel[i] = {};
-    }
-
-    for (int i = 0; i < ENV_CACHE_SIZE; i++)
-        cachedEnvironmentsID[i] = -1;
-
     create_context();
     GContext->IO.shaderDirectory = "../../Sandbox/shaders/";
     GContext->IO.resourceDirectory = "../../Resources/";
@@ -86,6 +64,10 @@ int main()
     mvAssetManager am{};
     initialize_asset_manager(&am);
     Renderer::setup_common_assets(am);
+
+    mvEnvironment environment = create_environment("../../data/glTF-Sample-Environments/" + std::string(env_maps[envMapIndex]) + ".hdr", 1024, 1024, 1.0f, 7);
+    mvGLTFModel gltfmodel0 = mvLoadGLTF(gltf_directories[modelIndex], gltf_models[modelIndex]);
+    mvModel model = load_gltf_assets(am, gltfmodel0);
     
     mvRendererContext renderCtx = Renderer::create_renderer_context(am);
 
@@ -142,62 +124,22 @@ int main()
             else
             {
                 showSkybox = true;
-                b8 cacheFound = false;
-                for (int i = 0; i < ENV_CACHE_SIZE; i++)
-                {
-                    if (cachedEnvironmentsID[i] == envMapIndex)
-                    {
-                        activeEnv = i;
-                        cacheFound = true;
-                        break;
-                    }
-                }
-
-                if (!cacheFound)
-                {
-                    std::string newMap = "../../data/glTF-Sample-Environments/" + std::string(env_maps[envMapIndex]) + ".hdr";
-                    cleanup_environment(cachedEnvironments[envCacheIndex]);
-                    cachedEnvironments[envCacheIndex] = create_environment(newMap, 1024, 1024, 1.0f, 7);
-                    cachedEnvironmentsID[envCacheIndex] = envMapIndex;
-                    activeEnv = envCacheIndex;
-                    envCacheIndex++;
-                    if (envCacheIndex == ENV_CACHE_SIZE) envCacheIndex = 0;
-                }
+                std::string newMap = "../../data/glTF-Sample-Environments/" + std::string(env_maps[envMapIndex]) + ".hdr";
+                cleanup_environment(environment);
+                environment = create_environment(newMap, 1024, 1024, 1.0f, 7);
             }
         }
         if (changeScene)
         {
             changeScene = false;
-            b8 cacheFound = false;
-            for (int i = 0; i < MODEL_CACHE_SIZE; i++)
-            {
-                if (cachedModelIndex[i] == modelIndex)
-                {
-                    cacheIndex = cachedModelIndex[i];
-                    cacheFound = true;
-                    break;
-                }
-            }
+            unload_gltf_assets(am, model);
 
-            if (!cacheFound)
-            {
+            gltfmodel0 = mvLoadGLTF(gltf_directories[modelIndex], gltf_models[modelIndex]);
+            model = load_gltf_assets(am, gltfmodel0);
+            mvCleanupGLTF(gltfmodel0);
 
-                i32 modelToRemove = cachedModelIndex[cacheRingIndex];
-
-                if (modelToRemove > -1)
-                    unload_gltf_assets(am, cachedModel[modelToRemove]);
-
-                mvGLTFModel gltfmodel0 = mvLoadGLTF(gltf_directories[modelIndex], gltf_models[modelIndex]);
-                cachedModel[cacheRingIndex] = load_gltf_assets(am, gltfmodel0);
-                mvCleanupGLTF(gltfmodel0);
-                cachedModelIndex[cacheRingIndex] = modelToRemove;
-                cacheIndex = cacheRingIndex;
-                cacheRingIndex++;
-                if (cacheRingIndex == MODEL_CACHE_SIZE) cacheRingIndex = 0;
-
-            }
-            camera.minBound = mvVec3{ cachedModel[cacheIndex].minBoundary[0], cachedModel[cacheIndex].minBoundary[1], cachedModel[cacheIndex].minBoundary[2] };
-            camera.maxBound = mvVec3{ cachedModel[cacheIndex].maxBoundary[0], cachedModel[cacheIndex].maxBoundary[1], cachedModel[cacheIndex].maxBoundary[2] };
+            camera.minBound = mvVec3{ model.minBoundary[0], model.minBoundary[1], model.minBoundary[2] };
+            camera.maxBound = mvVec3{ model.maxBoundary[0], model.maxBoundary[1], model.maxBoundary[2] };
 
             camera.target.x = (camera.minBound.x + camera.maxBound.x) / 2.0f;
             camera.target.y = (camera.minBound.y + camera.maxBound.y) / 2.0f;
@@ -226,9 +168,6 @@ int main()
             for (i32 i = 0; i < 3; i++)
                 target[i] = (camera.maxBound[i] + camera.minBound[i]) / 2.0f;
             camera.pos = mvVec3{ target[0], target[1], target[2] + camera.distance };
-
-
-
         }
 
         //-----------------------------------------------------------------------------
@@ -257,9 +196,7 @@ int main()
         for(int i = 0; i < 12; i++)
             ctx->PSSetShaderResources(i, 6, pSRV);
 
-        i32 activeScene = -1;
-        if (cacheIndex > -1)
-            activeScene = cachedModel[cacheIndex].defaultScene;
+        i32 activeScene = model.defaultScene;
 
         //-----------------------------------------------------------------------------
         // offscreen pass
@@ -282,14 +219,14 @@ int main()
         ctx->PSSetConstantBuffers(2u, 1u, &directionalLight.buffer.buffer);
         ctx->PSSetConstantBuffers(3u, 1u, &renderCtx.globalInfoBuffer.buffer);
 
-        if (activeEnv > -1)
+        if (envMapIndex > -1)
         {
-            ctx->PSSetSamplers(12u, 1, &cachedEnvironments[activeEnv].sampler);
-            ctx->PSSetSamplers(13u, 1, &cachedEnvironments[activeEnv].sampler);
-            ctx->PSSetSamplers(14u, 1, &cachedEnvironments[activeEnv].brdfSampler);
-            ctx->PSSetShaderResources(12u, 1, &cachedEnvironments[activeEnv].irradianceMap.textureView);
-            ctx->PSSetShaderResources(13u, 1, &cachedEnvironments[activeEnv].specularMap.textureView);
-            ctx->PSSetShaderResources(14u, 1, &cachedEnvironments[activeEnv].brdfLUT.textureView);
+            ctx->PSSetSamplers(12u, 1, &environment.sampler);
+            ctx->PSSetSamplers(13u, 1, &environment.sampler);
+            ctx->PSSetSamplers(14u, 1, &environment.brdfSampler);
+            ctx->PSSetShaderResources(12u, 1, &environment.irradianceMap.textureView);
+            ctx->PSSetShaderResources(13u, 1, &environment.specularMap.textureView);
+            ctx->PSSetShaderResources(14u, 1, &environment.brdfLUT.textureView);
         }
 
         Renderer::render_mesh_solid(am, pointlight.mesh, translate(identity_mat4(), pointlight.info.viewLightPos.xyz()), viewMatrix, projMatrix);
@@ -316,10 +253,8 @@ int main()
             Renderer::render_scenes(am, renderCtx, viewMatrix, projMatrix);
         }
 
-        if (showSkybox && activeEnv > -1)
-            Renderer::render_skybox(am,
-                blur ? cachedEnvironments[activeEnv].specularMap : cachedEnvironments[activeEnv].skyMap, 
-                cachedEnvironments[activeEnv].sampler, viewMatrix, projMatrix);
+        if (showSkybox && envMapIndex > -1)
+           Renderer::render_skybox(am,blur ? environment.specularMap : environment.skyMap, environment.sampler, viewMatrix, projMatrix);
 
         //-----------------------------------------------------------------------------
         // ui
@@ -464,13 +399,8 @@ int main()
     // Cleanup
     renderCtx.finalBlendState->Release();
     cleanup_asset_manager(&am);
-
-    for (int i = 0; i < ENV_CACHE_SIZE; i++)
-        cleanup_environment(cachedEnvironments[i]);
-
-    for (int i = 0; i < MODEL_CACHE_SIZE; i++)
-        unload_gltf_assets(am, cachedModel[i]);
-
+    cleanup_environment(environment);
+    unload_gltf_assets(am, model);
     ImGui_ImplDX11_Shutdown();
     ImGui_ImplWin32_Shutdown();
     ImGui::DestroyContext();

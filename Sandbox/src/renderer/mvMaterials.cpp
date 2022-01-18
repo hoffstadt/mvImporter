@@ -2,7 +2,7 @@
 #include "mvAssetManager.h"
 #include <assert.h>
 #include "mvSandbox.h"
-#include "mvVertexLayout.h"
+#include "mvPipeline.h"
 
 std::string hash_material(const mvMaterial& material, const mvVertexLayout& layout, const std::string& pixelShader, const std::string& vertexShader)
 {

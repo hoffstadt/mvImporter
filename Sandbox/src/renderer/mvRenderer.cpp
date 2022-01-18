@@ -4,9 +4,8 @@
 #include "mvSandbox.h"
 #include "mvGraphics.h"
 #include "mvBuffers.h"
-#include "mvVertexLayout.h"
+#include "mvPipeline.h"
 #include "mvAssetManager.h"
-#include "mvShader.h"
 
 namespace Renderer{
 
