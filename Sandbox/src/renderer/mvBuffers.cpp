@@ -32,7 +32,7 @@ create_buffer(void* data, u32 size, D3D11_BIND_FLAG flags, u32 stride, u32 miscF
 
     else
     {
-        hresult = GContext->graphics.device->CreateBuffer(&bufferDesc, &InitData, &buffer.buffer);
+        hresult = GContext->graphics.device->CreateBuffer(&bufferDesc, &InitData, buffer.buffer.GetAddressOf());
         assert(SUCCEEDED(hresult));
     }
 
@@ -48,8 +48,8 @@ create_buffer(void* data, u32 size, D3D11_BIND_FLAG flags, u32 stride, u32 miscF
         descView.Format = DXGI_FORMAT_UNKNOWN;
         descView.Buffer.NumElements = descBuf.ByteWidth / descBuf.StructureByteStride;
 
-        hresult = GContext->graphics.device->CreateUnorderedAccessView(buffer.buffer,
-            &descView, &buffer.unorderedAccessView);
+        hresult = GContext->graphics.device->CreateUnorderedAccessView(buffer.buffer.Get(),
+            &descView, buffer.unorderedAccessView.GetAddressOf());
         assert(SUCCEEDED(hresult));
     }
 
@@ -74,10 +74,10 @@ create_const_buffer(void* data, u32 size)
     {
         D3D11_SUBRESOURCE_DATA csd = {};
         csd.pSysMem = &data;
-        GContext->graphics.device->CreateBuffer(&cbd, &csd, &buffer.buffer);
+        GContext->graphics.device->CreateBuffer(&cbd, &csd, buffer.buffer.GetAddressOf());
     }
     else
-        GContext->graphics.device->CreateBuffer(&cbd, nullptr, &buffer.buffer);
+        GContext->graphics.device->CreateBuffer(&cbd, nullptr, buffer.buffer.GetAddressOf());
 
     return buffer;
 }
@@ -86,7 +86,7 @@ void
 update_const_buffer(mvConstBuffer& buffer, void* data)
 {
     D3D11_MAPPED_SUBRESOURCE mappedSubresource;
-    GContext->graphics.imDeviceContext->Map(buffer.buffer, 0u, D3D11_MAP_WRITE_DISCARD, 0u, &mappedSubresource);
+    GContext->graphics.imDeviceContext->Map(buffer.buffer.Get(), 0u, D3D11_MAP_WRITE_DISCARD, 0u, &mappedSubresource);
     memcpy(mappedSubresource.pData, data, buffer.size);
-    GContext->graphics.imDeviceContext->Unmap(buffer.buffer, 0u);
+    GContext->graphics.imDeviceContext->Unmap(buffer.buffer.Get(), 0u);
 }

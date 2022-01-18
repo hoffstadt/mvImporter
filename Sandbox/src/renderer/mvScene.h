@@ -3,6 +3,7 @@
 #include <string>
 #include "mvMath.h"
 #include "mvBuffers.h"
+#include "mvMesh.h"
 
 struct mvNode
 {

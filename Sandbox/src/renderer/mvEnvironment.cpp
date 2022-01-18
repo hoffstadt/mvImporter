@@ -1,14 +1,16 @@
 #include "mvEnvironment.h"
-#include "mvAssetManager.h"
 #include "mvSandbox.h"
 #include <assert.h>
 #include "stb_image.h"
 #include "mvPipeline.h"
+#include "mvMath.h"
+#include "mvBuffers.h"
 
 static mvCubeTexture
 create_cube_map_from_hdr(const std::string& path)
 {
 	mvCubeTexture texture{};
+	mvComPtr<ID3D11Texture2D> textureResource;
 
 	mvVec4* surfaces[6];
 
@@ -55,12 +57,12 @@ create_cube_map_from_hdr(const std::string& path)
 	update_const_buffer(cbuffer, &mdata);
 	ID3D11DeviceContext* ctx = GContext->graphics.imDeviceContext.Get();
 
-	ctx->CSSetConstantBuffers(0u, 1u, &cbuffer.buffer);
-	ctx->CSSetUnorderedAccessViews(0u, 1u, &inputBuffer.unorderedAccessView, nullptr);
+	ctx->CSSetConstantBuffers(0u, 1u, cbuffer.buffer.GetAddressOf());
+	ctx->CSSetUnorderedAccessViews(0u, 1u, inputBuffer.unorderedAccessView.GetAddressOf(), nullptr);
 	for (int i = 0; i < 6; i++)
-		ctx->CSSetUnorderedAccessViews(i + 1u, 1u, &faces[i].unorderedAccessView, nullptr);
+		ctx->CSSetUnorderedAccessViews(i + 1u, 1u, faces[i].unorderedAccessView.GetAddressOf(), nullptr);
 
-	ctx->CSSetShader(shader.shader, nullptr, 0);
+	ctx->CSSetShader(shader.shader.Get(), nullptr, 0);
 	ctx->Dispatch(res / 16, res / 16, 2u);
 
 	for (int i = 0; i < 6; i++)
@@ -78,7 +80,7 @@ create_cube_map_from_hdr(const std::string& path)
 		HRESULT hResult = GContext->graphics.device->CreateBuffer(&cbd, nullptr, &stagingBuffer);
 		assert(SUCCEEDED(hResult));
 
-		GContext->graphics.imDeviceContext->CopyResource(stagingBuffer, faces[i].buffer);
+		GContext->graphics.imDeviceContext->CopyResource(stagingBuffer, faces[i].buffer.Get());
 
 		D3D11_MAPPED_SUBRESOURCE MappedResource;
 		GContext->graphics.imDeviceContext->Map(stagingBuffer, 0, D3D11_MAP_READ, 0, &MappedResource);
@@ -111,7 +113,7 @@ create_cube_map_from_hdr(const std::string& path)
 		data[i].SysMemSlicePitch = 0;
 	}
 	// create the texture resource
-	GContext->graphics.device->CreateTexture2D(&textureDesc, data, &texture.texture);
+	GContext->graphics.device->CreateTexture2D(&textureDesc, data, textureResource.GetAddressOf());
 
 	// create the resource view on the texture
 	D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
@@ -120,21 +122,7 @@ create_cube_map_from_hdr(const std::string& path)
 	srvDesc.Texture2D.MostDetailedMip = 0;
 	srvDesc.Texture2D.MipLevels = 1;
 
-	GContext->graphics.device->CreateShaderResourceView(texture.texture, &srvDesc, &texture.textureView);
-	//GContext->graphics.imDeviceContext->GenerateMips(texture.textureView);
-
-
-	inputBuffer.buffer->Release();
-	inputBuffer.unorderedAccessView->Release();
-	cbuffer.buffer->Release();
-
-
-	for (int i = 0; i < 6; i++)
-	{
-		faces[i].buffer->Release();
-		faces[i].unorderedAccessView->Release();
-	}
-	shader.shader->Release();
+	GContext->graphics.device->CreateShaderResourceView(textureResource.Get(), &srvDesc, texture.textureView.GetAddressOf());
 
 	for (int i = 0; i < 6; i++)
 		delete[] surfaces[i];
@@ -143,7 +131,7 @@ create_cube_map_from_hdr(const std::string& path)
 }
 
 static void
-copy_resource_to_cubemap(mvCubeTexture& dst, std::vector<mvVec4*>& surfaces, i32 width, i32 height, i32 mipSlice, i32 mipLevels)
+copy_resource_to_cubemap(ID3D11Texture2D* specularTextureResource, mvCubeTexture& dst, std::vector<mvVec4*>& surfaces, i32 width, i32 height, i32 mipSlice, i32 mipLevels)
 {
 	D3D11_BOX sourceRegion;
 	for (int i = 0; i < 6; ++i)
@@ -168,13 +156,11 @@ copy_resource_to_cubemap(mvCubeTexture& dst, std::vector<mvVec4*>& surfaces, i32
 		textureDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
 		textureDesc.CPUAccessFlags = 0;
 
-		ID3D11Texture2D* texture;
-		GContext->graphics.device->CreateTexture2D(&textureDesc, nullptr, &texture);
-		GContext->graphics.imDeviceContext->UpdateSubresource(texture, 0u, nullptr, surfaces[i], 4 * width * sizeof(float), 0u);
+		mvComPtr<ID3D11Texture2D> texture;
+		GContext->graphics.device->CreateTexture2D(&textureDesc, nullptr, texture.GetAddressOf());
+		GContext->graphics.imDeviceContext->UpdateSubresource(texture.Get(), 0u, nullptr, surfaces[i], 4 * width * sizeof(float), 0u);
+		GContext->graphics.imDeviceContext->CopySubresourceRegion(specularTextureResource, D3D11CalcSubresource(mipSlice, i, mipLevels), 0, 0, 0, texture.Get(), 0, &sourceRegion);
 
-		GContext->graphics.imDeviceContext->CopySubresourceRegion(dst.texture, D3D11CalcSubresource(mipSlice, i, mipLevels), 0, 0, 0, texture, 0, &sourceRegion);
-
-		texture->Release();
 	}
 }
 
@@ -247,13 +233,13 @@ create_single_specular_map(mvCubeTexture& cubemap, i32 resolution, i32 width, i3
 
 	ID3D11DeviceContext* ctx = GContext->graphics.imDeviceContext.Get();
 
-	ctx->CSSetConstantBuffers(0u, 1u, &cbuffer.buffer);
+	ctx->CSSetConstantBuffers(0u, 1u, cbuffer.buffer.GetAddressOf());
 	for (int i = 0; i < 6; i++)
-		ctx->CSSetUnorderedAccessViews(i, 1u, &faces[i].unorderedAccessView, nullptr);
-	ctx->CSSetUnorderedAccessViews(6, 1u, &LutBuffer.unorderedAccessView, nullptr);
-	ctx->CSSetShaderResources(0u, 1, &cubemap.textureView);
+		ctx->CSSetUnorderedAccessViews(i, 1u, faces[i].unorderedAccessView.GetAddressOf(), nullptr);
+	ctx->CSSetUnorderedAccessViews(6, 1u, LutBuffer.unorderedAccessView.GetAddressOf(), nullptr);
+	ctx->CSSetShaderResources(0u, 1, cubemap.textureView.GetAddressOf());
 	ctx->CSSetSamplers(0u, 1, &sampler);
-	ctx->CSSetShader(filtershader.shader, nullptr, 0);
+	ctx->CSSetShader(filtershader.shader.Get(), nullptr, 0);
 	u32 dispatchCount = width / 16;
 	assert(dispatchCount > 0u);
 	ctx->Dispatch(dispatchCount, dispatchCount, 2u);
@@ -272,7 +258,7 @@ create_single_specular_map(mvCubeTexture& cubemap, i32 resolution, i32 width, i3
 		HRESULT hResult = GContext->graphics.device->CreateBuffer(&cbd, nullptr, &stagingBuffer);
 		assert(SUCCEEDED(hResult));
 
-		GContext->graphics.imDeviceContext->CopyResource(stagingBuffer, faces[i].buffer);
+		GContext->graphics.imDeviceContext->CopyResource(stagingBuffer, faces[i].buffer.Get());
 
 		D3D11_MAPPED_SUBRESOURCE MappedResource;
 		hResult = GContext->graphics.imDeviceContext->Map(stagingBuffer, 0, D3D11_MAP_READ, 0, &MappedResource);
@@ -297,7 +283,7 @@ create_single_specular_map(mvCubeTexture& cubemap, i32 resolution, i32 width, i3
 		HRESULT hResult = GContext->graphics.device->CreateBuffer(&cbd, nullptr, &stagingBuffer);
 		assert(SUCCEEDED(hResult));
 
-		GContext->graphics.imDeviceContext->CopyResource(stagingBuffer, LutBuffer.buffer);
+		GContext->graphics.imDeviceContext->CopyResource(stagingBuffer, LutBuffer.buffer.Get());
 
 		D3D11_MAPPED_SUBRESOURCE MappedResource;
 		hResult = GContext->graphics.imDeviceContext->Map(stagingBuffer, 0, D3D11_MAP_READ, 0, &MappedResource);
@@ -308,17 +294,7 @@ create_single_specular_map(mvCubeTexture& cubemap, i32 resolution, i32 width, i3
 		stagingBuffer->Release();
 	}
 
-	for (int i = 0; i < 6; i++)
-	{
-		faces[i].buffer->Release();
-		faces[i].unorderedAccessView->Release();
-	}
-
-	LutBuffer.buffer->Release();
-	LutBuffer.unorderedAccessView->Release();
 	sampler->Release();
-	cbuffer.buffer->Release();
-	filtershader.shader->Release();
 
 	return surfaces;
 
@@ -386,17 +362,17 @@ create_irradiance_map(mvCubeTexture& cubemap, i32 resolution, i32 sampleCount, f
 	samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
 	//samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
 	samplerDesc.MaxAnisotropy = D3D11_REQ_MAXANISOTROPY;
-	ID3D11SamplerState* sampler;
-	GContext->graphics.device->CreateSamplerState(&samplerDesc, &sampler);
+	mvComPtr<ID3D11SamplerState> sampler;
+	GContext->graphics.device->CreateSamplerState(&samplerDesc, sampler.GetAddressOf());
 
 	ID3D11DeviceContext* ctx = GContext->graphics.imDeviceContext.Get();
 
-	ctx->CSSetConstantBuffers(0u, 1u, &cbuffer.buffer);
+	ctx->CSSetConstantBuffers(0u, 1u, cbuffer.buffer.GetAddressOf());
 	for (int i = 0; i < 6; i++)
-		ctx->CSSetUnorderedAccessViews(i, 1u, &faces[i].unorderedAccessView, nullptr);
-	ctx->CSSetShaderResources(0u, 1, &cubemap.textureView);
-	ctx->CSSetSamplers(0u, 1, &sampler);
-	ctx->CSSetShader(filtershader.shader, nullptr, 0);
+		ctx->CSSetUnorderedAccessViews(i, 1u, faces[i].unorderedAccessView.GetAddressOf(), nullptr);
+	ctx->CSSetShaderResources(0u, 1, cubemap.textureView.GetAddressOf());
+	ctx->CSSetSamplers(0u, 1, sampler.GetAddressOf());
+	ctx->CSSetShader(filtershader.shader.Get(), nullptr, 0);
 	u32 dispatchCount = resolution / 16;
 	assert(dispatchCount > 0u);
 	ctx->Dispatch(dispatchCount, dispatchCount, 2u);
@@ -415,7 +391,7 @@ create_irradiance_map(mvCubeTexture& cubemap, i32 resolution, i32 sampleCount, f
 		HRESULT hResult = GContext->graphics.device->CreateBuffer(&cbd, nullptr, &stagingBuffer);
 		assert(SUCCEEDED(hResult));
 
-		GContext->graphics.imDeviceContext->CopyResource(stagingBuffer, faces[i].buffer);
+		GContext->graphics.imDeviceContext->CopyResource(stagingBuffer, faces[i].buffer.Get());
 
 		D3D11_MAPPED_SUBRESOURCE MappedResource;
 		hResult = GContext->graphics.imDeviceContext->Map(stagingBuffer, 0, D3D11_MAP_READ, 0, &MappedResource);
@@ -442,18 +418,9 @@ create_irradiance_map(mvCubeTexture& cubemap, i32 resolution, i32 sampleCount, f
 	srvDesc.Texture2D.MostDetailedMip = 0;
 	srvDesc.Texture2D.MipLevels = textureDesc.MipLevels;
 
-	GContext->graphics.device->CreateTexture2D(&textureDesc, data, &texture.texture);
-	GContext->graphics.device->CreateShaderResourceView(texture.texture, &srvDesc, &texture.textureView);
-
-	cbuffer.buffer->Release();
-	sampler->Release();
-
-	for (int i = 0; i < 6; i++)
-	{
-		faces[i].buffer->Release();
-		faces[i].unorderedAccessView->Release();
-	}
-	filtershader.shader->Release();
+	mvComPtr<ID3D11Texture2D> textureResource;
+	GContext->graphics.device->CreateTexture2D(&textureDesc, data, textureResource.GetAddressOf());
+	GContext->graphics.device->CreateShaderResourceView(textureResource.Get(), &srvDesc, texture.textureView.GetAddressOf());
 
 	for (int i = 0; i < 6; i++)
 		delete[] surfaces[i];
@@ -474,12 +441,11 @@ create_environment(const std::string& path, i32 resolution, i32 sampleCount, f32
     envSamplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
     envSamplerDesc.AddressV = envSamplerDesc.AddressU;
     envSamplerDesc.AddressW = envSamplerDesc.AddressU;
-    //envSamplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
     envSamplerDesc.Filter = D3D11_FILTER_ANISOTROPIC;
     envSamplerDesc.MaxAnisotropy = D3D11_REQ_MAXANISOTROPY;
     envSamplerDesc.MinLOD = 0.0f;
     envSamplerDesc.MaxLOD = (float)mipLevels + 1.0f;
-    GContext->graphics.device->CreateSamplerState(&envSamplerDesc, &environment.sampler);
+    GContext->graphics.device->CreateSamplerState(&envSamplerDesc, environment.sampler.GetAddressOf());
 
 	// create brdfLUT sampler
 	D3D11_SAMPLER_DESC brdfLutSamplerDesc{};
@@ -488,7 +454,7 @@ create_environment(const std::string& path, i32 resolution, i32 sampleCount, f32
 	brdfLutSamplerDesc.AddressW = brdfLutSamplerDesc.AddressU;
 	brdfLutSamplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
 	brdfLutSamplerDesc.MaxAnisotropy = D3D11_REQ_MAXANISOTROPY;
-	GContext->graphics.device->CreateSamplerState(&brdfLutSamplerDesc, &environment.brdfSampler);
+	GContext->graphics.device->CreateSamplerState(&brdfLutSamplerDesc, environment.brdfSampler.GetAddressOf());
 
 	// create irradianceMap
 	environment.irradianceMap = create_irradiance_map(environment.skyMap, resolution, sampleCount, 0.0f);
@@ -507,7 +473,7 @@ create_environment(const std::string& path, i32 resolution, i32 sampleCount, f32
 	texDesc.CPUAccessFlags = 0;
 	texDesc.MiscFlags = D3D11_RESOURCE_MISC_TEXTURECUBE;
 
-	HRESULT hResult = GContext->graphics.device->CreateTexture2D(&texDesc, nullptr, &environment.specularMap.texture);
+	HRESULT hResult = GContext->graphics.device->CreateTexture2D(&texDesc, nullptr, environment.specularTextureResource.GetAddressOf());
 	assert(SUCCEEDED(hResult));
 
 	D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc;
@@ -516,14 +482,14 @@ create_environment(const std::string& path, i32 resolution, i32 sampleCount, f32
 	srvDesc.TextureCube.MipLevels = texDesc.MipLevels;
 	srvDesc.TextureCube.MostDetailedMip = 0;
 
-	hResult = GContext->graphics.device->CreateShaderResourceView(environment.specularMap.texture, &srvDesc, &environment.specularMap.textureView);
+	hResult = GContext->graphics.device->CreateShaderResourceView(environment.specularTextureResource.Get(), &srvDesc, environment.specularMap.textureView.GetAddressOf());
 	assert(SUCCEEDED(hResult));
 
 	for (int i = mipLevels - 1; i != -1; i--)
 	{
 		i32 currentWidth = resolution >> i;
 		std::vector<mvVec4*>* faces = create_single_specular_map(environment.skyMap, resolution, currentWidth, sampleCount, lodBias, i, mipLevels);
-		copy_resource_to_cubemap(environment.specularMap, *faces, currentWidth, currentWidth, i, mipLevels);
+		copy_resource_to_cubemap(environment.specularTextureResource.Get(), environment.specularMap, *faces, currentWidth, currentWidth, i, mipLevels);
 
 		if (i == 0)
 		{
@@ -540,9 +506,10 @@ create_environment(const std::string& path, i32 resolution, i32 sampleCount, f32
 			textureDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
 			textureDesc.CPUAccessFlags = 0;
 
-			HRESULT hResult = GContext->graphics.device->CreateTexture2D(&textureDesc, nullptr, &environment.brdfLUT.texture);
+			mvComPtr<ID3D11Texture2D> textureResource2;
+			HRESULT hResult = GContext->graphics.device->CreateTexture2D(&textureDesc, nullptr, textureResource2.GetAddressOf());
 			assert(SUCCEEDED(hResult));
-			GContext->graphics.imDeviceContext->UpdateSubresource(environment.brdfLUT.texture, 0u, nullptr, (*faces)[6], 4 * currentWidth * sizeof(float), 0u);
+			GContext->graphics.imDeviceContext->UpdateSubresource(textureResource2.Get(), 0u, nullptr, (*faces)[6], 4 * currentWidth * sizeof(float), 0u);
 
 			// create the resource view on the texture
 			D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
@@ -551,7 +518,7 @@ create_environment(const std::string& path, i32 resolution, i32 sampleCount, f32
 			srvDesc.Texture2D.MostDetailedMip = 0;
 			srvDesc.Texture2D.MipLevels = -1;
 
-			hResult = GContext->graphics.device->CreateShaderResourceView(environment.brdfLUT.texture, &srvDesc, &environment.brdfLUT.textureView);
+			hResult = GContext->graphics.device->CreateShaderResourceView(textureResource2.Get(), &srvDesc, environment.brdfLUT.textureView.GetAddressOf());
 			assert(SUCCEEDED(hResult));
 		}
 
@@ -571,47 +538,11 @@ void
 cleanup_environment(mvEnvironment& environment)
 {
 
-	if (environment.skyMap.textureView)
-	{
-		environment.skyMap.texture->Release();
-		environment.skyMap.textureView->Release();
-		environment.skyMap.textureView = nullptr;
-		environment.skyMap.texture = nullptr;
-	}
-
-	if (environment.irradianceMap.textureView)
-	{
-		environment.irradianceMap.texture->Release();
-		environment.irradianceMap.textureView->Release();
-		environment.irradianceMap.textureView = nullptr;
-		environment.irradianceMap.texture = nullptr;
-	}
-
-	if (environment.specularMap.textureView)
-	{
-		environment.specularMap.texture->Release();
-		environment.specularMap.textureView->Release();
-		environment.specularMap.textureView = nullptr;
-		environment.specularMap.texture = nullptr;
-	}
-
-	if (environment.brdfLUT.textureView)
-	{
-		environment.brdfLUT.texture->Release();
-		environment.brdfLUT.textureView->Release();
-		environment.brdfLUT.textureView = nullptr;
-		environment.brdfLUT.texture = nullptr;
-	}
-
-	if (environment.sampler)
-	{
-		environment.sampler->Release();
-		environment.sampler = nullptr;
-	}
-
-	if (environment.brdfSampler)
-	{
-		environment.brdfSampler->Release();
-		environment.brdfSampler = nullptr;
-	}
+	environment.skyMap.textureView = nullptr;
+	environment.irradianceMap.textureView = nullptr;
+	environment.specularMap.textureView = nullptr;
+	environment.brdfLUT.textureView = nullptr;
+	environment.sampler = nullptr;
+	environment.brdfSampler = nullptr;
+	environment.specularTextureResource = nullptr;
 }

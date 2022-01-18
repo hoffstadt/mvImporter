@@ -1,5 +1,4 @@
 #include "mvMaterials.h"
-#include "mvAssetManager.h"
 #include <assert.h>
 #include "mvSandbox.h"
 #include "mvPipeline.h"
@@ -41,7 +40,7 @@ std::string hash_material(const mvMaterial& material, const mvVertexLayout& layo
 }
 
 mvMaterial
-create_material(mvAssetManager& am, const std::string& vs, const std::string& ps, mvMaterial materialInfo)
+create_material(const std::string& vs, const std::string& ps, mvMaterial materialInfo)
 {
 	mvMaterial material = materialInfo;
 
@@ -75,18 +74,94 @@ create_material(mvAssetManager& am, const std::string& vs, const std::string& ps
 		for (auto& macro : materialInfo.extramacros)
 			pipelineInfo.macros.push_back(macro);
 
-		std::string hash = hash_material(material, material.layout, ps, vs);
 		pipelineInfo.layout = material.layout;
-
-		material.pipeline = mvGetMaterialAssetID(&am, hash);
-		if (material.pipeline == -1)
-		{
-			material.pipeline = register_asset(&am, hash, finalize_pipeline(pipelineInfo));
-		}
-
+		material.pipeline = finalize_pipeline(pipelineInfo);
 		material.buffer = create_const_buffer(&material.data, sizeof(mvMaterialData));
 
 	}
 
 	return material;
+}
+
+mvAssetID
+register_asset(mvMaterialManager* manager, const std::string& tag, mvMaterial asset)
+{
+	manager->materials.push_back({ tag, asset });
+	return manager->materials.size()-1;
+}
+
+mvAssetID
+mvGetMaterialAssetID(mvMaterialManager* manager, const std::string& tag)
+{
+
+	for (s32 i = 0; i < manager->materials.size(); i++)
+	{
+		if (manager->materials[i].hash == tag)
+			return i;
+	}
+	return -1;
+}
+
+mvMaterial*
+mvGetRawMaterialAsset(mvMaterialManager* manager, const std::string& tag)
+{
+	for (s32 i = 0; i < manager->materials.size(); i++)
+	{
+		if (manager->materials[i].hash == tag)
+			return &manager->materials[i].asset;
+	}
+	assert(false && "Material not found.");
+	return nullptr;
+}
+
+void
+reload_materials(mvMaterialManager* manager)
+{
+
+	for (int i = 0; i < manager->materials.size(); i++)
+	{
+
+		mvMaterial& material = manager->materials[i].asset;
+		mvPipeline& pipeline = material.pipeline;
+
+		// clear old pipeline
+		material.pipeline.vertexShader = nullptr;
+		material.pipeline.vertexBlob = nullptr;
+		material.pipeline.inputLayout = nullptr;
+		material.pipeline.blendState = nullptr;
+		material.pipeline.depthStencilState = nullptr;
+		material.pipeline.rasterizationState = nullptr;
+		material.pipeline.pixelBlob = nullptr;
+		material.pipeline.pixelShader = nullptr;
+
+		pipeline.info.macros.clear();
+		if (GContext->IO.imageBasedLighting) pipeline.info.macros.push_back({ "USE_IBL", "0" });
+		if (GContext->IO.punctualLighting) pipeline.info.macros.push_back({ "USE_PUNCTUAL", "0" });
+		if (material.extensionClearcoat && GContext->IO.clearcoat) pipeline.info.macros.push_back({ "MATERIAL_CLEARCOAT", "0" });
+		if (material.pbrMetallicRoughness) pipeline.info.macros.push_back({ "MATERIAL_METALLICROUGHNESS", "0" });
+		if (material.alphaMode == 0) pipeline.info.macros.push_back({ "ALPHAMODE", "0" });
+		else if (material.alphaMode == 1) pipeline.info.macros.push_back({ "ALPHAMODE", "1" });
+		else if (material.alphaMode == 2) pipeline.info.macros.push_back({ "ALPHAMODE", "2" });
+		if (material.hasAlbedoMap)pipeline.info.macros.push_back({ "HAS_BASE_COLOR_MAP", "0" });
+		if (material.hasNormalMap)pipeline.info.macros.push_back({ "HAS_NORMAL_MAP", "0" });
+		if (material.hasMetallicRoughnessMap)pipeline.info.macros.push_back({ "HAS_METALLIC_ROUGHNESS_MAP", "0" });
+		if (material.hasEmmissiveMap)pipeline.info.macros.push_back({ "HAS_EMISSIVE_MAP", "0" });
+		if (material.hasOcculusionMap)pipeline.info.macros.push_back({ "HAS_OCCLUSION_MAP", "0" });
+		if (material.hasClearcoatMap)pipeline.info.macros.push_back({ "HAS_CLEARCOAT_MAP", "0" });
+		if (material.hasClearcoatRoughnessMap)pipeline.info.macros.push_back({ "HAS_CLEARCOAT_ROUGHNESS_MAP", "0" });
+		if (material.hasClearcoatNormalMap)pipeline.info.macros.push_back({ "HAS_CLEARCOAT_NORMAL_MAP", "0" });
+
+		for (auto& macro : material.extramacros)
+			pipeline.info.macros.push_back(macro);
+
+		material.pipeline = finalize_pipeline(pipeline.info);
+	}
+
+
+}
+
+void
+clear_materials(mvMaterialManager* manager)
+{
+	manager->materials.clear();
 }

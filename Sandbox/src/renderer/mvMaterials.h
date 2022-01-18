@@ -7,13 +7,19 @@
 #include "mvTextures.h"
 
 // forward declarations
-struct mvAssetManager;
 struct mvMaterial;
 struct mvMaterialData;
 struct mvVertexLayout;
+struct mvMaterialAsset;
+struct mvMaterialManager;
 
-mvMaterial  create_material(mvAssetManager& am, const std::string& vs, const std::string& ps, mvMaterial materialInfo);
+mvMaterial  create_material(const std::string& vs, const std::string& ps, mvMaterial materialInfo);
 std::string hash_material (const mvMaterial& materialInfo, const mvVertexLayout& layout, const std::string& pixelShader, const std::string& vertexShader);
+mvAssetID   register_asset(mvMaterialManager* manager, const std::string& tag, mvMaterial asset);
+void        clear_materials(mvMaterialManager* manager);
+void        reload_materials(mvMaterialManager* manager);
+mvAssetID   mvGetMaterialAssetID(mvMaterialManager* manager, const std::string& tag);
+mvMaterial* mvGetRawMaterialAsset(mvMaterialManager* manager, const std::string& tag);
 
 struct mvMaterialData
 {
@@ -60,7 +66,7 @@ struct mvMaterial
 {
     mvConstBuffer              buffer;
     mvMaterialData             data;
-    mvAssetID                  pipeline; 
+    mvPipeline                 pipeline; 
     std::vector<mvShaderMacro> macros;
     std::vector<mvShaderMacro> extramacros;
     mvVertexLayout             layout;
@@ -88,4 +94,15 @@ struct mvMaterial
     b8 hasClearcoatNormalMap = false;
     b8 hasClearcoatRoughnessMap = false;
 
+};
+
+struct mvMaterialAsset
+{
+    std::string hash;
+    mvMaterial asset;
+};
+
+struct mvMaterialManager
+{
+    std::vector<mvMaterialAsset> materials;
 };

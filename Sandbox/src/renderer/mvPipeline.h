@@ -97,24 +97,24 @@ struct mvShaderOptions
 
 struct mvPixelShader
 {
-    ID3D11PixelShader* shader;
-    ID3DBlob*          blob;
-    std::string        path;
+    mvComPtr<ID3D11PixelShader> shader;
+    mvComPtr<ID3DBlob>          blob;
+    std::string                 path;
 };
 
 struct mvVertexShader
 {
-    ID3D11VertexShader* shader;
-    ID3D11InputLayout*  inputLayout;
-    ID3DBlob*           blob;
+    mvComPtr<ID3D11VertexShader> shader;
+    mvComPtr<ID3D11InputLayout>  inputLayout;
+    mvComPtr<ID3DBlob>           blob;
     std::string         path;
 };
 
 struct mvComputeShader
 {
-    ID3D11ComputeShader* shader;
-    ID3DBlob*            blob;
-    std::string          path;
+    mvComPtr<ID3D11ComputeShader> shader;
+    mvComPtr<ID3DBlob>            blob;
+    std::string                   path;
 };
 
 struct mvPipelineInfo
@@ -131,16 +131,16 @@ struct mvPipelineInfo
 
 struct mvPipeline
 {
-    ID3D11PixelShader*       pixelShader = nullptr;
-    ID3D11VertexShader*      vertexShader = nullptr;
-    ID3DBlob*                pixelBlob = nullptr;
-    ID3DBlob*                vertexBlob = nullptr;
-    ID3D11InputLayout*       inputLayout = nullptr;
-    ID3D11BlendState*        blendState = nullptr;
-    ID3D11DepthStencilState* depthStencilState = nullptr;
-    ID3D11RasterizerState*   rasterizationState = nullptr;
-    D3D11_PRIMITIVE_TOPOLOGY topology;
-    mvPipelineInfo           info;
+    mvComPtr<ID3D11PixelShader>       pixelShader = nullptr;
+    mvComPtr<ID3D11VertexShader>      vertexShader = nullptr;
+    mvComPtr<ID3DBlob>                pixelBlob = nullptr;
+    mvComPtr<ID3DBlob>                vertexBlob = nullptr;
+    mvComPtr<ID3D11InputLayout>       inputLayout = nullptr;
+    mvComPtr<ID3D11BlendState>        blendState = nullptr;
+    mvComPtr<ID3D11DepthStencilState> depthStencilState = nullptr;
+    mvComPtr<ID3D11RasterizerState>   rasterizationState = nullptr;
+    D3D11_PRIMITIVE_TOPOLOGY          topology;
+    mvPipelineInfo                    info;
 };
 
 bool operator==(mvVertexLayout& left, mvVertexLayout& right);

@@ -18,8 +18,6 @@ mvMat4   create_ortho_view        (mvCamera& camera);
 mvMat4   create_fps_view          (mvCamera& camera);
 mvMat4   create_arcball_view      (mvCamera& camera);        
 mvMat4   create_lookat_view       (mvCamera& camera);        
-void     update_lookat_camera     (mvCamera& camera, f32 dt, f32 travelSpeed, f32 rotationSpeed);
-void     update_fps_camera        (mvCamera& camera, f32 dt, f32 travelSpeed, f32 rotationSpeed);
 void     update_arcball_camera    (mvCamera& camera, f32 dt);
 
 struct mvCamera

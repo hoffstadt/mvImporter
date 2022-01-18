@@ -16,6 +16,22 @@ T clamp(T value, T minvalue, T maxvalue)
 	return value;
 }
 
+template<typename T>
+T get_max(T v1, T v2)
+{
+	if (v1 > v2)
+		return v1;
+	return v2;
+}
+
+template<typename T>
+T get_min(T v1, T v2)
+{
+	if (v1 < v2)
+		return v1;
+	return v2;
+}
+
 struct mvVec2
 {
 	union { f32 x, r, u; };

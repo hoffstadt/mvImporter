@@ -45,10 +45,10 @@ setup_graphics(mvViewport& viewport)
         0,
         D3D11_SDK_VERSION,
         &sd,
-        &GContext->graphics.swapChain,
-        &GContext->graphics.device,
+        GContext->graphics.swapChain.GetAddressOf(),
+        GContext->graphics.device.GetAddressOf(),
         nullptr,
-        &GContext->graphics.imDeviceContext
+        GContext->graphics.imDeviceContext.GetAddressOf()
     );
     assert(SUCCEEDED(hResult));
 
@@ -92,7 +92,7 @@ setup_graphics(mvViewport& viewport)
     descDepth.SampleDesc.Quality = 0u;
     descDepth.Usage = D3D11_USAGE_DEFAULT;
     descDepth.BindFlags = D3D11_BIND_DEPTH_STENCIL;
-    GContext->graphics.device->CreateTexture2D(&descDepth, nullptr, &pDepthStencil);
+    GContext->graphics.device->CreateTexture2D(&descDepth, nullptr, pDepthStencil.GetAddressOf());
 
     // create view of depth stensil texture
     D3D11_DEPTH_STENCIL_VIEW_DESC descDSV = {};
@@ -145,7 +145,7 @@ recreate_swapchain(unsigned width, unsigned height)
         descDepth.SampleDesc.Quality = 0u;
         descDepth.Usage = D3D11_USAGE_DEFAULT;
         descDepth.BindFlags = D3D11_BIND_DEPTH_STENCIL;
-        GContext->graphics.device->CreateTexture2D(&descDepth, nullptr, &pDepthStencil);
+        GContext->graphics.device->CreateTexture2D(&descDepth, nullptr, pDepthStencil.GetAddressOf());
 
         // create view of depth stensil texture
         D3D11_DEPTH_STENCIL_VIEW_DESC descDSV = {};
@@ -166,12 +166,12 @@ set_pipeline_state(mvPipeline& pipeline)
 {
     auto device = GContext->graphics.imDeviceContext;
     device->IASetPrimitiveTopology(pipeline.topology);
-    device->RSSetState(pipeline.rasterizationState);
-    device->OMSetBlendState(pipeline.blendState, nullptr, 0xFFFFFFFFu);
-    device->OMSetDepthStencilState(pipeline.depthStencilState, 0xFF);;
-    device->IASetInputLayout(pipeline.inputLayout);
-    device->VSSetShader(pipeline.vertexShader, nullptr, 0);
-    device->PSSetShader(pipeline.pixelShader, nullptr, 0);
+    device->RSSetState(pipeline.rasterizationState.Get());
+    device->OMSetBlendState(pipeline.blendState.Get(), nullptr, 0xFFFFFFFFu);
+    device->OMSetDepthStencilState(pipeline.depthStencilState.Get(), 0xFF);;
+    device->IASetInputLayout(pipeline.inputLayout.Get());
+    device->VSSetShader(pipeline.vertexShader.Get(), nullptr, 0);
+    device->PSSetShader(pipeline.pixelShader.Get(), nullptr, 0);
     device->HSSetShader(nullptr, nullptr, 0);
     device->DSSetShader(nullptr, nullptr, 0);
     device->GSSetShader(nullptr, nullptr, 0);

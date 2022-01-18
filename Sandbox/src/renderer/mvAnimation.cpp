@@ -1,5 +1,7 @@
 #include "mvAnimation.h"
-#include "mvAssetManager.h"
+#include "mvAssetLoader.h"
+#include "mvScene.h"
+#include "mvMath.h"
 #include <assert.h>
 
 static mvVec4
@@ -188,7 +190,7 @@ interpolate(mvAnimationChannel& channel, f32 tcurrent, f32 tmax, u32 stride, f32
 }
 
 void
-advance_animations(mvAssetManager& am, mvAnimation& animation, f32 tcurrent)
+advance_animations(mvModel& model, mvAnimation& animation, f32 tcurrent)
 {
     if (animation.tmax == 0.0f)
     {
@@ -203,7 +205,7 @@ advance_animations(mvAssetManager& am, mvAnimation& animation, f32 tcurrent)
     for (i32 i = 0; i < animation.channelCount; i++)
     {
         mvAnimationChannel& channel = animation.channels[i];
-        mvNode& node = am.nodes[channel.node].asset;
+        mvNode& node = model.nodes[channel.node];
         if (channel.path == "rotation")
         {
 
@@ -223,7 +225,7 @@ advance_animations(mvAssetManager& am, mvAnimation& animation, f32 tcurrent)
         }
         else if (channel.path == "weights")
         {
-            mvMesh& mesh = am.meshes[node.mesh].asset;
+            mvMesh& mesh = model.meshes[node.mesh];
             std::vector<f32> weightsAnimated;
             weightsAnimated.resize(mesh.weightCount);
             interpolate(channel, tcurrent, animation.tmax, mesh.weightCount, weightsAnimated.data());
@@ -246,14 +248,14 @@ advance_animations(mvAssetManager& am, mvAnimation& animation, f32 tcurrent)
 }
 
 void
-compute_joints(mvAssetManager& am, mvMat4 transform, mvSkin& skin)
+compute_joints(mvModel& model, mvMat4 transform, mvSkin& skin)
 {
     u32 textureWidth = ceil(sqrt(skin.jointCount * 8));
 
     for (u32 i = 0; i < skin.jointCount; i++)
     {
         s32 joint = skin.joints[i];
-        mvNode& node = am.nodes[joint].asset;
+        mvNode& node = model.nodes[joint];
         mvMat4 ibm = (*(mvMat4*)&skin.inverseBindMatrices[i * 16]);
         mvMat4 jointMatrix = transform * node.worldTransform * ibm;
         mvMat4 normalMatrix = transpose(invert(jointMatrix));
@@ -262,5 +264,5 @@ compute_joints(mvAssetManager& am, mvMat4 transform, mvSkin& skin)
         *(mvMat4*)&skin.textureData[i * 32 + 16] = normalMatrix;
     }
 
-    update_dynamic_texture(skin.jointTexture, textureWidth, textureWidth, skin.textureData);
+    update_dynamic_texture(skin.jointTexture, textureWidth, textureWidth, skin.textureData.data());
 }

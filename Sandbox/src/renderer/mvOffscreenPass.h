@@ -8,11 +8,11 @@
 
 struct mvOffscreenPass
 {
-    ID3D11Texture2D*          texture;
-    ID3D11Texture2D*          depthTexture;
-    ID3D11RenderTargetView*   targetView = nullptr;
-    ID3D11DepthStencilView*   depthView = nullptr;
-    ID3D11ShaderResourceView* resourceView = nullptr;
+    mvComPtr<ID3D11Texture2D>          texture;
+    mvComPtr<ID3D11Texture2D>          depthTexture;
+    mvComPtr<ID3D11RenderTargetView>   targetView = nullptr;
+    mvComPtr<ID3D11DepthStencilView>   depthView = nullptr;
+    mvComPtr<ID3D11ShaderResourceView> resourceView = nullptr;
     D3D11_VIEWPORT            viewport;
 
     mvOffscreenPass(float width, float height)
@@ -24,20 +24,20 @@ struct mvOffscreenPass
 
     void cleanup()
     {
-        targetView->Release();
-        depthView->Release();
-        resourceView->Release();
-        texture->Release();
-        depthTexture->Release();
+        targetView = nullptr;
+        depthView = nullptr;
+        resourceView = nullptr;
+        texture = nullptr;
+        depthTexture = nullptr;
     }
 
     void recreate()
     {
-        targetView->Release();
-        depthView->Release();
-        resourceView->Release();
-        texture->Release();
-        depthTexture->Release();
+        targetView = nullptr;
+        depthView = nullptr;
+        resourceView = nullptr;
+        texture = nullptr;
+        depthTexture = nullptr;
         resize(viewport.Width, viewport.Height);
     }
 
@@ -59,7 +59,7 @@ struct mvOffscreenPass
             GContext->graphics.device->CreateTexture2D(
                 &textureDesc,
                 nullptr,
-                &texture
+                texture.GetAddressOf()
             );
         }
 
@@ -77,7 +77,7 @@ struct mvOffscreenPass
             GContext->graphics.device->CreateTexture2D(
                 &textureDesc,
                 nullptr,
-                &depthTexture
+                depthTexture.GetAddressOf()
             );
         }
 
@@ -89,9 +89,9 @@ struct mvOffscreenPass
             depthStencilViewDesc.Texture2D.MipSlice = 0;
 
             GContext->graphics.device->CreateRenderTargetView(
-                texture,
+                texture.Get(),
                 &depthStencilViewDesc,
-                &targetView
+                targetView.GetAddressOf()
             );
         }
 
@@ -103,9 +103,9 @@ struct mvOffscreenPass
             depthStencilViewDesc.Texture2D.MipSlice = 0;
 
             GContext->graphics.device->CreateDepthStencilView(
-                depthTexture,
+                depthTexture.Get(),
                 &depthStencilViewDesc,
-                &depthView
+                depthView.GetAddressOf()
             );
         }
 
@@ -117,9 +117,9 @@ struct mvOffscreenPass
             shaderResourceViewDesc.Texture2D.MipLevels = 1;
 
             GContext->graphics.device->CreateShaderResourceView(
-                texture,
+                texture.Get(),
                 &shaderResourceViewDesc,
-                &resourceView
+                resourceView.GetAddressOf()
             );
         }
     }

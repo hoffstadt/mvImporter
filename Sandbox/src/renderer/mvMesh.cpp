@@ -2,10 +2,9 @@
 #include <assert.h>
 #include <cmath>
 #include "mvSandbox.h"
-#include "mvAssetManager.h"
 
 mvMesh
-create_cube(mvAssetManager& assetManager, f32 size)
+create_cube(f32 size)
 {
 
     mvVertexLayout layout = create_vertex_layout(
@@ -55,22 +54,14 @@ create_cube(mvAssetManager& assetManager, f32 size)
     mesh.name = "cube";
     mesh.primitives.push_back({});
     mesh.primitives.back().layout = layout;
-    mesh.primitives.back().vertexBuffer = mvGetBufferAssetID(&assetManager,
-        "cube_vertex" + std::to_string(side),
-        vertices.data(),
-        vertices.size() * sizeof(f32),
-        D3D11_BIND_VERTEX_BUFFER);
-    mesh.primitives.back().indexBuffer = mvGetBufferAssetID(&assetManager, 
-        "cube_index",
-        indices.data(), 
-        indices.size() * sizeof(u32), 
-        D3D11_BIND_INDEX_BUFFER);
+    mesh.primitives.back().vertexBuffer = create_buffer(vertices.data(), vertices.size() * sizeof(f32), D3D11_BIND_VERTEX_BUFFER);
+    mesh.primitives.back().indexBuffer = create_buffer(indices.data(), indices.size() * sizeof(u32), D3D11_BIND_INDEX_BUFFER);
 
     return mesh;
 }
 
 mvMesh
-create_textured_cube(mvAssetManager& assetManager, f32 size)
+create_textured_cube(f32 size)
 {
 
     mvVertexLayout layout = create_vertex_layout(
@@ -147,22 +138,14 @@ create_textured_cube(mvAssetManager& assetManager, f32 size)
     mesh.name = "textured cube";
     mesh.primitives.push_back({});
     mesh.primitives.back().layout = layout;
-    mesh.primitives.back().vertexBuffer = mvGetBufferAssetID(&assetManager,
-        "textured_cube_vertex" + std::to_string(side),
-        vertices.data(), 
-        vertices.size() * sizeof(f32), 
-        D3D11_BIND_VERTEX_BUFFER);
-    mesh.primitives.back().indexBuffer = mvGetBufferAssetID(&assetManager, 
-        "textured_cube_index",
-        indices.data(), 
-        indices.size() * sizeof(u32), 
-        D3D11_BIND_INDEX_BUFFER);
+    mesh.primitives.back().vertexBuffer = create_buffer(vertices.data(), vertices.size() * sizeof(f32), D3D11_BIND_VERTEX_BUFFER);
+    mesh.primitives.back().indexBuffer = create_buffer(indices.data(), indices.size() * sizeof(u32), D3D11_BIND_INDEX_BUFFER);
 
     return mesh;
 }
 
 mvMesh
-create_textured_quad(mvAssetManager& assetManager, f32 size)
+create_textured_quad(f32 size)
 {
 
     mvVertexLayout layout = create_vertex_layout(
@@ -210,22 +193,14 @@ create_textured_quad(mvAssetManager& assetManager, f32 size)
     mesh.name = "textured quad";
     mesh.primitives.push_back({});
     mesh.primitives.back().layout = layout;
-    mesh.primitives.back().vertexBuffer = mvGetBufferAssetID(&assetManager, 
-        "textured_quad_vertex",
-        vertices.data(), 
-        vertices.size() * sizeof(f32),
-        D3D11_BIND_VERTEX_BUFFER);
-    mesh.primitives.back().indexBuffer = mvGetBufferAssetID(&assetManager,
-        "textured_quad_index",
-        indices.data(), 
-        indices.size()*sizeof(u32), 
-        D3D11_BIND_INDEX_BUFFER);
+    mesh.primitives.back().vertexBuffer = create_buffer(vertices.data(), vertices.size() * sizeof(f32), D3D11_BIND_VERTEX_BUFFER);
+    mesh.primitives.back().indexBuffer = create_buffer(indices.data(), indices.size() * sizeof(u32), D3D11_BIND_INDEX_BUFFER);
 
     return mesh;
 }
 
 mvMesh
-create_frustum(mvAssetManager& assetManager, f32 width, f32 height, f32 nearZ, f32 farZ)
+create_frustum(f32 width, f32 height, f32 nearZ, f32 farZ)
 {
     static u32 id = 0;
     id++;
@@ -270,22 +245,14 @@ create_frustum(mvAssetManager& assetManager, f32 width, f32 height, f32 nearZ, f
     mesh.name = "frustum1_" + std::to_string(id);
     mesh.primitives.push_back({});
     mesh.primitives.back().layout = layout;
-    mesh.primitives.back().vertexBuffer = mvGetBufferAssetID(&assetManager, 
-        "frustum_vertex1_" + std::to_string(id),
-        vertices.data(), 
-        vertices.size() * sizeof(f32), 
-        D3D11_BIND_VERTEX_BUFFER);
-    mesh.primitives.back().indexBuffer = mvGetBufferAssetID(&assetManager, 
-        "frustum_index1",
-        indices.data(), 
-        indices.size() * sizeof(u32), 
-        D3D11_BIND_INDEX_BUFFER);
+    mesh.primitives.back().vertexBuffer = create_buffer(vertices.data(), vertices.size() * sizeof(f32), D3D11_BIND_VERTEX_BUFFER);
+    mesh.primitives.back().indexBuffer = create_buffer(indices.data(), indices.size() * sizeof(u32), D3D11_BIND_INDEX_BUFFER);
 
     return mesh;
 }
 
 mvMesh
-create_frustum2(mvAssetManager& assetManager, f32 fov, f32 aspect, f32 nearZ, f32 farZ)
+create_frustum2(f32 fov, f32 aspect, f32 nearZ, f32 farZ)
 {
     static u32 id = 0;
     id++;
@@ -333,22 +300,14 @@ create_frustum2(mvAssetManager& assetManager, f32 fov, f32 aspect, f32 nearZ, f3
     mesh.name = "frustum2_" + std::to_string(id);
     mesh.primitives.push_back({});
     mesh.primitives.back().layout = layout;
-    mesh.primitives.back().vertexBuffer = mvGetBufferAssetID(&assetManager, 
-        "frustum_vertex2_" + std::to_string(id),
-        vertices.data(), 
-        vertices.size() * sizeof(f32), 
-        D3D11_BIND_VERTEX_BUFFER);
-    mesh.primitives.back().indexBuffer = mvGetBufferAssetID(&assetManager, 
-        "frustum_index2",
-        indices.data(), 
-        indices.size() * sizeof(u32), 
-        D3D11_BIND_INDEX_BUFFER);
+    mesh.primitives.back().vertexBuffer = create_buffer(vertices.data(), vertices.size() * sizeof(f32), D3D11_BIND_VERTEX_BUFFER);
+    mesh.primitives.back().indexBuffer = create_buffer(indices.data(), indices.size() * sizeof(u32), D3D11_BIND_INDEX_BUFFER);
 
     return mesh;
 }
 
 mvMesh
-create_ortho_frustum(mvAssetManager& assetManager, f32 width, f32 height, f32 nearZ, f32 farZ)
+create_ortho_frustum(f32 width, f32 height, f32 nearZ, f32 farZ)
 {
     static u32 id = 0;
     id++;
@@ -390,16 +349,8 @@ create_ortho_frustum(mvAssetManager& assetManager, f32 width, f32 height, f32 ne
     mesh.name = "frustum3_" + std::to_string(id);
     mesh.primitives.push_back({});
     mesh.primitives.back().layout = layout;
-    mesh.primitives.back().vertexBuffer = mvGetBufferAssetID(&assetManager,
-        "frustum_vertex3_" + std::to_string(id),
-        vertices.data(),
-        vertices.size() * sizeof(f32),
-        D3D11_BIND_VERTEX_BUFFER);
-    mesh.primitives.back().indexBuffer = mvGetBufferAssetID(&assetManager,
-        "frustum_index3",
-        indices.data(),
-        indices.size() * sizeof(u32),
-        D3D11_BIND_INDEX_BUFFER);
+    mesh.primitives.back().vertexBuffer = create_buffer(vertices.data(), vertices.size() * sizeof(f32), D3D11_BIND_VERTEX_BUFFER);
+    mesh.primitives.back().indexBuffer = create_buffer(indices.data(), indices.size() * sizeof(u32), D3D11_BIND_INDEX_BUFFER);
 
     return mesh;
 }

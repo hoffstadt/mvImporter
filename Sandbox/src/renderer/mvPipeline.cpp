@@ -20,7 +20,7 @@ create_compute_shader(const std::string& path, std::vector<D3D_SHADER_MACRO>* ma
 	mvComPtr<ID3DBlob> shaderCompileErrorsBlob;
 	HRESULT hResult = D3DCompileFromFile(ToWide(path).c_str(),
 		macros ? macros->data() : nullptr, D3D_COMPILE_STANDARD_FILE_INCLUDE, "main", "cs_5_0", 0, 0,
-		&shader.blob, shaderCompileErrorsBlob.GetAddressOf());
+		shader.blob.GetAddressOf(), shaderCompileErrorsBlob.GetAddressOf());
 
 	if (FAILED(hResult))
 	{
@@ -33,7 +33,7 @@ create_compute_shader(const std::string& path, std::vector<D3D_SHADER_MACRO>* ma
 		MessageBoxA(0, errorString, "Shader Compiler Error", MB_ICONERROR | MB_OK);
 	}
 
-	hResult = GContext->graphics.device->CreateComputeShader(shader.blob->GetBufferPointer(), shader.blob->GetBufferSize(), nullptr, &shader.shader);
+	hResult = GContext->graphics.device->CreateComputeShader(shader.blob->GetBufferPointer(), shader.blob->GetBufferSize(), nullptr, shader.shader.GetAddressOf());
 	assert(SUCCEEDED(hResult));
 	return shader;
 }
@@ -48,7 +48,7 @@ create_pixel_shader(const std::string& path, std::vector<D3D_SHADER_MACRO>* macr
 	HRESULT hResult = D3DCompileFromFile(
 		ToWide(path).c_str(),
 		macros ? macros->data() : nullptr, D3D_COMPILE_STANDARD_FILE_INCLUDE, "main", "ps_5_0", 0, 0,
-		&shader.blob, shaderCompileErrorsBlob.GetAddressOf());
+		shader.blob.GetAddressOf(), shaderCompileErrorsBlob.GetAddressOf());
 
 	if (FAILED(hResult))
 	{
@@ -61,7 +61,7 @@ create_pixel_shader(const std::string& path, std::vector<D3D_SHADER_MACRO>* macr
 		MessageBoxA(0, errorString, "Shader Compiler Error", MB_ICONERROR | MB_OK);
 	}
 
-	hResult = GContext->graphics.device->CreatePixelShader(shader.blob->GetBufferPointer(), shader.blob->GetBufferSize(), nullptr, &shader.shader);
+	hResult = GContext->graphics.device->CreatePixelShader(shader.blob->GetBufferPointer(), shader.blob->GetBufferSize(), nullptr, shader.shader.GetAddressOf());
 	assert(SUCCEEDED(hResult));
 	return shader;
 }
@@ -75,7 +75,7 @@ create_vertex_shader(const std::string& path, mvVertexLayout& layout, std::vecto
 	mvComPtr<ID3DBlob> shaderCompileErrorsBlob;
 	HRESULT hResult = D3DCompileFromFile(ToWide(path).c_str(),
 		macros ? macros->data() : nullptr, D3D_COMPILE_STANDARD_FILE_INCLUDE, "main", "vs_5_0",
-		0, 0, &shader.blob, shaderCompileErrorsBlob.GetAddressOf());
+		0, 0, shader.blob.GetAddressOf(), shaderCompileErrorsBlob.GetAddressOf());
 
 	if (FAILED(hResult))
 	{
@@ -89,7 +89,7 @@ create_vertex_shader(const std::string& path, mvVertexLayout& layout, std::vecto
 	}
 
 	hResult = GContext->graphics.device->CreateVertexShader(shader.blob->GetBufferPointer(),
-		shader.blob->GetBufferSize(), nullptr, &shader.shader);
+		shader.blob->GetBufferSize(), nullptr, shader.shader.GetAddressOf());
 
 	assert(SUCCEEDED(hResult));
 
@@ -110,7 +110,7 @@ create_vertex_shader(const std::string& path, mvVertexLayout& layout, std::vecto
 		(uint32_t)layout.d3dLayout.size(),
 		shader.blob->GetBufferPointer(),
 		shader.blob->GetBufferSize(),
-		&shader.inputLayout);
+		shader.inputLayout.GetAddressOf());
 
 	assert(SUCCEEDED(hResult));
 
@@ -353,7 +353,7 @@ finalize_pipeline(mvPipelineInfo& info)
     rasterDesc.DepthBiasClamp = info.clamp;
     rasterDesc.SlopeScaledDepthBias = info.slopeBias;
 
-    GContext->graphics.device->CreateRasterizerState(&rasterDesc, &pipeline.rasterizationState);
+    GContext->graphics.device->CreateRasterizerState(&rasterDesc, pipeline.rasterizationState.GetAddressOf());
 
 	D3D11_DEPTH_STENCIL_DESC dsDesc = CD3D11_DEPTH_STENCIL_DESC{ CD3D11_DEFAULT{} };
     // Depth test parameters
@@ -378,14 +378,14 @@ finalize_pipeline(mvPipelineInfo& info)
     dsDesc.BackFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
     dsDesc.BackFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
 
-    GContext->graphics.device->CreateDepthStencilState(&dsDesc, &pipeline.depthStencilState);
+    GContext->graphics.device->CreateDepthStencilState(&dsDesc, pipeline.depthStencilState.GetAddressOf());
 
     D3D11_BLEND_DESC blendDesc = CD3D11_BLEND_DESC{ CD3D11_DEFAULT{} };
     auto& brt = blendDesc.RenderTarget[0];
     brt.BlendEnable = TRUE;
     brt.SrcBlend = D3D11_BLEND_SRC_ALPHA;
     brt.DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
-    GContext->graphics.device->CreateBlendState(&blendDesc, &pipeline.blendState);
+    GContext->graphics.device->CreateBlendState(&blendDesc, pipeline.blendState.GetAddressOf());
 
     std::vector<D3D_SHADER_MACRO> macros;
     for (auto& mac : info.macros)

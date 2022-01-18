@@ -19,16 +19,13 @@ void      update_dynamic_texture(mvTexture& texture, u32 width, u32 height, f32*
 
 struct mvTexture
 {
-    ID3D11Texture2D*          texture     = nullptr;
-    ID3D11ShaderResourceView* textureView = nullptr;
-    b8                        alpha       = false;
-    ID3D11SamplerState*       sampler     = nullptr;
+    mvComPtr<ID3D11ShaderResourceView> textureView = nullptr;
+    b8                                 alpha       = false;
+    mvComPtr<ID3D11SamplerState>       sampler     = nullptr;
 };
 
 struct mvCubeTexture
 {
-    ID3D11Texture2D*          texture     = nullptr;
-    ID3D11ShaderResourceView* textureView = nullptr;
-    //ID3D11SamplerState*       sampler     = nullptr;
+    mvComPtr<ID3D11ShaderResourceView> textureView = nullptr;
 };
 

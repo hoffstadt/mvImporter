@@ -10,8 +10,8 @@
 struct mvPointLight;
 struct mvDirectionalLight;
 
-mvPointLight       create_point_light      (mvAssetManager& am);
-mvDirectionalLight create_directional_light(mvAssetManager& am);
+mvPointLight       create_point_light();
+mvDirectionalLight create_directional_light();
 
 struct mvPointLightInfo
 {

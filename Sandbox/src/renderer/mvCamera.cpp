@@ -45,7 +45,6 @@ create_perspective_camera(mvVec3 pos, f32 fov, f32 aspect, f32 nearZ, f32 farZ)
     return camera;
 }
 
-
 mvMat4 
 create_fps_view(mvCamera& camera)
 {
@@ -87,7 +86,6 @@ create_lookat_view(mvCamera& camera)
     return lookat(camera.pos, camera.pos + direction, camera.up);
 }
 
-
 void
 update_arcball_camera(mvCamera& camera, f32 dt)
 {
@@ -105,7 +103,7 @@ update_arcball_camera(mvCamera& camera, f32 dt)
 
         f32 zoomDistance = pow(camera.distance/ camera.baseDistance, 1.0f / camera.zoomExponent);
         zoomDistance += camera.zoomFactor * ImGui::GetIO().MouseWheel;
-        zoomDistance = std::max(zoomDistance, 0.0001f);
+        zoomDistance = get_max(zoomDistance, 0.0001f);
         camera.distance = pow(zoomDistance, camera.zoomExponent)* camera.baseDistance;
 
         // set distance from target
@@ -118,7 +116,7 @@ update_arcball_camera(mvCamera& camera, f32 dt)
         f32 longestDistance = 10.0f * sqrt(camera.minBound.x * camera.minBound.x + camera.minBound.y * camera.minBound.y + camera.minBound.z * camera.minBound.z);
         camera.nearZ = camera.distance - longestDistance * 0.6;
         camera.farZ = camera.distance + longestDistance * 0.6;
-        camera.nearZ = std::max(camera.nearZ, camera.farZ / 10000.0f);
+        camera.nearZ = get_max(camera.nearZ, camera.farZ / 10000.0f);
     }
 
     // for now, we will just use imgui's input

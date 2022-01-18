@@ -33,6 +33,7 @@ create_texture(u32 width, u32 height, u32 arraySize, f32* data)
 	i32 texBytesPerRow = 4 * width * sizeof(f32);
 
 	// subresource data
+	mvComPtr<ID3D11Texture2D> textureResource;
 	D3D11_SUBRESOURCE_DATA* sdata = new D3D11_SUBRESOURCE_DATA[arraySize];
 	for (int i = 0; i < arraySize; i++)
 	{
@@ -42,7 +43,7 @@ create_texture(u32 width, u32 height, u32 arraySize, f32* data)
 		sdata[i].SysMemSlicePitch = width * height * 4 * sizeof(f32);
 	}
 	// create the texture resource
-	HRESULT hResult = GContext->graphics.device->CreateTexture2D(&textureDesc, sdata, &texture.texture);
+	HRESULT hResult = GContext->graphics.device->CreateTexture2D(&textureDesc, sdata, textureResource.GetAddressOf());
 	assert(SUCCEEDED(hResult));
 	delete[] sdata;
 
@@ -56,7 +57,7 @@ create_texture(u32 width, u32 height, u32 arraySize, f32* data)
 	srvDesc.Texture2DArray.MostDetailedMip = 0;
 	srvDesc.Texture2DArray.MipLevels = textureDesc.MipLevels;
 
-	hResult = GContext->graphics.device->CreateShaderResourceView(texture.texture, &srvDesc, &texture.textureView);
+	hResult = GContext->graphics.device->CreateShaderResourceView(textureResource.Get(), &srvDesc, texture.textureView.GetAddressOf());
 	assert(SUCCEEDED(hResult));
 
 	// Create Sampler State
@@ -69,7 +70,7 @@ create_texture(u32 width, u32 height, u32 arraySize, f32* data)
 	samplerDesc.MaxAnisotropy = D3D11_REQ_MAXANISOTROPY;
 	samplerDesc.MinLOD = -FLT_MAX;
 	samplerDesc.MaxLOD = FLT_MAX;
-	hResult = GContext->graphics.device->CreateSamplerState(&samplerDesc, &texture.sampler);
+	hResult = GContext->graphics.device->CreateSamplerState(&samplerDesc, texture.sampler.GetAddressOf());
 	assert(SUCCEEDED(hResult));
 
 	return texture;
@@ -79,6 +80,7 @@ mvTexture
 create_dynamic_texture(u32 width, u32 height, u32 arraySize)
 {
 	mvTexture texture{};
+	mvComPtr<ID3D11Texture2D> textureResource;
 
 	// Create Texture
 	D3D11_TEXTURE2D_DESC textureDesc = {};
@@ -93,7 +95,7 @@ create_dynamic_texture(u32 width, u32 height, u32 arraySize)
 	textureDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
 	textureDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
 
-	HRESULT hResult = GContext->graphics.device->CreateTexture2D(&textureDesc, nullptr, &texture.texture);
+	HRESULT hResult = GContext->graphics.device->CreateTexture2D(&textureDesc, nullptr, textureResource.GetAddressOf());
 	assert(SUCCEEDED(hResult));
 
 	// create the resource view on the texture
@@ -106,7 +108,7 @@ create_dynamic_texture(u32 width, u32 height, u32 arraySize)
 	srvDesc.Texture2DArray.MostDetailedMip = 0;
 	srvDesc.Texture2DArray.MipLevels = textureDesc.MipLevels;
 
-	hResult = GContext->graphics.device->CreateShaderResourceView(texture.texture, &srvDesc, &texture.textureView);
+	hResult = GContext->graphics.device->CreateShaderResourceView(textureResource.Get(), &srvDesc, texture.textureView.GetAddressOf());
 	assert(SUCCEEDED(hResult));
 
 	// Create Sampler State
@@ -119,7 +121,7 @@ create_dynamic_texture(u32 width, u32 height, u32 arraySize)
 	samplerDesc.MaxAnisotropy = D3D11_REQ_MAXANISOTROPY;
 	samplerDesc.MinLOD = -FLT_MAX;
 	samplerDesc.MaxLOD = FLT_MAX;
-	hResult = GContext->graphics.device->CreateSamplerState(&samplerDesc, &texture.sampler);
+	hResult = GContext->graphics.device->CreateSamplerState(&samplerDesc, texture.sampler.GetAddressOf());
 	assert(SUCCEEDED(hResult));
 
 	return texture;
@@ -153,6 +155,7 @@ mvTexture
 create_texture(mvVector<unsigned char> data)
 {
 	mvTexture texture{};
+	mvComPtr<ID3D11Texture2D> textureResource;
 
 	f32 gamma = 1.0f;
 	f32 gamma_scale = 1.0f;
@@ -199,8 +202,8 @@ create_texture(mvVector<unsigned char> data)
 	textureDesc.CPUAccessFlags = 0;
 	textureDesc.MiscFlags = D3D11_RESOURCE_MISC_GENERATE_MIPS;
 
-	GContext->graphics.device->CreateTexture2D(&textureDesc, nullptr, &texture.texture);
-	GContext->graphics.imDeviceContext->UpdateSubresource(texture.texture, 0u, nullptr, testTextureBytes, texBytesPerRow, 0u);
+	GContext->graphics.device->CreateTexture2D(&textureDesc, nullptr, textureResource.GetAddressOf());
+	GContext->graphics.imDeviceContext->UpdateSubresource(textureResource.Get(), 0u, nullptr, testTextureBytes, texBytesPerRow, 0u);
 
 	// create the resource view on the texture
 	D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
@@ -209,8 +212,8 @@ create_texture(mvVector<unsigned char> data)
 	srvDesc.Texture2D.MostDetailedMip = 0;
 	srvDesc.Texture2D.MipLevels = -1;
 
-	GContext->graphics.device->CreateShaderResourceView(texture.texture, &srvDesc, &texture.textureView);
-	GContext->graphics.imDeviceContext->GenerateMips(texture.textureView);
+	GContext->graphics.device->CreateShaderResourceView(textureResource.Get(), &srvDesc, texture.textureView.GetAddressOf());
+	GContext->graphics.imDeviceContext->GenerateMips(texture.textureView.Get());
 
 	free(testTextureBytes);
 
@@ -221,6 +224,7 @@ mvTexture
 create_texture(const std::string& path)
 {
     mvTexture texture{};
+	mvComPtr<ID3D11Texture2D> textureResource;
 
     std::filesystem::path fpath = path;
 
@@ -269,8 +273,8 @@ create_texture(const std::string& path)
     textureDesc.CPUAccessFlags = 0;
     textureDesc.MiscFlags = D3D11_RESOURCE_MISC_GENERATE_MIPS;
 
-    GContext->graphics.device->CreateTexture2D(&textureDesc, nullptr, &texture.texture);
-    GContext->graphics.imDeviceContext->UpdateSubresource(texture.texture, 0u, nullptr, testTextureBytes, texBytesPerRow, 0u);
+    GContext->graphics.device->CreateTexture2D(&textureDesc, nullptr, textureResource.GetAddressOf());
+    GContext->graphics.imDeviceContext->UpdateSubresource(textureResource.Get(), 0u, nullptr, testTextureBytes, texBytesPerRow, 0u);
 
     // create the resource view on the texture
     D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
@@ -279,8 +283,8 @@ create_texture(const std::string& path)
     srvDesc.Texture2D.MostDetailedMip = 0;
     srvDesc.Texture2D.MipLevels = -1;
 
-    GContext->graphics.device->CreateShaderResourceView(texture.texture, &srvDesc, &texture.textureView);
-    GContext->graphics.imDeviceContext->GenerateMips(texture.textureView);
+    GContext->graphics.device->CreateShaderResourceView(textureResource.Get(), &srvDesc, texture.textureView.GetAddressOf());
+    GContext->graphics.imDeviceContext->GenerateMips(texture.textureView.Get());
 
     free(testTextureBytes);
 
@@ -291,6 +295,7 @@ mvCubeTexture
 create_cube_texture(const std::string& path)
 {
 	mvCubeTexture texture{};
+	mvComPtr<ID3D11Texture2D> textureResource;
 
 	// Load Image
 	int texWidth, texHeight, texNumChannels, textBytesPerRow;
@@ -462,7 +467,7 @@ create_cube_texture(const std::string& path)
 		data[i].SysMemSlicePitch = 0;
 	}
 	// create the texture resource
-	GContext->graphics.device->CreateTexture2D(&textureDesc, data, &texture.texture);
+	GContext->graphics.device->CreateTexture2D(&textureDesc, data, textureResource.GetAddressOf());
 
 	// create the resource view on the texture
 	D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
@@ -470,7 +475,7 @@ create_cube_texture(const std::string& path)
 	srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURECUBE;
 	srvDesc.Texture2D.MostDetailedMip = 0;
 	srvDesc.Texture2D.MipLevels = 1;
-	GContext->graphics.device->CreateShaderResourceView(texture.texture, &srvDesc, &texture.textureView);
+	GContext->graphics.device->CreateShaderResourceView(textureResource.Get(), &srvDesc, texture.textureView.GetAddressOf());
 
 	return texture;
 }

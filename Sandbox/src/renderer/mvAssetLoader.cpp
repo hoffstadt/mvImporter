@@ -1,9 +1,12 @@
 #include "mvAssetLoader.h"
-#include "mvAssetManager.h"
 #include "mvSandbox.h"
 #include <unordered_map>
 #include <assert.h>
 #include "mvImporter.h"
+#include "mvMesh.h"
+#include "mvAnimation.h"
+#include "mvScene.h"
+#include "mvCamera.h"
 
 static u8
 mvGetAccessorItemCompCount(mvGLTFAccessor& accessor)
@@ -175,25 +178,24 @@ get_filter_mode(mvS32 minFilter, mvS32 magFilter)
     }
 }
 
-static mvAssetID
-setup_texture(mvAssetManager& assetManager, mvGLTFModel& model, u32 currentPrimitive, mvS32 textureID, b8& flag, std::string& name, std::string suffix)
+static mvTexture
+setup_texture(mvGLTFModel& model, u32 currentPrimitive, mvS32 textureID, b8& flag, std::string& name, std::string suffix)
 {
     if (textureID == -1)
-        return -1;
+        return {};
     mvGLTFTexture& texture = model.textures[textureID];
     std::string uri = model.images[texture.image_index].uri;
-    mvAssetID resultID = -1;
+    mvTexture result{};
     if (model.images[texture.image_index].embedded)
     {
-        resultID = mvGetTextureAssetID(&assetManager, model.root + name + std::to_string(currentPrimitive) + uri + suffix, model.images[texture.image_index].data);
+        result = create_texture(model.images[texture.image_index].data);
     }
     else
-        resultID = mvGetTextureAssetID(&assetManager, model.root + name + std::to_string(currentPrimitive) + uri + suffix, model.root + uri);
+        result = create_texture(model.root + uri);
     flag = true;
     if (texture.sampler_index > -1)
     {
         mvGLTFSampler& sampler = model.samplers[texture.sampler_index];
-        mvTexture& newTexture = assetManager.textures[resultID].asset;
 
         // Create Sampler State
         D3D11_SAMPLER_DESC samplerDesc{};
@@ -206,18 +208,16 @@ setup_texture(mvAssetManager& assetManager, mvGLTFModel& model, u32 currentPrimi
         samplerDesc.MinLOD = -FLT_MAX;
         samplerDesc.MaxLOD = FLT_MAX;
 
-        HRESULT hResult = GContext->graphics.device->CreateSamplerState(&samplerDesc, &newTexture.sampler);
+        HRESULT hResult = GContext->graphics.device->CreateSamplerState(&samplerDesc, result.sampler.GetAddressOf());
         assert(SUCCEEDED(hResult));
     }
 
-    return resultID;
+    return result;
 }
 
-static std::vector<mvAssetID>
-load_gltf_skins(mvAssetManager& assetManager, mvGLTFModel& model)
+static void
+load_gltf_skins(mvModel& mvmodel, mvGLTFModel& model)
 {
-    std::vector<mvAssetID> skinMapping;
-    skinMapping.resize(model.skin_count);
 
     for (u32 currentSkin = 0u; currentSkin < model.skin_count; currentSkin++)
     {
@@ -236,46 +236,11 @@ load_gltf_skins(mvAssetManager& assetManager, mvGLTFModel& model)
         u32 textureWidth = ceil(sqrt(skin.jointCount * 8));
 
         skin.jointTexture = create_dynamic_texture(textureWidth, textureWidth);
-        skin.textureData = new f32[textureWidth * textureWidth * 4];
+        skin.textureData.resize(textureWidth * textureWidth * 4);
 
-        skinMapping[currentSkin] = register_asset(&assetManager, glskin.name, skin);
+        mvmodel.skins.push_back(skin);
     }
 
-    return skinMapping;
-}
-
-static std::vector<mvAssetID>
-load_gltf_cameras(mvAssetManager& assetManager, mvGLTFModel& model)
-{
-    std::vector<mvAssetID> cameraMapping;
-    cameraMapping.resize(model.camera_count);
-
-    for (u32 currentCamera = 0u; currentCamera < model.camera_count; currentCamera++)
-    {
-        mvGLTFCamera& glcamera = model.cameras[currentCamera];
-        mvCamera camera{};
-
-        if (glcamera.type == MV_IMP_PERSPECTIVE)
-        {
-            camera.type = MV_CAMERA_PERSPECTIVE;
-            camera.aspectRatio = glcamera.perspective.aspectRatio;
-            camera.farZ = glcamera.perspective.zfar;
-            camera.nearZ = glcamera.perspective.znear;
-            camera.fieldOfView = glcamera.perspective.yfov;
-        }
-        else
-        {
-            camera.type = MV_CAMERA_ORTHOGRAPHIC;
-            camera.farZ = glcamera.orthographic.zfar;
-            camera.nearZ = glcamera.orthographic.znear;
-            camera.width = glcamera.orthographic.xmag * 2.0f;
-            camera.height = glcamera.orthographic.ymag * 2.0f;
-        }
-
-        cameraMapping[currentCamera] = register_asset(&assetManager, glcamera.name, camera);
-    }
-
-    return cameraMapping;
 }
 
 struct RawAttributeBuffers
@@ -1035,11 +1000,9 @@ gather_target_attributes(mvGLTFModel& model, mvGLTFMeshPrimitive& glprimitive)
     return targetAttributes;
 }
 
-static std::vector<mvAssetID>
-load_gltf_meshes(mvAssetManager& assetManager, mvGLTFModel& model, float* minBoundary, float* maxBoundary)
+static void
+load_gltf_meshes(mvModel& mvmodel, mvGLTFModel& model, float* minBoundary, float* maxBoundary)
 {
-    std::vector<mvAssetID> meshMapping;
-    meshMapping.resize(model.mesh_count);
 
     for (u32 currentMesh = 0u; currentMesh < model.mesh_count; currentMesh++)
     {
@@ -1304,14 +1267,14 @@ load_gltf_meshes(mvAssetManager& assetManager, mvGLTFModel& model, float* minBou
                 if (materialData.alphaMode == 1)
                     materialData.data.alphaCutoff = material.alphaCutoff;
 
-                newMesh.primitives.back().albedoTexture = setup_texture(assetManager, model, currentPrimitive, material.base_color_texture, materialData.hasAlbedoMap, newMesh.name, "_a");
-                newMesh.primitives.back().normalTexture = setup_texture(assetManager, model, currentPrimitive, material.normal_texture, materialData.hasNormalMap, newMesh.name, "_n");
-                newMesh.primitives.back().metalRoughnessTexture = setup_texture(assetManager, model, currentPrimitive, material.metallic_roughness_texture, materialData.hasMetallicRoughnessMap, newMesh.name, "_m");
-                newMesh.primitives.back().emissiveTexture = setup_texture(assetManager, model, currentPrimitive, material.emissive_texture, materialData.hasEmmissiveMap, newMesh.name, "_e");
-                newMesh.primitives.back().occlusionTexture = setup_texture(assetManager, model, currentPrimitive, material.occlusion_texture, materialData.hasOcculusionMap, newMesh.name, "_o");
-                newMesh.primitives.back().clearcoatTexture = setup_texture(assetManager, model, currentPrimitive, material.clearcoat_texture, materialData.hasClearcoatMap, newMesh.name, "_cc");
-                newMesh.primitives.back().clearcoatRoughnessTexture = setup_texture(assetManager, model, currentPrimitive, material.clearcoat_roughness_texture, materialData.hasClearcoatRoughnessMap, newMesh.name, "_ccr");
-                newMesh.primitives.back().clearcoatNormalTexture = setup_texture(assetManager, model, currentPrimitive, material.clearcoat_normal_texture, materialData.hasClearcoatNormalMap, newMesh.name, "_ccn");
+                newMesh.primitives.back().albedoTexture = setup_texture(model, currentPrimitive, material.base_color_texture, materialData.hasAlbedoMap, newMesh.name, "_a");
+                newMesh.primitives.back().normalTexture = setup_texture(model, currentPrimitive, material.normal_texture, materialData.hasNormalMap, newMesh.name, "_n");
+                newMesh.primitives.back().metalRoughnessTexture = setup_texture(model, currentPrimitive, material.metallic_roughness_texture, materialData.hasMetallicRoughnessMap, newMesh.name, "_m");
+                newMesh.primitives.back().emissiveTexture = setup_texture(model, currentPrimitive, material.emissive_texture, materialData.hasEmmissiveMap, newMesh.name, "_e");
+                newMesh.primitives.back().occlusionTexture = setup_texture(model, currentPrimitive, material.occlusion_texture, materialData.hasOcculusionMap, newMesh.name, "_o");
+                newMesh.primitives.back().clearcoatTexture = setup_texture(model, currentPrimitive, material.clearcoat_texture, materialData.hasClearcoatMap, newMesh.name, "_cc");
+                newMesh.primitives.back().clearcoatRoughnessTexture = setup_texture(model, currentPrimitive, material.clearcoat_roughness_texture, materialData.hasClearcoatRoughnessMap, newMesh.name, "_ccr");
+                newMesh.primitives.back().clearcoatNormalTexture = setup_texture(model, currentPrimitive, material.clearcoat_normal_texture, materialData.hasClearcoatNormalMap, newMesh.name, "_ccn");
             }
             else
             {
@@ -1325,37 +1288,26 @@ load_gltf_meshes(mvAssetManager& assetManager, mvGLTFModel& model, float* minBou
             materialData.layout = modifiedLayout;
             std::string hash = hash_material(materialData, modifiedLayout, std::string("PBR_PS.hlsl"), std::string("PBR_VS.hlsl"));
 
-            newMesh.primitives.back().materialID = mvGetMaterialAssetID(&assetManager, hash);
+            newMesh.primitives.back().materialID = mvGetMaterialAssetID(&mvmodel.materialManager, hash);
             if (newMesh.primitives.back().materialID == -1)
             {
-                newMesh.primitives.back().materialID = register_asset(&assetManager, hash, create_material(assetManager, "PBR_VS.hlsl", "PBR_PS.hlsl", materialData));
+                newMesh.primitives.back().materialID = register_asset(&mvmodel.materialManager, hash, create_material("PBR_VS.hlsl", "PBR_PS.hlsl", materialData));
             }
 
-            newMesh.primitives.back().indexBuffer = mvGetBufferAssetID(&assetManager,
-                model.name + std::string(glmesh.name) + std::to_string(currentMesh) + std::to_string(currentPrimitive) + "_indexbuffer",
-                indexBuffer.data(),
-                indexBuffer.size() * sizeof(u32),
-                D3D11_BIND_INDEX_BUFFER);
-            newMesh.primitives.back().vertexBuffer = mvGetBufferAssetID(&assetManager,
-                model.name + std::string(glmesh.name) + std::to_string(currentMesh) + std::to_string(currentPrimitive) + "_vertexBuffer",
-                vertexBuffer.data(),
-                vertexBuffer.size() * sizeof(f32),
-                D3D11_BIND_VERTEX_BUFFER);
+            newMesh.primitives.back().vertexBuffer = create_buffer(vertexBuffer.data(), vertexBuffer.size() * sizeof(f32), D3D11_BIND_VERTEX_BUFFER);
+            newMesh.primitives.back().indexBuffer = create_buffer(indexBuffer.data(), indexBuffer.size() * sizeof(u32), D3D11_BIND_INDEX_BUFFER);
+
         }
 
-        meshMapping[currentMesh] = register_asset(&assetManager, newMesh.name + std::to_string(currentMesh), newMesh);
+        mvmodel.meshes.push_back(newMesh);
 
     }
 
-
-    return meshMapping;
 }
 
-static std::vector<mvAssetID>
-load_gltf_nodes(mvAssetManager& assetManager, mvGLTFModel& model)
+static void
+load_gltf_nodes(mvModel& mvmodel, mvGLTFModel& model)
 {
-    std::vector<mvAssetID> nodeMapping;
-    nodeMapping.resize(model.node_count);
 
     for (u32 currentNode = 0u; currentNode < model.node_count; currentNode++)
     {
@@ -1390,17 +1342,14 @@ load_gltf_nodes(mvAssetManager& assetManager, mvGLTFModel& model)
 
         newNode.transform = newNode.matrix;
 
-        nodeMapping[currentNode] = register_asset(&assetManager, "node_" + std::to_string(currentNode), newNode);
+        mvmodel.nodes.push_back(newNode);
     }
 
-    return nodeMapping;
 }
 
-static std::vector<mvAssetID>
-load_gltf_animations(mvAssetManager& assetManager, mvGLTFModel& model)
+static void
+load_gltf_animations(mvModel& mvmodel, mvGLTFModel& model)
 {
-    std::vector<mvAssetID> animationMapping;
-    animationMapping.resize(model.animation_count);
 
     for (u32 currentAnimation = 0u; currentAnimation < model.animation_count; currentAnimation++)
     {
@@ -1441,24 +1390,48 @@ load_gltf_animations(mvAssetManager& assetManager, mvGLTFModel& model)
             }
         }
 
-        animationMapping[currentAnimation] = register_asset(&assetManager, model.name + "_animation_" + std::to_string(currentAnimation), animation);
+        mvmodel.animations.push_back(animation);
     }
 
-    return animationMapping;
 }
 
 mvModel
-load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
+load_gltf_assets(mvGLTFModel& model)
 {
     mvModel mvmodel{};
     float maxBoundary[3] = { -FLT_MAX , -FLT_MAX , -FLT_MAX };
     float minBoundary[3] = { FLT_MAX , FLT_MAX , FLT_MAX };
     mvmodel.loaded = true;
-    mvmodel.skins = load_gltf_skins(assetManager, model);
-    mvmodel.cameras = load_gltf_cameras(assetManager, model);
-    mvmodel.meshes = load_gltf_meshes(assetManager, model, minBoundary, maxBoundary);
-    mvmodel.nodes = load_gltf_nodes(assetManager, model);
-    mvmodel.animations = load_gltf_animations(assetManager, model);
+    load_gltf_skins(mvmodel, model);
+    load_gltf_meshes(mvmodel, model, minBoundary, maxBoundary);
+    load_gltf_nodes(mvmodel, model);
+    load_gltf_animations(mvmodel, model);
+
+    for (u32 currentCamera = 0u; currentCamera < model.camera_count; currentCamera++)
+    {
+        mvGLTFCamera& glcamera = model.cameras[currentCamera];
+        mvCamera camera{};
+
+        if (glcamera.type == MV_IMP_PERSPECTIVE)
+        {
+            camera.type = MV_CAMERA_PERSPECTIVE;
+            camera.aspectRatio = glcamera.perspective.aspectRatio;
+            camera.farZ = glcamera.perspective.zfar;
+            camera.nearZ = glcamera.perspective.znear;
+            camera.fieldOfView = glcamera.perspective.yfov;
+        }
+        else
+        {
+            camera.type = MV_CAMERA_ORTHOGRAPHIC;
+            camera.farZ = glcamera.orthographic.zfar;
+            camera.nearZ = glcamera.orthographic.znear;
+            camera.width = glcamera.orthographic.xmag * 2.0f;
+            camera.height = glcamera.orthographic.ymag * 2.0f;
+        }
+
+        mvmodel.cameras.push_back(camera);
+    }
+
 
     for (i32 i = 0; i < 3; i++)
     {
@@ -1469,56 +1442,37 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
     // updates based on correct offset mapping
     for (u32 currentAnimation = 0u; currentAnimation < model.animation_count; currentAnimation++)
     {
-        mvAnimation& animation = assetManager.animations[mvmodel.animations[currentAnimation]].asset;
+        mvAnimation& animation = mvmodel.animations[currentAnimation];
 
         for (u32 channel_index = 0u; channel_index < animation.channelCount; channel_index++)
         {
             mvAnimationChannel& channel = animation.channels[channel_index];
-            channel.node = mvmodel.nodes[channel.node];
-            assetManager.nodes[channel.node].asset.animated = true;
+            mvmodel.nodes[channel.node].animated = true;
         }
     }
 
     for (u32 currentNode = 0u; currentNode < model.node_count; currentNode++)
     {
 
-        mvNode& node = assetManager.nodes[mvmodel.nodes[currentNode]].asset;
-        if(node.mesh > -1)
-            node.mesh = mvmodel.meshes[node.mesh];
-        if (node.skin > -1)
-            node.skin = mvmodel.skins[node.skin];
-        for (i32 i = 0; i < node.childCount; i++)
-            node.children[i] = mvmodel.nodes[node.children[i]];
+        mvNode& node = mvmodel.nodes[currentNode];
 
         if (node.camera > -1)
         {
 
-            node.camera = mvmodel.cameras[node.camera];
-            mvCamera& camera = assetManager.cameras[node.camera].asset;
+            mvCamera& camera = mvmodel.cameras[node.camera];
 
             if (camera.type == MV_CAMERA_PERSPECTIVE)
             {
-                mvMesh frustum1 = create_frustum2(assetManager, camera.fieldOfView * 180.0f / M_PI, camera.aspectRatio, camera.nearZ, camera.farZ);
-                node.mesh = register_asset(&assetManager, "node_camera_" + std::to_string(currentNode), frustum1);
+                mvMesh frustum1 = create_frustum2(camera.fieldOfView * 180.0f / M_PI, camera.aspectRatio, camera.nearZ, camera.farZ);
+                mvmodel.meshes.push_back(frustum1);
+                node.mesh = mvmodel.meshes.size() - 1;
             }
             else
             {
-                mvMesh frustum1 = create_ortho_frustum(assetManager, camera.width, camera.height, camera.nearZ, camera.farZ);
-                node.mesh = register_asset(&assetManager, "bad_node_camera_" + std::to_string(currentNode), frustum1);
+                mvMesh frustum1 = create_ortho_frustum(camera.width, camera.height, camera.nearZ, camera.farZ);
+                mvmodel.meshes.push_back(frustum1);
+                node.mesh = mvmodel.meshes.size() - 1;
             }
-        }
-    }
-
-    // update joints for actual offset
-    for (u32 currentSkin = 0u; currentSkin < model.skin_count; currentSkin++)
-    {
-
-        mvSkin& skin = assetManager.skins[mvmodel.skins[currentSkin]].asset;
-        if (skin.skeleton != -1)
-            skin.skeleton = mvmodel.nodes[skin.skeleton];
-        for (i32 i = 0; i < skin.jointCount; i++)
-        {
-            skin.joints[i] = mvmodel.nodes[skin.joints[i]];
         }
     }
 
@@ -1532,13 +1486,13 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
         newScene.nodeCount = glscene.node_count;
 
         for (i32 i = 0; i < glscene.node_count; i++)
-            newScene.nodes[i] = mvmodel.nodes[glscene.nodes[i]];
+            newScene.nodes[i] = glscene.nodes[i];
 
 
-        mvmodel.scenes.push_back(register_asset(&assetManager, model.name + "_scene_" + std::to_string(currentScene), newScene));
+        mvmodel.scenes.push_back(newScene);
 
         if (currentScene == model.scene)
-            defaultScene = mvmodel.scenes.back();
+            defaultScene = mvmodel.scenes.size()-1;
     }
 
     mvmodel.defaultScene = defaultScene;
@@ -1546,29 +1500,10 @@ load_gltf_assets(mvAssetManager& assetManager, mvGLTFModel& model)
 }
 
 void
-unload_gltf_assets(mvAssetManager& assetManager, mvModel& model)
+unload_gltf_assets(mvModel& model)
 {
     model.loaded = false;
     model.defaultScene = -1;
-
-    for (i32 i = 0; i < model.cameras.size(); i++)
-        unregister_camera_asset(&assetManager, model.cameras[i]);
-
-    for (i32 i = 0; i < model.meshes.size(); i++)
-        unregister_mesh_asset(&assetManager, model.meshes[i]);
-
-    for (i32 i = 0; i < model.nodes.size(); i++)
-        unregister_node_asset(&assetManager, model.nodes[i]);
-
-    for (i32 i = 0; i < model.animations.size(); i++)
-        unregister_animation_asset(&assetManager, model.animations[i]);
-
-    for (i32 i = 0; i < model.skins.size(); i++)
-        unregister_skin_asset(&assetManager, model.skins[i]);
-
-    for (i32 i = 0; i < model.scenes.size(); i++)
-        unregister_scene_asset(&assetManager, model.scenes[i]);
-
     model.skins.clear();
     model.cameras.clear();
     model.meshes.clear();

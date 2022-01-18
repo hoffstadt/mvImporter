@@ -15,29 +15,29 @@ struct mvSkin;
 struct mvNode;
 
 
-mvMesh    create_cube         (mvAssetManager& assetManager, f32 size = 1.0f);
-mvMesh    create_textured_cube(mvAssetManager& assetManager, f32 size = 1.0f);
-mvMesh    create_textured_quad(mvAssetManager& assetManager, f32 size = 1.0f);
-mvMesh    create_frustum      (mvAssetManager& assetManager, f32 width, f32 height, f32 nearZ, f32 farZ);
-mvMesh    create_frustum2     (mvAssetManager& assetManager, f32 fov, f32 aspect, f32 nearZ, f32 farZ);
-mvMesh    create_ortho_frustum(mvAssetManager& assetManager, f32 width, f32 height, f32 nearZ, f32 farZ);
+mvMesh    create_cube         (f32 size = 1.0f);
+mvMesh    create_textured_cube(f32 size = 1.0f);
+mvMesh    create_textured_quad(f32 size = 1.0f);
+mvMesh    create_frustum      (f32 width, f32 height, f32 nearZ, f32 farZ);
+mvMesh    create_frustum2     (f32 fov, f32 aspect, f32 nearZ, f32 farZ);
+mvMesh    create_ortho_frustum(f32 width, f32 height, f32 nearZ, f32 farZ);
 
 struct mvMeshPrimitive
 {
     mvVertexLayout layout;
-    mvAssetID      indexBuffer = -1;
-    mvAssetID      vertexBuffer = -1;
-    mvAssetID      normalTexture = -1;
-    mvAssetID      specularTexture = -1;
-    mvAssetID      albedoTexture = -1;
-    mvAssetID      emissiveTexture = -1;
-    mvAssetID      occlusionTexture = -1;
-    mvAssetID      metalRoughnessTexture = -1;
-    mvAssetID      clearcoatTexture = -1;
-    mvAssetID      clearcoatRoughnessTexture = -1;
-    mvAssetID      clearcoatNormalTexture = -1;
-    mvAssetID      materialID = -1;
+    mvBuffer       indexBuffer;
+    mvBuffer       vertexBuffer;
+    mvTexture      normalTexture;
+    mvTexture      specularTexture;
+    mvTexture      albedoTexture;
+    mvTexture      emissiveTexture;
+    mvTexture      occlusionTexture;
+    mvTexture      metalRoughnessTexture;
+    mvTexture      clearcoatTexture;
+    mvTexture      clearcoatRoughnessTexture;
+    mvTexture      clearcoatNormalTexture;
     mvTexture      morphTexture;
+    mvAssetID      materialID = -1;
     f32*           morphData = nullptr;
 };
 

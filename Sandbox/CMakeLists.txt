@@ -23,7 +23,6 @@ target_sources(mvimporter_sandbox
 		"src/core/mvMath.cpp"
 
 		# renderer
-		"src/renderer/mvAssetManager.cpp"
 		"src/renderer/mvAssetLoader.cpp"
 		"src/renderer/mvAnimation.cpp"
 		"src/renderer/mvGraphics.cpp"

@@ -4,6 +4,7 @@
 #include <wrl.h>
 #include <thread>
 #include "mvWindows.h"
+#include "mvTypes.h"
 
 // forward declarations
 struct mvViewport;
@@ -12,9 +13,6 @@ struct mvPipeline;
 void setup_graphics    (mvViewport& viewport);
 void recreate_swapchain(unsigned width, unsigned height);
 void set_pipeline_state(mvPipeline& pipeline);
-
-template <typename T>
-using mvComPtr = Microsoft::WRL::ComPtr<T>;
 
 struct mvGraphics
 {

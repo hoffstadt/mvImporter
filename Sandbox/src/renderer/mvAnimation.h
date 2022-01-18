@@ -7,13 +7,13 @@
 #include "mvTextures.h"
 
 // forward declarations
-struct mvAssetManager;
 struct mvAnimationChannel;
 struct mvAnimation;
 struct mvSkin;
+struct mvModel;
 
-void advance_animations(mvAssetManager& am, mvAnimation& animation, f32 tcurrent);
-void compute_joints    (mvAssetManager& am, mvMat4 transform, mvSkin& skin);
+void advance_animations(mvModel& model, mvAnimation& animation, f32 tcurrent);
+void compute_joints    (mvModel& model, mvMat4 transform, mvSkin& skin);
 
 struct mvSkin
 {
@@ -22,7 +22,7 @@ struct mvSkin
     u32       jointCount = 0u;
     mvTexture jointTexture;
     std::vector<f32> inverseBindMatrices;
-    f32* textureData = nullptr;
+    std::vector<f32> textureData;
 };
 
 struct mvAnimationChannel

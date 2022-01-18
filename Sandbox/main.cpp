@@ -12,7 +12,6 @@
 #include "mvAnimation.h"
 #include "mvSandbox.h"
 #include "mvAssetLoader.h"
-#include "mvAssetManager.h"
 #include "mvViewport.h"
 
 mvViewport* window = nullptr;
@@ -24,21 +23,15 @@ i32 envMapIndex = 5;
 
 // misc
 f32    currentTime = 0.0f;
-f32    uniformScale = 1.0f;
-mvVec3 translation = { 0.0f, 0.0f, 0.0f };
-
-// prevent recalculating every frame
-mvMat4 scaleTransform = identity_mat4();
-mvMat4 translationTransform = identity_mat4();
 
 // flags
-b8 showSkybox = false;
+b8 showSkybox = true;
 b8 blur = true;
 
 // per frame dirty flags
 bool reloadMaterials = false;
 bool recreatePrimary = false;
-bool recreateEnvironment = true;
+bool recreateEnvironment = false;
 bool changeScene = true;
 
 int main()
@@ -60,25 +53,20 @@ int main()
 
     ID3D11DeviceContext* ctx = GContext->graphics.imDeviceContext.Get();
 
-    // setup asset manager
-    mvAssetManager am{};
-    initialize_asset_manager(&am);
-    Renderer::setup_common_assets(am);
-
     mvEnvironment environment = create_environment("../../data/glTF-Sample-Environments/" + std::string(env_maps[envMapIndex]) + ".hdr", 1024, 1024, 1.0f, 7);
     mvGLTFModel gltfmodel0 = mvLoadGLTF(gltf_directories[modelIndex], gltf_models[modelIndex]);
-    mvModel model = load_gltf_assets(am, gltfmodel0);
+    mvModel model = load_gltf_assets(gltfmodel0);
     
-    mvRendererContext renderCtx = Renderer::create_renderer_context(am);
+    mvRendererContext renderCtx = Renderer::create_renderer_context();
 
     // main camera
     mvCamera camera = create_perspective_camera({ 0.0f, 0.0f, 5.0f }, (f32)PI/4.0f, 1.0f, 0.1f, 400.0f);
     renderCtx.camera = &camera;
 
     // lights
-    mvPointLight pointlight = create_point_light(am);
+    mvPointLight pointlight = create_point_light();
     pointlight.info.viewLightPos = mvVec4{ -15.0f, 15.0f, 10.0f, 0.0f };
-    mvDirectionalLight directionalLight = create_directional_light(am);
+    mvDirectionalLight directionalLight = create_directional_light();
 
     // passes
     mvOffscreenPass offscreen = mvOffscreenPass(500.0f, 500.0f);
@@ -105,7 +93,7 @@ int main()
 
         if (reloadMaterials)
         {
-            reload_materials(&am);
+            reload_materials(&model.materialManager);
             reloadMaterials = false;
         }
 
@@ -132,10 +120,10 @@ int main()
         if (changeScene)
         {
             changeScene = false;
-            unload_gltf_assets(am, model);
+            unload_gltf_assets(model);
 
             gltfmodel0 = mvLoadGLTF(gltf_directories[modelIndex], gltf_models[modelIndex]);
-            model = load_gltf_assets(am, gltfmodel0);
+            model = load_gltf_assets(gltfmodel0);
             mvCleanupGLTF(gltfmodel0);
 
             camera.minBound = mvVec3{ model.minBoundary[0], model.minBoundary[1], model.minBoundary[2] };
@@ -146,12 +134,12 @@ int main()
             camera.target.z = (camera.minBound.z + camera.maxBound.z) / 2.0f;
 
             // fit radius
-            f32 maxAxisLength = std::max(camera.maxBound.x - camera.minBound.x, camera.maxBound.y - camera.minBound.y);
+            f32 maxAxisLength = get_max(camera.maxBound.x - camera.minBound.x, camera.maxBound.y - camera.minBound.y);
             f32 yfov = camera.fieldOfView;
             f32 xfov = camera.fieldOfView * camera.aspectRatio;
             f32 yZoom = maxAxisLength / 2.0f / tan(yfov / 2.0f);
             f32 xZoom = maxAxisLength / 2.0f / tan(xfov / 2.0f);
-            camera.distance = std::max(xZoom, yZoom);
+            camera.distance = get_max(xZoom, yZoom);
             camera.baseDistance = camera.distance;
 
             // fit camera planes
@@ -160,7 +148,7 @@ int main()
             camera.pitch = 0.0f;
             camera.nearZ = camera.distance - longestDistance * 0.6;
             camera.farZ = camera.distance + longestDistance * 0.6;
-            camera.nearZ = std::max(camera.nearZ, camera.farZ / 10000.0f);
+            camera.nearZ = get_max(camera.nearZ, camera.farZ / 10000.0f);
             camera.panSpeed = longestDistance / 3500;
 
             // fit camera target
@@ -176,14 +164,14 @@ int main()
         static float backgroundColor[] = { 0.0f, 0.0f, 0.0f, 1.0f };
         static float backgroundColor2[] = { 0.2f, 0.2f, 0.2f, 1.0f };
         ctx->ClearRenderTargetView(*GContext->graphics.target.GetAddressOf(), backgroundColor);
-        ctx->ClearRenderTargetView(offscreen.targetView, backgroundColor2);
-        ctx->ClearDepthStencilView(offscreen.depthView, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0u);
+        ctx->ClearRenderTargetView(offscreen.targetView.Get(), backgroundColor2);
+        ctx->ClearDepthStencilView(offscreen.depthView.Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0u);
 
         //-----------------------------------------------------------------------------
         // update animations
         //-----------------------------------------------------------------------------
-        for (i32 i = 0; i < am.animationCount; i++)
-            advance_animations(am, am.animations[i].asset, currentTime);
+        for (i32 i = 0; i < model.animations.size(); i++)
+            advance_animations(model, model.animations[i], currentTime);
 
         //-----------------------------------------------------------------------------
         // begin frame
@@ -201,7 +189,7 @@ int main()
         //-----------------------------------------------------------------------------
         // offscreen pass
         //-----------------------------------------------------------------------------
-        ctx->OMSetRenderTargets(1, &offscreen.targetView, offscreen.depthView);
+        ctx->OMSetRenderTargets(1, offscreen.targetView.GetAddressOf(), offscreen.depthView.Get());
         ctx->RSSetViewports(1u, &offscreen.viewport);
 
         mvMat4 viewMatrix = create_arcball_view(camera);
@@ -215,46 +203,46 @@ int main()
         update_const_buffer(renderCtx.globalInfoBuffer, &renderCtx.globalInfo);
 
         // pixel constant buffers
-        ctx->PSSetConstantBuffers(0u, 1u, &pointlight.buffer.buffer);
-        ctx->PSSetConstantBuffers(2u, 1u, &directionalLight.buffer.buffer);
-        ctx->PSSetConstantBuffers(3u, 1u, &renderCtx.globalInfoBuffer.buffer);
+        ctx->PSSetConstantBuffers(0u, 1u, pointlight.buffer.buffer.GetAddressOf());
+        ctx->PSSetConstantBuffers(2u, 1u, directionalLight.buffer.buffer.GetAddressOf());
+        ctx->PSSetConstantBuffers(3u, 1u, renderCtx.globalInfoBuffer.buffer.GetAddressOf());
 
         if (envMapIndex > -1)
         {
-            ctx->PSSetSamplers(12u, 1, &environment.sampler);
-            ctx->PSSetSamplers(13u, 1, &environment.sampler);
-            ctx->PSSetSamplers(14u, 1, &environment.brdfSampler);
-            ctx->PSSetShaderResources(12u, 1, &environment.irradianceMap.textureView);
-            ctx->PSSetShaderResources(13u, 1, &environment.specularMap.textureView);
-            ctx->PSSetShaderResources(14u, 1, &environment.brdfLUT.textureView);
+            ctx->PSSetSamplers(12u, 1, environment.sampler.GetAddressOf());
+            ctx->PSSetSamplers(13u, 1, environment.sampler.GetAddressOf());
+            ctx->PSSetSamplers(14u, 1, environment.brdfSampler.GetAddressOf());
+            ctx->PSSetShaderResources(12u, 1, environment.irradianceMap.textureView.GetAddressOf());
+            ctx->PSSetShaderResources(13u, 1, environment.specularMap.textureView.GetAddressOf());
+            ctx->PSSetShaderResources(14u, 1, environment.brdfLUT.textureView.GetAddressOf());
         }
 
-        Renderer::render_mesh_solid(am, pointlight.mesh, translate(identity_mat4(), pointlight.info.viewLightPos.xyz()), viewMatrix, projMatrix);
+        Renderer::render_mesh_solid(renderCtx, model, pointlight.mesh, translate(identity_mat4(), pointlight.info.viewLightPos.xyz()), viewMatrix, projMatrix);
 
         if (activeScene > -1)
         {
-            Renderer::submit_scene(am, renderCtx, am.scenes[activeScene].asset, scaleTransform, translationTransform);
+            Renderer::submit_scene(model, renderCtx, model.scenes[activeScene]);
             //-----------------------------------------------------------------------------
             // update skins
             //-----------------------------------------------------------------------------
-            for (i32 i = 0; i < am.nodeCount; i++)
+            for (i32 i = 0; i < model.nodes.size(); i++)
             {
-                mvNode& node = am.nodes[i].asset;
+                mvNode& node = model.nodes[i];
                 if (node.skin != -1 && node.mesh != -1)
                 {
-                    u32 skeleton = am.skins[node.skin].asset.skeleton;
+                    u32 skeleton = model.skins[node.skin].skeleton;
                     if(skeleton != -1)
-                        compute_joints(am, am.nodes[skeleton].asset.inverseWorldTransform, am.skins[node.skin].asset);
+                        compute_joints(model, model.nodes[skeleton].inverseWorldTransform, model.skins[node.skin]);
                     else
-                        compute_joints(am, viewMatrix, am.skins[node.skin].asset);
+                        compute_joints(model, viewMatrix, model.skins[node.skin]);
                 }
             }
 
-            Renderer::render_scenes(am, renderCtx, viewMatrix, projMatrix);
+            Renderer::render_scenes(model, renderCtx, viewMatrix, projMatrix);
         }
 
         if (showSkybox && envMapIndex > -1)
-           Renderer::render_skybox(am,blur ? environment.specularMap : environment.skyMap, environment.sampler, viewMatrix, projMatrix);
+           Renderer::render_skybox(renderCtx, model, blur ? environment.specularMap : environment.skyMap, environment.sampler.Get(), viewMatrix, projMatrix);
 
         //-----------------------------------------------------------------------------
         // ui
@@ -320,7 +308,7 @@ int main()
             };
 
             ImGui::GetWindowDrawList()->AddCallback(blendCallback, renderCtx.finalBlendState);
-            ImGui::Image(offscreen.resourceView, contentSize, ImVec2(0, 0), ImVec2(1, 1), ImVec4(1, 1, 1, 1), ImVec4(0, 0, 0, 0));
+            ImGui::Image(offscreen.resourceView.Get(), contentSize, ImVec2(0, 0), ImVec2(1, 1), ImVec4(1, 1, 1, 1), ImVec4(0, 0, 0, 0));
             if (!(contentSize.x == oldContentRegion.x && contentSize.y == oldContentRegion.y))
                 recreatePrimary = true;
             oldContentRegion = contentSize;
@@ -330,17 +318,7 @@ int main()
             // right panel
             //-----------------------------------------------------------------------------
             ImGui::TableSetColumnIndex(1);
-            ImGui::Dummy(ImVec2(50.0f, 25.0f));
             ImGui::Indent(14.0f);
-            ImGui::Text("%s", "Scene");
-            if (ImGui::DragFloat("Scale", &uniformScale, 0.1f, 0.001f))
-            {
-                scaleTransform = scale(identity_mat4(), mvVec3{ uniformScale, uniformScale, uniformScale });
-            }
-            if (ImGui::DragFloat3("Translate", &translation.x, 1.0f, -200.0f, 200.0f))
-            {
-                translationTransform = translate(identity_mat4(), translation);
-            }
 
             ImGui::Dummy(ImVec2(50.0f, 25.0f));
             ImGui::Text("%s", "Environments");
@@ -398,9 +376,8 @@ int main()
 
     // Cleanup
     renderCtx.finalBlendState->Release();
-    cleanup_asset_manager(&am);
     cleanup_environment(environment);
-    unload_gltf_assets(am, model);
+    unload_gltf_assets(model);
     ImGui_ImplDX11_Shutdown();
     ImGui_ImplWin32_Shutdown();
     ImGui::DestroyContext();
