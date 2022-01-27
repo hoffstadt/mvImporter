@@ -94,7 +94,7 @@ int main()
 * [ ] Add tests
 * [ ] Support extensions and extras
 * [x] Support animations
-* [ ] Added toy engine for Linux & macOS
+* [ ] Added toy engine for Linux
 
 ## Sample Renderers
 We've included simple renderers to test loading and features. A lot of work still needs to be done here and they are not ready for general usage but feel free to play with them.
@@ -120,7 +120,7 @@ git clone --recursive https://github.com/hoffstadt/mvImporter
 Not ready yet.
 
 ### MacOS
-Not ready yet.
+WIP
 
 ## Licenses
 _mvImporter_ is licensed under MIT license.

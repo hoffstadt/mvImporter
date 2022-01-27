@@ -61,7 +61,7 @@ int main()
     modelIDCache[0] = modelIndex;
 
     create_context();
-    GContext->IO.shaderDirectory = "../../Sandbox/shaders/";
+    GContext->IO.shaderDirectory = "../../Sandbox_D3D11/shaders/";
     GContext->IO.resourceDirectory = "../../Resources/";
 
     window = initialize_viewport(1850, 900);
