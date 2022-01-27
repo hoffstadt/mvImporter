@@ -1,7 +1,11 @@
-﻿cmake_minimum_required (VERSION 3.13)
+cmake_minimum_required (VERSION 3.13)
 
 project ("mvImporter")
 
 add_definitions(-D_USE_MATH_DEFINES)
 
-add_subdirectory ("Sandbox")
+if(WIN32)
+    add_subdirectory("Sandbox")
+elseif(APPLE)
+    add_subdirectory("Sandbox_Metal")
+endif()
