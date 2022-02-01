@@ -18,6 +18,10 @@ target_sources(sandbox_metal
 		"src/renderer/mvPipeline.cpp"
 		"src/renderer/mvRenderer.cpp"
 
+		# semper
+		"vendor/Semper/sSemper.mm"
+		"vendor/Semper/sSemper_apple.mm"
+
 		"vendor/Metal/Metal.cpp"
 )
 
@@ -32,6 +36,7 @@ target_include_directories(sandbox_metal
 
 		"vendor/"
 		"../Sandbox/vendor/"
+		"../Sandbox/vendor/Semper/"
 		"../Sandbox/vendor/imgui/"
 		"../Sandbox/vendor/imgui/backends/"
 		"../Sandbox/vendor/stb/"
