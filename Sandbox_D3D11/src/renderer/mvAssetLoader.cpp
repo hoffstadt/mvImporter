@@ -26,7 +26,7 @@ mvGetAccessorItemCompCount(mvGLTFAccessor& accessor)
     }
 }
 
-static mvS32
+static int
 mvGetBufferViewStride(mvGLTFModel& model, mvGLTFAccessor& accessor)
 {
     mvGLTFBufferView& bufferview = model.bufferviews[accessor.buffer_view_index];
@@ -69,7 +69,7 @@ template<typename T, typename W>
 static void
 mvFillBufferAsType(mvGLTFModel& model, mvGLTFAccessor& accessor, std::vector<W>& outBuffer, u32 componentCap)
 {
-    mvS32 bufferviewStride = mvGetBufferViewStride(model, accessor);
+    int bufferviewStride = mvGetBufferViewStride(model, accessor);
     mvGLTFBufferView bufferView = model.bufferviews[accessor.buffer_view_index];
     char* bufferRawData = (char*)model.buffers[bufferView.buffer_index].data.data;
     char* bufferRawSection = &bufferRawData[bufferView.byte_offset + accessor.byteOffset]; // start of buffer section
@@ -132,7 +132,7 @@ mvFillBuffer(mvGLTFModel& model, mvGLTFAccessor& accessor, std::vector<W>& outBu
 }
 
 static D3D11_TEXTURE_ADDRESS_MODE
-get_address_mode(mvS32 address)
+get_address_mode(int address)
 {
     switch (address)
     {
@@ -144,7 +144,7 @@ get_address_mode(mvS32 address)
 }
 
 static D3D11_FILTER
-get_filter_mode(mvS32 minFilter, mvS32 magFilter)
+get_filter_mode(int minFilter, int magFilter)
 {
     //return D3D11_FILTER_MIN_MAG_MIP_POINT;
     if (magFilter == MV_IMP_FILTER_LINEAR)
@@ -179,7 +179,7 @@ get_filter_mode(mvS32 minFilter, mvS32 magFilter)
 }
 
 static mvTexture
-setup_texture(mvGLTFModel& model, u32 currentPrimitive, mvS32 textureID, b8& flag, std::string& name, std::string suffix)
+setup_texture(mvGLTFModel& model, u32 currentPrimitive, int textureID, b8& flag, std::string& name, std::string suffix)
 {
     if (textureID == -1)
         return {};

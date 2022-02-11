@@ -6,7 +6,7 @@
 
    Do this:
 	  #define MV_IMPORTER_IMPLEMENTATION
-   before you include this file in *one* C or C++ file to create the implementation.
+   before you include this file in *one* C++ file to create the implementation.
    // i.e. it should look like this:
    #include ...
    #include ...
@@ -29,9 +29,8 @@
 #define MV_IMPORTER_MAX_NAME_LENGTH 256
 #endif
 
-#include <string>
+#include <string> // temporary
 
-//#define MV_IMPORTER_IMPLEMENTATION
 #ifdef MV_IMPORTER_IMPLEMENTATION
 #include <assert.h>
 #include <stdio.h>
@@ -72,26 +71,6 @@ MV_IMPORTER_API mvGLTFModel mvLoadGLTF      (const char* root, const char* file)
 MV_IMPORTER_API void        mvCleanupGLTF   (mvGLTFModel& model);
 
 //-----------------------------------------------------------------------------
-// Basic Types
-//-----------------------------------------------------------------------------
-
-typedef float               mvF32;
-typedef double              mvF64;
-typedef signed char         mvS8;   // 8-bit signed integer
-typedef unsigned char       mvU8;   // 8-bit unsigned integer
-typedef signed short        mvS16;  // 16-bit signed integer
-typedef unsigned short      mvU16;  // 16-bit unsigned integer
-typedef signed int          mvS32;  // 32-bit signed integer == int
-typedef unsigned int        mvU32;  // 32-bit unsigned integer (often used to store packed colors)
-#if defined(_MSC_VER) && !defined(__clang__)
-typedef signed   __int64    mvS64;  // 64-bit signed integer (pre and post C++11 with Visual Studio)
-typedef unsigned __int64    mvU64;  // 64-bit unsigned integer (pre and post C++11 with Visual Studio)
-#else
-typedef signed   long long  mvS64;  // 64-bit signed integer (post C++11)
-typedef unsigned long long  mvU64;  // 64-bit unsigned integer (post C++11)
-#endif
-
-//-----------------------------------------------------------------------------
 // Flags, Enumerations, & Struct Definitions
 //-----------------------------------------------------------------------------
 
@@ -99,7 +78,7 @@ enum mvGLTFAlphaMode
 {
 	MV_ALPHA_MODE_OPAQUE = 0,
 	MV_ALPHA_MODE_MASK   = 1,
-	MV_ALPHA_MODE_BLEND  =2
+	MV_ALPHA_MODE_BLEND  = 2
 };
 
 enum mvGLTFPrimMode
@@ -155,78 +134,63 @@ enum mvGLTFCameraType
 	MV_IMP_ORTHOGRAPHIC = 1
 };
 
+// borrowed from Dear ImGui
 template<typename T>
 struct mvVector
 {
 	int size     = 0u;
 	int capacity = 0u;
 	T*  data     = nullptr;
-
-	// Constructors, destructor
 	inline mvVector() { size = capacity = 0; data = nullptr; }
-	inline mvVector(const mvVector<T>& src) { size = capacity = 0; data = nullptr; operator=(src); }
 	inline mvVector<T>& operator=(const mvVector<T>& src) { clear(); resize(src.size); memcpy(data, src.data, (size_t)size * sizeof(T)); return *this; }
 	inline ~mvVector() { if (data) free(data); }
-
-	inline bool empty() const           { return size == 0; }
+	inline bool empty() const { return size == 0; }
 	inline int  size_in_bytes() const   { return size * (int)sizeof(T); }
-	inline int  max_size() const        { return 0x7FFFFFFF / (int)sizeof(T); }
-	inline T&   operator[](int i)       { assert(i >= 0 && i < size); return data[i]; }
-	inline T&   operator[](int i) const { assert(i >= 0 && i < size); return data[i]; }
-
-	inline void         clear()      { if (data) { size = capacity = 0; free(data); data = nullptr; } }
-	inline T*           begin()      { return data; }
-    inline const T*     begin() const{ return data; }
-    inline T*           end()        { return data + size; }
-    inline const T*     end() const  { return data + size; }
-    inline T&           front()      { IM_ASSERT(size > 0); return data[0]; }
-	inline T&           back()       { assert(size > 0); return data[size - 1]; }
-	inline T&           back() const { assert(size > 0); return data[size - 1]; }
-	inline void         swap(mvVector<T>& rhs) { int rhs_size = rhs.size; rhs.size = size; size = rhs_size; int rhs_cap = rhs.capacity; rhs.capacity = capacity; capacity = rhs_cap; T* rhs_data = rhs.data; rhs.data = data; data = rhs_data; }
-
-	inline int _grow_capacity(int sz)     { int new_capacity = capacity ? (capacity + capacity / 2) : 8; return new_capacity > sz ? new_capacity : sz; }
-	inline void resize(int new_size)      { if (new_size > capacity) reserve(_grow_capacity(new_size)); size = new_size; }
+	inline T&   operator[](int i) { assert(i >= 0 && i < size); return data[i]; }
+	inline void clear() { if (data) { size = capacity = 0; free(data); data = nullptr; } }
+	inline T*   begin() { return data; }
+    inline T*   end() { return data + size; }
+	inline T&   back() { assert(size > 0); return data[size - 1]; }
+	inline void swap(mvVector<T>& rhs) { int rhs_size = rhs.size; rhs.size = size; size = rhs_size; int rhs_cap = rhs.capacity; rhs.capacity = capacity; capacity = rhs_cap; T* rhs_data = rhs.data; rhs.data = data; data = rhs_data; }
+	inline int  _grow_capacity(int sz) { int new_capacity = capacity ? (capacity + capacity / 2) : 8; return new_capacity > sz ? new_capacity : sz; }
+	inline void resize(int new_size) { if (new_size > capacity) reserve(_grow_capacity(new_size)); size = new_size; }
 	inline void reserve(int new_capacity) { if (new_capacity <= capacity) return; T* new_data = (T*)malloc((size_t)new_capacity * sizeof(T)); if (data) { memcpy(new_data, data, (size_t)size * sizeof(T)); free(data); } data = new_data; capacity = new_capacity; }
-
-	inline void     push_back(const T& v)      { if (size == capacity) reserve(_grow_capacity(size*2)); memcpy(&data[size], &v, sizeof(v)); size++;}
-	inline void     pop_back()                 { assert(size > 0); size--; }
-	inline bool     contains(const T& v) const { const T* data = this->data;  const T* data_end = this->data + size; while (data < data_end) if (*data++ == v) return true; return false; }
-	inline T*       find(const T& v)           { T* data = this->data;  const T* data_end = this->data + size; while (data < data_end) if (*data == v) break; else ++data; return data; }
-	inline const T* find(const T& v) const     { const T* data = this->data;  const T* data_end = this->data + size; while (data < data_end) if (*data == v) break; else ++data; return data; }
+	inline void push_back(const T& v) { if (size == capacity) reserve(_grow_capacity(size*2)); memcpy(&data[size], &v, sizeof(v)); size++;}
+	inline void pop_back() { assert(size > 0); size--; }
 };
 
 struct mvGLTFAttribute
 {
 	char  semantic[MV_IMPORTER_MAX_NAME_LENGTH];
-	mvS32 index = -1; // accessor index
+	int   index = -1; // accessor index
 };
 
 struct mvGLTFAccessor
 {
 	std::string         name;
 	mvGLTFAccessorType  type = MV_IMP_SCALAR;
-	mvS32               buffer_view_index = -1;
+	int                 buffer_view_index = -1;
 	mvGLTFComponentType component_type = MV_IMP_FLOAT;
-	mvS32               byteOffset = 0;
-	mvS32               count = -1;
-	mvF32               maxes[16];
-	mvF32               mins[16];
+	int                 byteOffset = 0;
+	int                 count = -1;
+	float               maxes[16];
+	float               mins[16];
 };
 
 struct mvGLTFTexture
 {
 	std::string name;
-	mvS32       image_index   = -1;
-	mvS32       sampler_index = -1;
+	int         image_index   = -1;
+	int         sampler_index = -1;
 };
 
 struct mvGLTFSampler
 {
 	std::string name;
-	mvS32       mag_filter = -1;
-	mvS32       min_filter = -1;
-	mvS32       wrap_s     = MV_IMP_WRAP_REPEAT;
-	mvS32       wrap_t     = MV_IMP_WRAP_REPEAT;
+	int         mag_filter = -1;
+	int         min_filter = -1;
+	int         wrap_s     = MV_IMP_WRAP_REPEAT;
+	int         wrap_t     = MV_IMP_WRAP_REPEAT;
 };
 
 struct mvGLTFImage
@@ -235,12 +199,12 @@ struct mvGLTFImage
 	std::string             uri;
 	mvVector<unsigned char> data;
 	bool                    embedded;
-	mvS32                   buffer_view_index = -1;
+	int                     buffer_view_index = -1;
 };
 
 struct mvGLTFBuffer
 {
-	mvU32                   byte_length = 0u;
+	unsigned                byte_length = 0u;
 	std::string             uri;
 	mvVector<unsigned char> data;
 };
@@ -248,61 +212,61 @@ struct mvGLTFBuffer
 struct mvGLTFBufferView
 {
 	std::string name;
-	mvS32       buffer_index = -1;
-	mvS32       byte_offset  =  0;
-	mvS32       byte_length  = -1;
-	mvS32       byte_stride  = -1;
+	int         buffer_index = -1;
+	int         byte_offset  =  0;
+	int         byte_length  = -1;
+	int         byte_stride  = -1;
 };
 
 struct mvGLTFMorphTarget
 {
 	mvGLTFAttribute* attributes = nullptr;
-	mvU32            attribute_count = 0u;
+	unsigned         attribute_count = 0u;
 };
 
 struct mvGLTFMeshPrimitive
 {
-	mvS32              indices_index = -1; // accessor index
-	mvS32              material_index = -1;
+	int                indices_index = -1; // accessor index
+	int                material_index = -1;
 	mvGLTFPrimMode     mode = MV_IMP_TRIANGLES;
 	mvGLTFAttribute*   attributes = nullptr;
-	mvU32              attribute_count = 0u;
+	unsigned           attribute_count = 0u;
 	mvGLTFMorphTarget* targets = nullptr;
-	mvU32              target_count = 0u;
+	unsigned           target_count = 0u;
 };
 
 struct mvGLTFMesh
 {
 	std::string          name;
 	mvGLTFMeshPrimitive* primitives = nullptr;
-	mvU32                primitives_count = 0u;
-	mvF32*               weights = nullptr;
-	mvU32                weights_count = 0u;
+	unsigned             primitives_count = 0u;
+	float*               weights = nullptr;
+	unsigned             weights_count = 0u;
 };
 
 struct mvGLTFMaterial
 {
 	std::string     name;
-	mvS32           base_color_texture             = -1;
-	mvS32           metallic_roughness_texture     = -1;
-	mvS32           normal_texture                 = -1;
-	mvS32           occlusion_texture              = -1;
-	mvS32           emissive_texture               = -1;
-	mvS32           clearcoat_texture              = -1;
-	mvS32           clearcoat_roughness_texture    = -1;
-	mvS32           clearcoat_normal_texture       = -1;
-	mvF32           normal_texture_scale           = 1.0f;
-	mvF32           clearcoat_normal_texture_scale = 1.0f;
-	mvF32           occlusion_texture_strength     = 1.0f;
-	mvF32           metallic_factor                = 1.0f;
-	mvF32           roughness_factor               = 1.0f;
-	mvF32           base_color_factor[4]           = { 1.0f, 1.0f, 1.0f, 1.0f };
-	mvF32           emissive_factor[3]             = { 0.0f, 0.0f, 0.0f };
-	mvF32           alphaCutoff                    = 0.5;
+	int             base_color_texture             = -1;
+	int             metallic_roughness_texture     = -1;
+	int             normal_texture                 = -1;
+	int             occlusion_texture              = -1;
+	int             emissive_texture               = -1;
+	int             clearcoat_texture              = -1;
+	int             clearcoat_roughness_texture    = -1;
+	int             clearcoat_normal_texture       = -1;
+	float           normal_texture_scale           = 1.0f;
+	float           clearcoat_normal_texture_scale = 1.0f;
+	float           occlusion_texture_strength     = 1.0f;
+	float           metallic_factor                = 1.0f;
+	float           roughness_factor               = 1.0f;
+	float           base_color_factor[4]           = { 1.0f, 1.0f, 1.0f, 1.0f };
+	float           emissive_factor[3]             = { 0.0f, 0.0f, 0.0f };
+	float           alphaCutoff                    = 0.5;
 	bool            double_sided                   = false;
 	mvGLTFAlphaMode alphaMode                      = MV_ALPHA_MODE_OPAQUE;
-	mvF32           clearcoat_factor               = 0.0;
-	mvF32           clearcoat_roughness_factor     = 0.0;
+	float           clearcoat_factor               = 0.0;
+	float           clearcoat_roughness_factor     = 0.0;
 
 	// extensions & models
 	bool pbrMetallicRoughness  = false;
@@ -311,18 +275,18 @@ struct mvGLTFMaterial
 
 struct mvGLTFPerspective
 {
-	mvF32 aspectRatio = 0.0f;
-	mvF32 yfov = 0.0f;
-	mvF32 zfar = 0.0f;
-	mvF32 znear = 0.0f;
+	float aspectRatio = 0.0f;
+	float yfov = 0.0f;
+	float zfar = 0.0f;
+	float znear = 0.0f;
 };
 
 struct mvGLTFOrthographic
 {
-	mvF32 xmag = 0.0f;
-	mvF32 ymag = 0.0f;
-	mvF32 zfar = 0.0f;
-	mvF32 znear = 0.0f;
+	float xmag = 0.0f;
+	float ymag = 0.0f;
+	float zfar = 0.0f;
+	float znear = 0.0f;
 };
 
 struct mvGLTFCamera
@@ -336,39 +300,39 @@ struct mvGLTFCamera
 struct mvGLTFNode
 {
 	std::string name;
-	mvS32       mesh_index   = -1;
-	mvS32       skin_index   = -1;
-	mvS32       camera_index = -1;
-	mvU32*      children = nullptr;
-	mvU32       child_count = 0u;
-	mvF32       matrix[16] = {
+	int         mesh_index   = -1;
+	int         skin_index   = -1;
+	int         camera_index = -1;
+	unsigned*   children = nullptr;
+	unsigned    child_count = 0u;
+	float       matrix[16] = {
 		1.0f, 0.0f, 0.0f, 0.0f,
 		0.0f, 1.0f, 0.0f, 0.0f,
 		0.0f, 0.0f, 1.0f, 0.0f,
 		0.0f, 0.0f, 0.0f, 1.0f,
 	};
-	mvF32       rotation[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
-	mvF32       scale[3]    = { 1.0f, 1.0f, 1.0f};
-	mvF32       translation[3]    = { 0.0f, 0.0f, 0.0f};
+	float       rotation[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
+	float       scale[3]    = { 1.0f, 1.0f, 1.0f};
+	float       translation[3]    = { 0.0f, 0.0f, 0.0f};
 	bool        hadMatrix = false;
 };
 
 struct mvGLTFAnimationChannelTarget
 {
-	mvS32       node = -1;
+	int         node = -1;
 	std::string path;
 };
 
 struct mvGLTFAnimationChannel
 {
-	mvS32                        sampler = -1;
+	int                          sampler = -1;
 	mvGLTFAnimationChannelTarget target;
 };
 
 struct mvGLTFAnimationSampler
 {
-	mvS32       input = -1;
-	mvS32       output = -1;
+	int         input = -1;
+	int         output = -1;
 	std::string interpolation = "LINEAR";
 };
 
@@ -376,24 +340,24 @@ struct mvGLTFAnimation
 {
 	std::string             name;
 	mvGLTFAnimationChannel* channels = nullptr;
-	mvU32                   channel_count = 0u;
+	unsigned                channel_count = 0u;
 	mvGLTFAnimationSampler* samplers = nullptr;
-	mvU32                   sampler_count = 0u;
+	unsigned                sampler_count = 0u;
 };
 
 struct mvGLTFScene
 {
-	mvU32* nodes = nullptr;
-	mvU32  node_count = 0u;
+	unsigned* nodes = nullptr;
+	unsigned  node_count = 0u;
 };
 
 struct mvGLTFSkin
 {
 	std::string name;
-	mvS32       inverseBindMatrices = -1;
-	mvS32       skeleton = -1;
-	mvU32*      joints = nullptr;
-	mvU32       joints_count = 0u;
+	int         inverseBindMatrices = -1;
+	int         skeleton = -1;
+	unsigned*   joints = nullptr;
+	unsigned    joints_count = 0u;
 };
 
 struct mvGLTFModel
@@ -415,21 +379,21 @@ struct mvGLTFModel
 	mvGLTFSkin*       skins       = nullptr;
 	std::string*      extensions  = nullptr;
 
-	mvS32 scene            = -1;
-	mvU32 scene_count      = 0u;
-	mvU32 node_count       = 0u;
-	mvU32 mesh_count       = 0u;
-	mvU32 material_count   = 0u;
-	mvU32 texture_count    = 0u;
-	mvU32 sampler_count    = 0u;
-	mvU32 image_count      = 0u;
-	mvU32 buffer_count     = 0u;
-	mvU32 bufferview_count = 0u;
-	mvU32 accessor_count   = 0u;
-	mvU32 camera_count     = 0u;
-	mvU32 animation_count  = 0u;
-	mvU32 skin_count       = 0u;
-	mvU32 extension_count  = 0u;
+	int      scene            = -1;
+	unsigned scene_count      = 0u;
+	unsigned node_count       = 0u;
+	unsigned mesh_count       = 0u;
+	unsigned material_count   = 0u;
+	unsigned texture_count    = 0u;
+	unsigned sampler_count    = 0u;
+	unsigned image_count      = 0u;
+	unsigned buffer_count     = 0u;
+	unsigned bufferview_count = 0u;
+	unsigned accessor_count   = 0u;
+	unsigned camera_count     = 0u;
+	unsigned animation_count  = 0u;
+	unsigned skin_count       = 0u;
+	unsigned extension_count  = 0u;
 };
 
 //-----------------------------------------------------------------------------
@@ -499,7 +463,7 @@ struct mvJsonMember
 
 	operator char* ();
 	operator int();
-	operator mvU32         ();
+	operator unsigned();
 	operator float();
 	operator mvJsonObject& ();
 };
@@ -1167,10 +1131,10 @@ mvJsonMember::operator int()
 	return atoi(context->primitiveValues[index].value.data);
 }
 
-mvJsonMember::operator mvU32()
+mvJsonMember::operator unsigned()
 {
 	int value = atoi(context->primitiveValues[index].value.data);
-	return (mvU32)value;
+	return (unsigned)value;
 }
 
 mvJsonMember::operator float()
@@ -1191,12 +1155,12 @@ mvJsonMember::operator mvJsonObject& ()
 namespace mvImp {
 
 	static std::string*
-	_LoadExtensions(mvJsonContext& j, mvU32& size)
+	_LoadExtensions(mvJsonContext& j, unsigned& size)
 	{
 		if (!j.doesMemberExist("extensionsUsed"))
 			return nullptr;
 
-		mvU32 extensionCount = j["extensionsUsed"].members.size;
+		unsigned extensionCount = j["extensionsUsed"].members.size;
 
 		std::string* extensions = new std::string[extensionCount];
 
@@ -1211,12 +1175,12 @@ namespace mvImp {
 	}
 
 	static mvGLTFAnimation*
-	_LoadAnimations(mvJsonContext& j, mvU32& size)
+	_LoadAnimations(mvJsonContext& j, unsigned& size)
 	{
 		if (!j.doesMemberExist("animations"))
 			return nullptr;
 
-		mvU32 animationCount = j["animations"].members.size;
+		unsigned animationCount = j["animations"].members.size;
 
 		mvGLTFAnimation* animations = new mvGLTFAnimation[animationCount];
 
@@ -1232,7 +1196,7 @@ namespace mvImp {
 
 			if (janimation.doesMemberExist("samplers"))
 			{
-				mvU32 samplerCount = janimation["samplers"].members.size;
+				unsigned samplerCount = janimation["samplers"].members.size;
 				animation.samplers = new mvGLTFAnimationSampler[samplerCount];
 				animation.sampler_count = samplerCount;
 
@@ -1260,7 +1224,7 @@ namespace mvImp {
 
 			if (janimation.doesMemberExist("channels"))
 			{
-				mvU32 channelCount = janimation["channels"].members.size;
+				unsigned channelCount = janimation["channels"].members.size;
 				animation.channels = new mvGLTFAnimationChannel[channelCount];
 				animation.channel_count = channelCount;
 
@@ -1301,12 +1265,12 @@ namespace mvImp {
 	}
 
 	static mvGLTFCamera*
-	_LoadCameras(mvJsonContext& j, mvU32& size)
+	_LoadCameras(mvJsonContext& j, unsigned& size)
 	{
 		if (!j.doesMemberExist("cameras"))
 			return nullptr;
 
-		mvU32 cameraCount = j["cameras"].members.size;
+		unsigned cameraCount = j["cameras"].members.size;
 
 		mvGLTFCamera* cameras = new mvGLTFCamera[cameraCount];
 
@@ -1379,13 +1343,13 @@ namespace mvImp {
 	}
 
 	static mvGLTFScene*
-	_LoadScenes(mvJsonContext& j, mvU32& size)
+	_LoadScenes(mvJsonContext& j, unsigned& size)
 	{
 
 		if (!j.doesMemberExist("scenes"))
 			return nullptr;
 
-		mvU32 count = j["scenes"].members.size;
+		unsigned count = j["scenes"].members.size;
 		mvGLTFScene* scenes = new mvGLTFScene[count];
 
 		for (int i = 0; i < count; i++)
@@ -1395,8 +1359,8 @@ namespace mvImp {
 
 			if (jscene.doesMemberExist("nodes"))
 			{
-				mvU32 nodeCount = jscene["nodes"].members.size;
-				scene.nodes = new mvU32[nodeCount];
+				unsigned nodeCount = jscene["nodes"].members.size;
+				scene.nodes = new unsigned[nodeCount];
 				for (int j = 0; j < nodeCount; j++)
 				{
 					int node = jscene["nodes"][j];
@@ -1412,12 +1376,12 @@ namespace mvImp {
 	}
 
 	static mvGLTFNode*
-	_LoadNodes(mvJsonContext& j, mvU32& size)
+	_LoadNodes(mvJsonContext& j, unsigned& size)
 	{
 		if (!j.doesMemberExist("nodes"))
 			return nullptr;
 
-		mvU32 count = j["nodes"].members.size;
+		unsigned count = j["nodes"].members.size;
 		mvGLTFNode* nodes = new mvGLTFNode[count];
 
 		for (int i = 0; i < count; i++)
@@ -1439,12 +1403,12 @@ namespace mvImp {
 
 			if (jnode.doesMemberExist("children"))
 			{
-				mvU32 childCount = jnode["children"].members.size;
-				node.children = new mvU32[childCount];
+				unsigned childCount = jnode["children"].members.size;
+				node.children = new unsigned[childCount];
 
 				for (int j = 0; j < childCount; j++)
 				{
-					mvU32 child = jnode["children"][j];
+					unsigned child = jnode["children"][j];
 					node.children[node.child_count] = child;
 					node.child_count++;
 				}
@@ -1452,7 +1416,7 @@ namespace mvImp {
 
 			if (jnode.doesMemberExist("translation"))
 			{
-				mvU32 compCount = jnode["translation"].members.size;
+				unsigned compCount = jnode["translation"].members.size;
 
 				for (int j = 0; j < compCount; j++)
 				{
@@ -1462,7 +1426,7 @@ namespace mvImp {
 
 			if (jnode.doesMemberExist("scale"))
 			{
-				mvU32 compCount = jnode["scale"].members.size;
+				unsigned compCount = jnode["scale"].members.size;
 
 				for (int j = 0; j < compCount; j++)
 				{
@@ -1472,7 +1436,7 @@ namespace mvImp {
 
 			if (jnode.doesMemberExist("rotation"))
 			{
-				mvU32 compCount = jnode["rotation"].members.size;
+				unsigned compCount = jnode["rotation"].members.size;
 
 				for (int j = 0; j < compCount; j++)
 				{
@@ -1483,7 +1447,7 @@ namespace mvImp {
 			if (jnode.doesMemberExist("matrix"))
 			{
 				node.hadMatrix = true;
-				mvU32 compCount = jnode["matrix"].members.size;
+				unsigned compCount = jnode["matrix"].members.size;
 
 				for (int j = 0; j < compCount; j++)
 				{
@@ -1498,12 +1462,12 @@ namespace mvImp {
 	}
 
 	static mvGLTFMesh*
-	_LoadMeshes(mvJsonContext& j, mvU32& size)
+	_LoadMeshes(mvJsonContext& j, unsigned& size)
 	{
 		if (!j.doesMemberExist("meshes"))
 			return nullptr;
 
-		mvU32 meshCount = j["meshes"].members.size;
+		unsigned meshCount = j["meshes"].members.size;
 
 		mvGLTFMesh* meshes = new mvGLTFMesh[meshCount];
 
@@ -1518,7 +1482,7 @@ namespace mvImp {
 			if (jmesh.doesMemberExist("weights"))
 			{
 				mesh.weights_count = jmesh["weights"].members.size;
-				mesh.weights = new mvF32[mesh.weights_count];
+				mesh.weights = new float[mesh.weights_count];
 				for (int j = 0; j < mesh.weights_count; j++)
 				{
 					mvJsonMember m = jmesh["weights"][j];
@@ -1549,7 +1513,7 @@ namespace mvImp {
 					if (jprimitive.doesMemberExist("attributes"))
 					{
 						mvJsonObject jattributes = jprimitive["attributes"];
-						mvU32 attrCount = jattributes.members.size;
+						unsigned attrCount = jattributes.members.size;
 						primitive.attributes = new mvGLTFAttribute[attrCount];
 						
 
@@ -1569,7 +1533,7 @@ namespace mvImp {
 					if (jprimitive.doesMemberExist("targets"))
 					{
 						mvJsonObject jtargets = jprimitive["targets"];
-						mvU32 targetCount = jtargets.members.size;
+						unsigned targetCount = jtargets.members.size;
 						primitive.targets = new mvGLTFMorphTarget[targetCount];
 
 						for (int k = 0; k < targetCount; k++)
@@ -1578,7 +1542,7 @@ namespace mvImp {
 
 							mvJsonObject jtarget = jtargets.members[k];
 							
-							mvU32 attrCount = jtarget.members.size;
+							unsigned attrCount = jtarget.members.size;
 							target.attributes = new mvGLTFAttribute[attrCount];
 							for (int x = 0; x < attrCount; x++)
 							{
@@ -1604,12 +1568,12 @@ namespace mvImp {
 	}
 
 	static mvGLTFMaterial*
-	_LoadMaterials(mvJsonContext& j, mvU32& size)
+	_LoadMaterials(mvJsonContext& j, unsigned& size)
 	{
 		if (!j.doesMemberExist("materials"))
 			return nullptr;
 
-		mvU32 count = j["materials"].members.size;
+		unsigned count = j["materials"].members.size;
 		mvGLTFMaterial* materials = new mvGLTFMaterial[count];
 
 		for (int i = 0; i < count; i++)
@@ -1757,12 +1721,12 @@ namespace mvImp {
 	}
 
 	static mvGLTFTexture*
-	_LoadTextures(mvJsonContext& j, mvU32& size)
+	_LoadTextures(mvJsonContext& j, unsigned& size)
 	{
 		if (!j.doesMemberExist("textures"))
 			return nullptr;
 
-		mvU32 count = j["textures"].members.size;
+		unsigned count = j["textures"].members.size;
 		mvGLTFTexture* textures = new mvGLTFTexture[count];
 
 		for (int i = 0; i < count; i++)
@@ -1786,12 +1750,12 @@ namespace mvImp {
 	}
 
 	static mvGLTFSampler*
-	_LoadSamplers(mvJsonContext& j, mvU32& size)
+	_LoadSamplers(mvJsonContext& j, unsigned& size)
 	{
 		if (!j.doesMemberExist("samplers"))
 			return nullptr;
 
-		mvU32 count = j["samplers"].members.size;
+		unsigned count = j["samplers"].members.size;
 		mvGLTFSampler* samplers = new mvGLTFSampler[count];
 
 		for (int i = 0; i < count; i++)
@@ -1821,12 +1785,12 @@ namespace mvImp {
 	}
 
 	static mvGLTFImage*
-	_LoadImages(mvJsonContext& j, mvU32& size)
+	_LoadImages(mvJsonContext& j, unsigned& size)
 	{
 		if (!j.doesMemberExist("images"))
 			return nullptr;
 
-		mvU32 count = j["images"].members.size;
+		unsigned count = j["images"].members.size;
 		mvGLTFImage* images = new mvGLTFImage[count];
 
 		for (int i = 0; i < count; i++)
@@ -1850,12 +1814,12 @@ namespace mvImp {
 	}
 
 	static mvGLTFBuffer*
-	_LoadBuffers(mvJsonContext& j, mvU32& size)
+	_LoadBuffers(mvJsonContext& j, unsigned& size)
 	{
 		if (!j.doesMemberExist("buffers"))
 			return nullptr;
 
-		mvU32 count = j["buffers"].members.size;
+		unsigned count = j["buffers"].members.size;
 		mvGLTFBuffer* buffers = new mvGLTFBuffer[count];
 
 		for (int i = 0; i < count; i++)
@@ -1876,12 +1840,12 @@ namespace mvImp {
 	}
 
 	static mvGLTFBufferView*
-	_LoadBufferViews(mvJsonContext& j, mvU32& size)
+	_LoadBufferViews(mvJsonContext& j, unsigned& size)
 	{
 		if (!j.doesMemberExist("bufferViews"))
 			return nullptr;
 
-		mvU32 count = j["bufferViews"].members.size;
+		unsigned count = j["bufferViews"].members.size;
 		mvGLTFBufferView* bufferviews = new mvGLTFBufferView[count];
 
 		for (int i = 0; i < count; i++)
@@ -1912,12 +1876,12 @@ namespace mvImp {
 	}
 
 	static mvGLTFAccessor*
-	_LoadAccessors(mvJsonContext& j, mvU32& size)
+	_LoadAccessors(mvJsonContext& j, unsigned& size)
 	{
 		if (!j.doesMemberExist("accessors"))
 			return nullptr;
 
-		mvU32 count = j["accessors"].members.size;
+		unsigned count = j["accessors"].members.size;
 		mvGLTFAccessor* accessors = new mvGLTFAccessor[count];
 
 		for (int i = 0; i < count; i++)
@@ -1971,8 +1935,8 @@ namespace mvImp {
 			if (jaccessor.doesMemberExist("max"))
 			{
 
-				mvU32 min_count = jaccessor["max"].members.size;
-				for (mvU32 min_entry = 0u; min_entry < min_count; min_entry++)
+				unsigned min_count = jaccessor["max"].members.size;
+				for (unsigned min_entry = 0u; min_entry < min_count; min_entry++)
 				{
 					accessor.maxes[min_entry] = jaccessor["max"][min_entry];
 				}
@@ -1981,8 +1945,8 @@ namespace mvImp {
 			if (jaccessor.doesMemberExist("min"))
 			{
 
-				mvU32 min_count = jaccessor["min"].members.size;
-				for (mvU32 min_entry = 0u; min_entry < min_count; min_entry++)
+				unsigned min_count = jaccessor["min"].members.size;
+				for (unsigned min_entry = 0u; min_entry < min_count; min_entry++)
 				{
 					accessor.mins[min_entry] = jaccessor["min"][min_entry];
 				}
@@ -1995,12 +1959,12 @@ namespace mvImp {
 	}
 
 	static mvGLTFSkin*
-	_LoadSkins(mvJsonContext& j, mvU32& size)
+	_LoadSkins(mvJsonContext& j, unsigned& size)
 	{
 		if (!j.doesMemberExist("skins"))
 			return nullptr;
 
-		mvU32 count = j["skins"].members.size;
+		unsigned count = j["skins"].members.size;
 		mvGLTFSkin* skins = new mvGLTFSkin[count];
 
 		for (int i = 0; i < count; i++)
@@ -2019,12 +1983,12 @@ namespace mvImp {
 
 			if (jnode.doesMemberExist("joints"))
 			{
-				mvU32 childCount = jnode["joints"].members.size;
-				skin.joints = new mvU32[childCount];
+				unsigned childCount = jnode["joints"].members.size;
+				skin.joints = new unsigned[childCount];
 
 				for (int j = 0; j < childCount; j++)
 				{
-					mvU32 child = jnode["joints"][j];
+					unsigned child = jnode["joints"][j];
 					skin.joints[skin.joints_count] = child;
 					skin.joints_count++;
 				}
@@ -2037,7 +2001,7 @@ namespace mvImp {
 	}
 
 	static char*
-	_ReadFile(const char* file, mvU32& size, const char* mode)
+	_ReadFile(const char* file, unsigned& size, const char* mode)
 	{
 		FILE* dataFile = fopen(file, mode);
 
@@ -2084,15 +2048,15 @@ mvLoadBinaryGLTF(const char* root, const char* file)
 	model.root = root;
 	model.name = file;
 
-	mvU32 dataSize = 0u;
+	unsigned dataSize = 0u;
 	char* data = (char*)mvImp::_ReadFile(file, dataSize, "rb");
 
-	mvU32 magic = *(mvU32*)&data[0];
-	mvU32 version = *(mvU32*)&data[4];
-	mvU32 length = *(mvU32*)&data[8];
+	unsigned magic = *(unsigned*)&data[0];
+	unsigned version = *(unsigned*)&data[4];
+	unsigned length = *(unsigned*)&data[8];
 
-	mvU32 chunkLength = *(mvU32*)&data[12];
-	mvU32 chunkType = *(mvU32*)&data[16];
+	unsigned chunkLength = *(unsigned*)&data[12];
+	unsigned chunkType = *(unsigned*)&data[16];
 	char* chunkData = &data[20];
 
 	if (dataSize == 0u)
@@ -2133,8 +2097,8 @@ mvLoadBinaryGLTF(const char* root, const char* file)
 
 	if (chunkLength + 20 != length)
 	{
-		mvU32 datachunkLength = *(mvU32*)&data[20 + chunkLength];
-		mvU32 datachunkType = *(mvU32*)&data[24 + chunkLength];
+		unsigned datachunkLength = *(unsigned*)&data[20 + chunkLength];
+		unsigned datachunkType = *(unsigned*)&data[24 + chunkLength];
 		char* datachunkData = &data[28 + chunkLength];
 
 		model.buffers[0].data.resize(model.buffers[0].byte_length);
@@ -2142,7 +2106,7 @@ mvLoadBinaryGLTF(const char* root, const char* file)
 		int a = 6;
 	}
 
-	for (mvU32 i = 0; i < model.image_count; i++)
+	for (unsigned i = 0; i < model.image_count; i++)
 	{
 		mvGLTFImage& image = model.images[i];
 
@@ -2174,7 +2138,7 @@ mvLoadBinaryGLTF(const char* root, const char* file)
 
 	}
 
-	for (mvU32 i = 0; i < model.buffer_count; i++)
+	for (unsigned i = 0; i < model.buffer_count; i++)
 	{
 		mvGLTFBuffer& buffer = model.buffers[i];
 
@@ -2193,7 +2157,7 @@ mvLoadBinaryGLTF(const char* root, const char* file)
 		{
 			std::string combinedFile = model.root;
 			combinedFile.append(buffer.uri);
-			mvU32 dataSize = 0u;
+			unsigned dataSize = 0u;
 			void* data = mvImp::_ReadFile(combinedFile.c_str(), dataSize, "rb");
 			buffer.data.resize(dataSize);
 			memcpy(buffer.data.data, data, dataSize);
@@ -2218,7 +2182,7 @@ mvLoadGLTF(const char* root, const char* file)
 	model.root = root;
 	model.name = file;
 
-	mvU32 dataSize = 0u;
+	unsigned dataSize = 0u;
 	char* data = mvImp::_ReadFile(file, dataSize, "rb");
 
 	if (dataSize == 0u)
@@ -2260,7 +2224,7 @@ mvLoadGLTF(const char* root, const char* file)
 	model.extensions = mvImp::_LoadExtensions(context, model.extension_count);
 	model.skins = mvImp::_LoadSkins(context, model.skin_count);
 
-	for (mvU32 i = 0; i < model.image_count; i++)
+	for (unsigned i = 0; i < model.image_count; i++)
 	{
 		mvGLTFImage& image = model.images[i];
 
@@ -2280,7 +2244,7 @@ mvLoadGLTF(const char* root, const char* file)
 
 	}
 
-	for (mvU32 i = 0; i < model.buffer_count; i++)
+	for (unsigned i = 0; i < model.buffer_count; i++)
 	{
 		mvGLTFBuffer& buffer = model.buffers[i];
 
@@ -2296,7 +2260,7 @@ mvLoadGLTF(const char* root, const char* file)
 		{
 			std::string combinedFile = model.root;
 			combinedFile.append(buffer.uri);
-			mvU32 dataSize = 0u;
+			unsigned dataSize = 0u;
 			void* data = mvImp::_ReadFile(combinedFile.c_str(), dataSize, "rb");
 			buffer.data.resize(dataSize);
 			memcpy(buffer.data.data, data, dataSize);
@@ -2311,12 +2275,12 @@ void
 mvCleanupGLTF(mvGLTFModel& model)
 {
 
-	for (mvU32 i = 0; i < model.mesh_count; i++)
+	for (unsigned i = 0; i < model.mesh_count; i++)
 	{
-		for (mvU32 j = 0; j < model.meshes[i].primitives_count; j++)
+		for (unsigned j = 0; j < model.meshes[i].primitives_count; j++)
 		{
 			
-			for (mvU32 k = 0; k < model.meshes[i].primitives[j].target_count; k++)
+			for (unsigned k = 0; k < model.meshes[i].primitives[j].target_count; k++)
 			{
 				delete[] model.meshes[i].primitives[j].targets[k].attributes;
 			}
@@ -2328,19 +2292,19 @@ mvCleanupGLTF(mvGLTFModel& model)
 	}
 
 
-	for (mvU32 i = 0; i < model.node_count; i++)
+	for (unsigned i = 0; i < model.node_count; i++)
 	{
 		if (model.nodes[i].children)
 			delete[] model.nodes[i].children;
 	}
 
-	for (mvU32 i = 0; i < model.scene_count; i++)
+	for (unsigned i = 0; i < model.scene_count; i++)
 	{
 		if (model.scenes[i].nodes)
 			delete[] model.scenes[i].nodes;
 	}
 
-	for (mvU32 i = 0; i < model.animation_count; i++)
+	for (unsigned i = 0; i < model.animation_count; i++)
 	{
 		if (model.animations[i].sampler_count > 0)
 			delete[] model.animations[i].samplers;
@@ -2348,7 +2312,7 @@ mvCleanupGLTF(mvGLTFModel& model)
 			delete[] model.animations[i].channels;
 	}
 
-	for (mvU32 i = 0; i < model.skin_count; i++)
+	for (unsigned i = 0; i < model.skin_count; i++)
 	{
 		if (model.skins[i].joints_count > 0)
 			delete[] model.skins[i].joints;

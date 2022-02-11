@@ -59,16 +59,11 @@ int main()
   * [x] macOS + clang(LLVM)
   * [x] Linux + gcc/clang
   * [x] Windows + MinGW
-  * [ ] iOS + clang
-  * [ ] Android NDK
-  * [ ] Web using Emscripten(LLVM)
 * glTF specification v2.0.0
   * [x] ASCII glTF
     * [x] Load
-    * [ ] Save
   * [x] Binary glTF(GLB)
     * [x] Load
-    * [ ] Save(.bin embedded .glb)
 * Buffers
   * [x] Parse BASE64 encoded embedded buffer data(DataURI).
   * [x] Load `.bin` file.
