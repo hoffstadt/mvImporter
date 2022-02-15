@@ -25,7 +25,7 @@
 .gitignore     export-ignore
 
 # vendored code
-mv3D/vendor/* linguist-vendored
+Sandbox_D3D11/vendor/* linguist-vendored
 
 # documentation
 docs/* linguist-documentation

@@ -61,8 +61,7 @@ int main()
     modelIDCache[0] = modelIndex;
 
     create_context();
-    GContext->IO.shaderDirectory = "../../Sandbox_D3D11/shaders/";
-    GContext->IO.resourceDirectory = "../../Resources/";
+    GContext->IO.shaderDirectory = "../Sandbox_D3D11/shaders/";
 
     window = initialize_viewport(1850, 900);
     setup_graphics(*window);
@@ -77,7 +76,7 @@ int main()
 
     ID3D11DeviceContext* ctx = GContext->graphics.imDeviceContext.Get();
 
-    environmentCache[0] = create_environment("../../data/glTF-Sample-Environments/" + std::string(env_maps[envMapIndex]) + ".hdr", 1024, 1024, 1.0f, 7);
+    environmentCache[0] = create_environment("../data/glTF-Sample-Environments/" + std::string(env_maps[envMapIndex]) + ".hdr", 1024, 1024, 1.0f, 7);
     mvGLTFModel gltfmodel0 = mvLoadGLTF(gltf_directories[modelIndex], gltf_models[modelIndex]);
     modelCache[0] = load_gltf_assets(gltfmodel0);
     
@@ -150,7 +149,7 @@ int main()
                 if (!cacheFound)
                 {
                     currentEnvironment = nextEnvironmentCacheIndex;
-                    std::string newMap = "../../data/glTF-Sample-Environments/" + std::string(env_maps[envMapIndex]) + ".hdr";
+                    std::string newMap = "../data/glTF-Sample-Environments/" + std::string(env_maps[envMapIndex]) + ".hdr";
                     cleanup_environment(environmentCache[nextEnvironmentCacheIndex]);
                     environmentIDCache[nextEnvironmentCacheIndex] = envMapIndex;
                     environmentCache[nextEnvironmentCacheIndex] = create_environment(newMap, 1024, 1024, 1.0f, 7);

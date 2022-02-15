@@ -181,9 +181,9 @@
     Z(VertexColorTest) \
     Z(WaterBottle)
 
-#define X(el) "../../data/glTF-Sample-Models/2.0/" ## #el ## "/glTF/" ## #el ## ".gltf" ## ,
-#define Y(el) "../../data/glTF-Sample-Models/2.0/" ## #el ## "/glTF-Embedded/" ## #el ## ".gltf" ## ,
-#define Z(el) "../../data/glTF-Sample-Models/2.0/" ## #el ## "/glTF-Binary/" ## #el ## ".glb" ## ,
+#define X(el) "../data/glTF-Sample-Models/2.0/" ## #el ## "/glTF/" ## #el ## ".gltf" ## ,
+#define Y(el) "../data/glTF-Sample-Models/2.0/" ## #el ## "/glTF-Embedded/" ## #el ## ".gltf" ## ,
+#define Z(el) "../data/glTF-Sample-Models/2.0/" ## #el ## "/glTF-Binary/" ## #el ## ".glb" ## ,
 static const char* gltf_models[] = {
     MV_GLTF_MODELS
     MV_GLTF_EMBEDDED_MODELS
@@ -193,9 +193,9 @@ static const char* gltf_models[] = {
 #undef Y
 #undef Z
 
-#define X(el) "../../data/glTF-Sample-Models/2.0/" ## #el ## "/glTF/" ## ,
-#define Y(el) "../../data/glTF-Sample-Models/2.0/" ## #el ## "/glTF-Embedded/" ## ,
-#define Z(el) "../../data/glTF-Sample-Models/2.0/" ## #el ## "/glTF-Binary/" ## ,
+#define X(el) "../data/glTF-Sample-Models/2.0/" ## #el ## "/glTF/" ## ,
+#define Y(el) "../data/glTF-Sample-Models/2.0/" ## #el ## "/glTF-Embedded/" ## ,
+#define Z(el) "../data/glTF-Sample-Models/2.0/" ## #el ## "/glTF-Binary/" ## ,
 static const char* gltf_directories[] = {
     MV_GLTF_MODELS
     MV_GLTF_EMBEDDED_MODELS

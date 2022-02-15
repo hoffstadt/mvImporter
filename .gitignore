@@ -1,6 +1,9 @@
 .idea/
 .vs/
+.vscode/
 out/
 cmake-build-debug/
 cmake-build-release/
+Debug/
+Sandbox_D3D11/*.pdb
 .DS_Store
