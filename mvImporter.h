@@ -15,7 +15,8 @@
    #include "mvImporter.h"
 */
 
-#pragma once
+#ifndef MV_IMPORTER_H
+#define MV_IMPORTER_H
 
 #ifndef MV_IMPORTER_API
 #define MV_IMPORTER_API
@@ -30,11 +31,11 @@
 #endif
 
 #include <string> // temporary
+#include <assert.h>
 
 #ifdef MV_IMPORTER_IMPLEMENTATION
-#include <assert.h>
 #include <stdio.h>
-#include<stdlib.h>
+#include <stdlib.h>
 #endif // MV_IMPORTER_IMPLEMENTATION
 
 //-----------------------------------------------------------------------------
@@ -396,6 +397,9 @@ struct mvGLTFModel
 	unsigned extension_count  = 0u;
 };
 
+// end of header file
+#endif // MV_IMPORTER_H
+
 //-----------------------------------------------------------------------------
 // mvImporter Implementation
 //-----------------------------------------------------------------------------
@@ -461,11 +465,12 @@ struct mvJsonMember
 	int         index = -1;
 	mvJsonContext* context = nullptr;
 
-	operator char* ();
+	//operator char* ();
 	operator int();
 	operator unsigned();
 	operator float();
 	operator mvJsonObject& ();
+	operator std::string();
 };
 
 struct mvJsonObject
@@ -1142,9 +1147,14 @@ mvJsonMember::operator float()
 	return atof(context->primitiveValues[index].value.data);
 }
 
-mvJsonMember::operator char* ()
+// mvJsonMember::operator char*()
+// {
+// 	return (char*)context->primitiveValues[index].value.data;
+// }
+
+mvJsonMember::operator std::string()
 {
-	return (char*)context->primitiveValues[index].value.data;
+	return std::string((char*)context->primitiveValues[index].value.data);
 }
 
 mvJsonMember::operator mvJsonObject& ()
@@ -1659,7 +1669,7 @@ namespace mvImp {
 			}
 
 			if (jmaterial.doesMemberExist("doubleSided"))
-				material.double_sided = jmaterial.getMember("doubleSided")[0] == 't';
+				material.double_sided = ((std::string)jmaterial.getMember("doubleSided")).data()[0] == 't';
 
 			if (jmaterial.doesMemberExist("alphaCutoff"))
 				material.alphaCutoff = jmaterial.getMember("alphaCutoff");
