@@ -108,8 +108,7 @@ Instructions:
 ```
 git clone --recursive https://github.com/hoffstadt/mvImporter
 ```
-4. In Visual Studio, use _Open a local folder_ to open _mvImporter_ folder. This will use CMakeLists.txt as the "project" file.
-5. Run _Build All_.
+2. Run respective build script.
 
 ### Linux
 Not ready yet.
