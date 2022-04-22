@@ -392,19 +392,6 @@ ParseJSON(char* rawData, int size)
 	return rootObject;
 }
 
-sJsonObject&
-sJsonObject::operator[](const char* member)
-{
-	for (int i = 0; i < childCount; i++)
-	{
-
-		if (strcmp(member, children[i].name) == 0)
-			return children[i];
-	}
-	assert(false);
-	return *this;
-}
-
 sJsonObject*
 sJsonObject::getMember(const char* member)
 {

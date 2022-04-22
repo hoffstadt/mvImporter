@@ -66,6 +66,15 @@ struct mvGLTFAccessor;               // GLTF -> "accessors
 struct mvGLTFAttribute;              // GLTF -> "meshes" > "primitives" > "attributes"
 struct mvGLTFModel;                  // contains arrays of the above and counts
 
+// enums
+typedef int mvGLTFAlphaMode;
+typedef int mvGLTFPrimMode;
+typedef int mvGLTFAccessorType;
+typedef int mvGLTFComponentType;
+typedef int mvGLTFFilter;
+typedef int mvGLTFWrapMode;
+typedef int mvGLTFCameraType;
+
 //-----------------------------------------------------------------------------
 // mvImporter End-User API
 //-----------------------------------------------------------------------------
@@ -77,21 +86,21 @@ MV_IMPORTER_API void        mvCleanupGLTF   (mvGLTFModel& model);
 // Flags, Enumerations, & Struct Definitions
 //-----------------------------------------------------------------------------
 
-enum mvGLTFAlphaMode
+enum mvGLTFAlphaMode_
 {
 	MV_ALPHA_MODE_OPAQUE = 0,
 	MV_ALPHA_MODE_MASK   = 1,
 	MV_ALPHA_MODE_BLEND  = 2
 };
 
-enum mvGLTFPrimMode
+enum mvGLTFPrimMode_
 {
 	MV_IMP_POINTS    = 0,
 	MV_IMP_LINES     = 1,
 	MV_IMP_TRIANGLES = 4
 };
 
-enum mvGLTFAccessorType
+enum mvGLTFAccessorType_
 {
 	MV_IMP_SCALAR,
 	MV_IMP_VEC2,
@@ -102,7 +111,7 @@ enum mvGLTFAccessorType
 	MV_IMP_MAT4,
 };
 
-enum mvGLTFComponentType
+enum mvGLTFComponentType_
 {
 	MV_IMP_BYTE           = 5120,
 	MV_IMP_UNSIGNED_BYTE  = 5121,
@@ -114,7 +123,7 @@ enum mvGLTFComponentType
 	MV_IMP_DOUBLE         = 5130
 };
 
-enum mvGLTFFilter
+enum mvGLTFFilter_
 {
 	MV_IMP_FILTER_NEAREST                = 9728,
 	MV_IMP_FILTER_LINEAR                 = 9729,
@@ -124,14 +133,14 @@ enum mvGLTFFilter
 	MV_IMP_FILTER_LINEAR_MIPMAP_LINEAR   = 9987
 };
 
-enum mvGLTFWrapMode
+enum mvGLTFWrapMode_
 {
 	MV_IMP_WRAP_CLAMP_TO_EDGE   = 33071,
 	MV_IMP_WRAP_MIRRORED_REPEAT = 33648,
 	MV_IMP_WRAP_REPEAT          = 10497,
 };
 
-enum mvGLTFCameraType
+enum mvGLTFCameraType_
 {
 	MV_IMP_PERSPECTIVE = 0,
 	MV_IMP_ORTHOGRAPHIC = 1
@@ -140,240 +149,235 @@ enum mvGLTFCameraType
 struct mvGLTFAttribute
 {
 	char  semantic[MV_IMPORTER_MAX_NAME_LENGTH];
-	int   index = -1; // accessor index
+	int   index;                                 // accessor index, default -1
 };
 
 struct mvGLTFAccessor
 {
-	std::string         name;
-	mvGLTFAccessorType  type = MV_IMP_SCALAR;
-	int                 buffer_view_index = -1;
-	mvGLTFComponentType component_type = MV_IMP_FLOAT;
-	int                 byteOffset = 0;
-	int                 count = -1;
+	std::string         name;              // default ""
+	mvGLTFAccessorType  type;              // default MV_IMP_SCALAR
+	int                 buffer_view_index; // default -1
+	mvGLTFComponentType component_type;    // default MV_IMP_FLOAT
+	int                 byteOffset;        // default 0
+	int                 count;             // default -1
 	float               maxes[16];
 	float               mins[16];
 };
 
 struct mvGLTFTexture
 {
-	std::string name;
-	int         image_index   = -1;
-	int         sampler_index = -1;
+	std::string name;          // default ""
+	int         image_index;   // default -1
+	int         sampler_index; // default -1
 };
 
 struct mvGLTFSampler
 {
-	std::string name;
-	int         mag_filter = -1;
-	int         min_filter = -1;
-	int         wrap_s     = MV_IMP_WRAP_REPEAT;
-	int         wrap_t     = MV_IMP_WRAP_REPEAT;
+	std::string name;       // default ""
+	int         mag_filter; // default -1
+	int         min_filter; // default -1
+	int         wrap_s;     // default MV_IMP_WRAP_REPEAT
+	int         wrap_t;     // default MV_IMP_WRAP_REPEAT
 };
 
 struct mvGLTFImage
 {
-	std::string    mimeType;
-	std::string    uri;
-	unsigned char* data;
-	size_t         dataCount;
-	bool           embedded;
-	int            buffer_view_index = -1;
+	std::string    mimeType;          // default ""
+	std::string    uri;               // default ""
+	unsigned char* data;              // default nullptr
+	size_t         dataCount;         // default 0u
+	bool           embedded;          // default
+	int            buffer_view_index; // default -1
 };
 
 struct mvGLTFBuffer
 {
-	unsigned       byte_length = 0u;
-	std::string    uri;
-	unsigned char* data;
-	size_t         dataCount;
+	unsigned       byte_length; // default 0u
+	std::string    uri;         // default ""
+	unsigned char* data;        // default nullptr
+	size_t         dataCount;   // default 0u
 };
 
 struct mvGLTFBufferView
 {
 	std::string name;
-	int         buffer_index = -1;
-	int         byte_offset  =  0;
-	int         byte_length  = -1;
-	int         byte_stride  = -1;
+	int         buffer_index; // default -1
+	int         byte_offset;  // default  0
+	int         byte_length;  // default -1
+	int         byte_stride;  // default -1
 };
 
 struct mvGLTFMorphTarget
 {
-	mvGLTFAttribute* attributes = nullptr;
-	unsigned         attribute_count = 0u;
+	mvGLTFAttribute* attributes;      // default nullptr
+	unsigned         attribute_count; // default 0u
 };
 
 struct mvGLTFMeshPrimitive
 {
-	int                indices_index = -1; // accessor index
-	int                material_index = -1;
-	mvGLTFPrimMode     mode = MV_IMP_TRIANGLES;
-	mvGLTFAttribute*   attributes = nullptr;
-	unsigned           attribute_count = 0u;
-	mvGLTFMorphTarget* targets = nullptr;
-	unsigned           target_count = 0u;
+	int                indices_index;   // accessor index, default -1
+	int                material_index;  // default -1
+	mvGLTFPrimMode     mode;            // default MV_IMP_TRIANGLES
+	mvGLTFAttribute*   attributes;      // default nullptr
+	unsigned           attribute_count; // default 0u
+	mvGLTFMorphTarget* targets;         // default nullptr
+	unsigned           target_count;    // default 0u
 };
 
 struct mvGLTFMesh
 {
-	std::string          name;
-	mvGLTFMeshPrimitive* primitives = nullptr;
-	unsigned             primitives_count = 0u;
-	float*               weights = nullptr;
-	unsigned             weights_count = 0u;
+	std::string          name;             // default ""
+	mvGLTFMeshPrimitive* primitives;       // default nullptr
+	unsigned             primitives_count; // default 0u
+	float*               weights;          // default nullptr
+	unsigned             weights_count;    // default 0u
 };
 
 struct mvGLTFMaterial
 {
-	std::string     name;
-	int             base_color_texture             = -1;
-	int             metallic_roughness_texture     = -1;
-	int             normal_texture                 = -1;
-	int             occlusion_texture              = -1;
-	int             emissive_texture               = -1;
-	int             clearcoat_texture              = -1;
-	int             clearcoat_roughness_texture    = -1;
-	int             clearcoat_normal_texture       = -1;
-	float           normal_texture_scale           = 1.0f;
-	float           clearcoat_normal_texture_scale = 1.0f;
-	float           occlusion_texture_strength     = 1.0f;
-	float           metallic_factor                = 1.0f;
-	float           roughness_factor               = 1.0f;
-	float           base_color_factor[4]           = { 1.0f, 1.0f, 1.0f, 1.0f };
-	float           emissive_factor[3]             = { 0.0f, 0.0f, 0.0f };
-	float           alphaCutoff                    = 0.5;
-	bool            double_sided                   = false;
-	mvGLTFAlphaMode alphaMode                      = MV_ALPHA_MODE_OPAQUE;
-	float           clearcoat_factor               = 0.0;
-	float           clearcoat_roughness_factor     = 0.0;
+	std::string     name;                           // default ""
+	int             base_color_texture;             // default -1
+	int             metallic_roughness_texture;     // default -1
+	int             normal_texture;                 // default -1
+	int             occlusion_texture;              // default -1
+	int             emissive_texture;               // default -1
+	int             clearcoat_texture;              // default -1
+	int             clearcoat_roughness_texture;    // default -1
+	int             clearcoat_normal_texture;       // default -1
+	float           normal_texture_scale;           // default 1.0f
+	float           clearcoat_normal_texture_scale; // default 1.0f
+	float           occlusion_texture_strength;     // default 1.0f
+	float           metallic_factor;                // default 1.0f
+	float           roughness_factor;               // default 1.0f
+	float           base_color_factor[4];           // default { 1.0f, 1.0f, 1.0f, 1.0f }
+	float           emissive_factor[3];             // default { 0.0f, 0.0f, 0.0f }
+	float           alphaCutoff;                    // default 0.5f
+	bool            double_sided;                   // default false
+	mvGLTFAlphaMode alphaMode;                      // default MV_ALPHA_MODE_OPAQUE
+	float           clearcoat_factor;               // default 0.0f
+	float           clearcoat_roughness_factor;     // default 0.0f
 
 	// extensions & models
-	bool pbrMetallicRoughness  = false;
-	bool clearcoat_extension   = false;
+	bool pbrMetallicRoughness; // default false
+	bool clearcoat_extension;  // default false
 };
 
 struct mvGLTFPerspective
 {
-	float aspectRatio = 0.0f;
-	float yfov = 0.0f;
-	float zfar = 0.0f;
-	float znear = 0.0f;
+	float aspectRatio; // default 0.0f;
+	float yfov;        // default 0.0f;
+	float zfar;        // default 0.0f;
+	float znear;       // default 0.0f;
 };
 
 struct mvGLTFOrthographic
 {
-	float xmag = 0.0f;
-	float ymag = 0.0f;
-	float zfar = 0.0f;
-	float znear = 0.0f;
+	float xmag;  // default 0.0f;
+	float ymag;  // default 0.0f;
+	float zfar;  // default 0.0f;
+	float znear; // default 0.0f;
 };
 
 struct mvGLTFCamera
 {
-	std::string        name;
-	mvGLTFCameraType   type = MV_IMP_PERSPECTIVE;
+	std::string        name; // default ""
+	mvGLTFCameraType   type; // default MV_IMP_PERSPECTIVE
 	mvGLTFPerspective  perspective;
 	mvGLTFOrthographic orthographic;
 };
 
 struct mvGLTFNode
 {
-	std::string name;
-	int         mesh_index   = -1;
-	int         skin_index   = -1;
-	int         camera_index = -1;
-	unsigned*   children = nullptr;
-	unsigned    child_count = 0u;
-	float       matrix[16] = {
-		1.0f, 0.0f, 0.0f, 0.0f,
-		0.0f, 1.0f, 0.0f, 0.0f,
-		0.0f, 0.0f, 1.0f, 0.0f,
-		0.0f, 0.0f, 0.0f, 1.0f,
-	};
-	float       rotation[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
-	float       scale[3]    = { 1.0f, 1.0f, 1.0f};
-	float       translation[3]    = { 0.0f, 0.0f, 0.0f};
-	bool        hadMatrix = false;
+	std::string name;           // default ""
+	int         mesh_index;     // default 0.0f;
+	int         skin_index;     // default 0.0f;
+	int         camera_index;   // default 0.0f;
+	unsigned*   children;       // default nullptr;
+	unsigned    child_count;    // default 0u;
+	float       matrix[16];     // default identity
+	float       rotation[4];    // default { 0.0f, 0.0f, 0.0f, 1.0f };
+	float       scale[3];       // default { 1.0f, 1.0f, 1.0f};
+	float       translation[3]; // default { 0.0f, 0.0f, 0.0f};
+	bool        hadMatrix;      // default false;
 };
 
 struct mvGLTFAnimationChannelTarget
 {
-	int         node = -1;
+	int         node; // default -1
 	std::string path;
 };
 
 struct mvGLTFAnimationChannel
 {
-	int                          sampler = -1;
+	int                          sampler; // default -1
 	mvGLTFAnimationChannelTarget target;
 };
 
 struct mvGLTFAnimationSampler
 {
-	int         input = -1;
-	int         output = -1;
-	std::string interpolation = "LINEAR";
+	int         input;         // default -1
+	int         output;        // default -1
+	std::string interpolation; // default "LINEAR"
 };
 
 struct mvGLTFAnimation
 {
-	std::string             name;
-	mvGLTFAnimationChannel* channels = nullptr;
-	unsigned                channel_count = 0u;
-	mvGLTFAnimationSampler* samplers = nullptr;
-	unsigned                sampler_count = 0u;
+	std::string             name;          // default ""
+	mvGLTFAnimationChannel* channels;      // default nullptr
+	unsigned                channel_count; // default 0u
+	mvGLTFAnimationSampler* samplers;      // default nullptr
+	unsigned                sampler_count; // default 0u
 };
 
 struct mvGLTFScene
 {
-	unsigned* nodes = nullptr;
-	unsigned  node_count = 0u;
+	unsigned* nodes;      // default nullptr
+	unsigned  node_count; // default 0u
 };
 
 struct mvGLTFSkin
 {
 	std::string name;
-	int         inverseBindMatrices = -1;
-	int         skeleton = -1;
-	unsigned*   joints = nullptr;
-	unsigned    joints_count = 0u;
+	int         inverseBindMatrices; // default -1
+	int         skeleton;            // default -1
+	unsigned*   joints;              // default nullptr
+	unsigned    joints_count;        // default 0u
 };
 
 struct mvGLTFModel
 {
-	std::string       root;
-	std::string       name;
-	mvGLTFScene*      scenes      = nullptr;
-	mvGLTFNode*       nodes       = nullptr;
-	mvGLTFMesh*       meshes      = nullptr;
-	mvGLTFMaterial*   materials   = nullptr;
-	mvGLTFTexture*    textures    = nullptr;
-	mvGLTFSampler*    samplers    = nullptr;
-	mvGLTFImage*      images      = nullptr;
-	mvGLTFBuffer*     buffers     = nullptr;
-	mvGLTFBufferView* bufferviews = nullptr;
-	mvGLTFAccessor*   accessors   = nullptr;
-	mvGLTFCamera*     cameras     = nullptr;
-	mvGLTFAnimation*  animations  = nullptr;
-	mvGLTFSkin*       skins       = nullptr;
-	std::string*      extensions  = nullptr;
+	std::string       root;        // default ""
+	std::string       name;        // default ""
+	mvGLTFScene*      scenes;      // default nullptr
+	mvGLTFNode*       nodes;       // default nullptr
+	mvGLTFMesh*       meshes;      // default nullptr
+	mvGLTFMaterial*   materials;   // default nullptr
+	mvGLTFTexture*    textures;    // default nullptr
+	mvGLTFSampler*    samplers;    // default nullptr
+	mvGLTFImage*      images;      // default nullptr
+	mvGLTFBuffer*     buffers;     // default nullptr
+	mvGLTFBufferView* bufferviews; // default nullptr
+	mvGLTFAccessor*   accessors;   // default nullptr
+	mvGLTFCamera*     cameras;     // default nullptr
+	mvGLTFAnimation*  animations;  // default nullptr
+	mvGLTFSkin*       skins;       // default nullptr
+	std::string*      extensions;  // default nullptr
 
-	int      scene            = -1;
-	unsigned scene_count      = 0u;
-	unsigned node_count       = 0u;
-	unsigned mesh_count       = 0u;
-	unsigned material_count   = 0u;
-	unsigned texture_count    = 0u;
-	unsigned sampler_count    = 0u;
-	unsigned image_count      = 0u;
-	unsigned buffer_count     = 0u;
-	unsigned bufferview_count = 0u;
-	unsigned accessor_count   = 0u;
-	unsigned camera_count     = 0u;
-	unsigned animation_count  = 0u;
-	unsigned skin_count       = 0u;
-	unsigned extension_count  = 0u;
+	int      scene;            // default -1
+	unsigned scene_count;      // default 0u
+	unsigned node_count;       // default 0u
+	unsigned mesh_count;       // default 0u
+	unsigned material_count;   // default 0u
+	unsigned texture_count;    // default 0u
+	unsigned sampler_count;    // default 0u
+	unsigned image_count;      // default 0u
+	unsigned buffer_count;     // default 0u
+	unsigned bufferview_count; // default 0u
+	unsigned accessor_count;   // default 0u
+	unsigned camera_count;     // default 0u
+	unsigned animation_count;  // default 0u
+	unsigned skin_count;       // default 0u
+	unsigned extension_count;  // default 0u
 };
 
 // end of header file
