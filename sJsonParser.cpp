@@ -24,7 +24,7 @@ struct sToken
 
 struct sStack
 {
-	inline void push(int value){ if (data.empty()) data.resize(2048); if (value == data.size) data.resize(value * 2);data[currentIndex++] = value;}
+	inline void push(int id){ if (data.empty()) data.resize(2048); if (currentIndex == data.size) data.resize(data.size * 2); data[currentIndex++] = id;}
 	inline void pop()   { data[currentIndex] = -1; currentIndex--;}
 	inline int  top()   { return data[currentIndex - 1];}
 	inline bool empty() { return currentIndex == 0;}
@@ -32,7 +32,6 @@ struct sStack
 	int currentIndex = 0;
 	mvVector<int> data;
 };
-
 
 static void
 ParseForTokens(char* rawData, mvVector<sToken>& tokens)
@@ -181,13 +180,26 @@ RemoveWhiteSpace(char* rawData, char* spacesRemoved, size_t size)
 
 }
 
-sJsonDocument*
+static void
+UpdateChildenPointers(sJsonObject* object, mvVector<sJsonObject*>* objects)
+{
+	if((*(mvVector<int>*)(object->_internal)).empty())
+		return;
+
+	object->childCount = (*(mvVector<int>*)(object->_internal)).size;
+	object->children = new sJsonObject[object->childCount];
+	for(int i = 0; i < (*(mvVector<int>*)(object->_internal)).size; i++)
+	{
+		object->children[i] = *(*objects)[(*(mvVector<int>*)(object->_internal))[i]];
+		UpdateChildenPointers(&object->children[i], objects);
+	}
+}
+
+sJsonObject*
 ParseJSON(char* rawData, int size)
 {
-	sJsonDocument* ptrContext = new sJsonDocument();
-	sJsonDocument& context = *ptrContext;
-	sStack jsonObjectStack;
-	sStack jsonMemberStack;
+	sStack parentIDStack;
+	mvVector<sJsonObject*> objectArray;
 
 	char* spacesRemoved = new char[size];
 	RemoveWhiteSpace(rawData, spacesRemoved, size);
@@ -195,153 +207,118 @@ ParseJSON(char* rawData, int size)
 	mvVector<sToken>* tokens = new mvVector<sToken>;
 	ParseForTokens(spacesRemoved, *tokens);
 
-	//for (auto& token : tokens)
-	//	std::cout << token.value << std::endl;
-
-	sJsonObject rootObject{};
-	rootObject.type = S_JSON_TYPE_OBJECT;
-	rootObject.members.push_back({});
-	context.jsonObjects.push_back(rootObject);
-	jsonObjectStack.push(0);
-	jsonMemberStack.push(0);
+	sJsonObject *rootObject = new sJsonObject();
+	rootObject->type = S_JSON_TYPE_OBJECT;
+	rootObject->_internal = new mvVector<int>();
+	
+	objectArray.push_back(rootObject);
+	parentIDStack.push(0);
 
 	int i = 0;
+	bool waitingOnValue = true;
 	while (true)
 	{
 
 		if (i >= tokens->size)
 			break;
 
+		sJsonObject* parent = objectArray[parentIDStack.top()];
+
 		switch ((*tokens)[i].type)
 		{
 
 		case S_JSON_TOKEN_LEFT_BRACE:
 		{
-			int parentId = jsonObjectStack.top();
-			sJsonObject& parent = context.jsonObjects[parentId];
 
-			if (parent.type == S_JSON_TYPE_OBJECT)
+			if(waitingOnValue)
 			{
-				sJsonObject jobject{};
-				jobject.type = S_JSON_TYPE_OBJECT;
-				int newObjectIndex = context.jsonObjects.size;
-				int memberId = jsonMemberStack.top();
-				parent.members[memberId].index = newObjectIndex;
-				context.jsonObjects.push_back(jobject);
-				jsonObjectStack.push(newObjectIndex);
-				if (!jsonMemberStack.empty())
-					jsonMemberStack.pop();
-				i++;
+				waitingOnValue = false; // object was created in S_JSON_TOKEN_MEMBER case below.
 			}
-
-			else if (parent.type == S_JSON_TYPE_ARRAY)
+			else
 			{
-
-				sJsonObject jobject{};
-				jobject.type = S_JSON_TYPE_OBJECT;
-				int newObjectIndex = context.jsonObjects.size;
-
-				sJsonMember member{};
-				member.type = S_JSON_TYPE_PRIMITIVE;
-				member.index = newObjectIndex;
-				parent.members.push_back(member);
-				context.jsonObjects.push_back(jobject);
-				jsonObjectStack.push(newObjectIndex);
-				//jsonMemberStack.pop();
-				i++;
+				sJsonObject *newObject = new sJsonObject();
+				newObject->type = S_JSON_TYPE_OBJECT;
+				newObject->_internal = new mvVector<int>();
+				mvVector<int>          _childrenID;
+				objectArray.push_back(newObject);
+				parentIDStack.push(objectArray.size-1);
+				(*(mvVector<int>*)(parent->_internal)).push_back(objectArray.size-1);
 			}
+			i++;
 			break;
 		}
 
 		case S_JSON_TOKEN_LEFT_BRACKET:
 		{
-			sJsonObject jobject{};
-			jobject.type = S_JSON_TYPE_ARRAY;
-			int newObjectIndex = context.jsonObjects.size;
-			context.jsonObjects.push_back(jobject);
-			jsonObjectStack.push(newObjectIndex);
-			jsonMemberStack.pop();
+
+			if(waitingOnValue)
+			{
+				waitingOnValue = false; // object was created in S_JSON_TOKEN_MEMBER case below.
+			}
+			else
+			{
+				sJsonObject *newObject = new sJsonObject();
+				newObject->type = S_JSON_TYPE_ARRAY;
+				newObject->_internal = new mvVector<int>();
+				objectArray.push_back(newObject);
+				parentIDStack.push(objectArray.size-1);
+				(*(mvVector<int>*)(parent->_internal)).push_back(objectArray.size-1);	
+			}
 			i++;
 			break;
 		}
 
 		case S_JSON_TOKEN_RIGHT_BRACE:
 		{
-			int finishedObject = jsonObjectStack.top();
-			jsonObjectStack.pop();
+			parentIDStack.pop();
 			i++;
 			break;
 		}
 
 		case S_JSON_TOKEN_RIGHT_BRACKET:
 		{
-			int finishedArray = jsonObjectStack.top();
-			jsonObjectStack.pop();
+			parentIDStack.pop();
 			i++;
 			break;
 		}
 
 		case S_JSON_TOKEN_MEMBER:
 		{
-			int parentId = jsonObjectStack.top();
-			sJsonObject& parent = context.jsonObjects[parentId];
-			sJsonMember member{};
-			memcpy(member.name, (*tokens)[i].value.data, (*tokens)[i].value.size_in_bytes());
 
+			sJsonObject* newObject = new sJsonObject();
+			objectArray.push_back(newObject);
+			newObject->_internal = new mvVector<int>();
+			parentIDStack.push(objectArray.size-1);
+			(*(mvVector<int>*)(parent->_internal)).push_back(objectArray.size-1);
+			memcpy(newObject->name, (*tokens)[i].value.data, (*tokens)[i].value.size_in_bytes());
 
-			sTokenType valueType = (*tokens)[i + 2].type;
-			if (valueType == S_JSON_TOKEN_LEFT_BRACKET)
-			{
-				member.index = context.jsonObjects.size;
-				member.type = S_JSON_TYPE_ARRAY;
-			}
-			else if (valueType == S_JSON_TOKEN_LEFT_BRACE)
-			{
-				member.index = context.jsonObjects.size;
-				member.type = S_JSON_TYPE_OBJECT;
-			}
-			else if (valueType == S_JSON_TOKEN_PRIMITIVE)
-			{
-				member.index = context.primitiveValues.size;
-				member.type = S_JSON_TYPE_PRIMITIVE;
-			}
-			else if (valueType == S_JSON_TOKEN_STRING)
-			{
-				member.index = context.primitiveValues.size;
-				member.type = S_JSON_TYPE_STRING;
-			}
-			int memberId = parent.members.size;
-			parent.members.push_back(member);
-			jsonMemberStack.push(memberId);
+			// look ahead to 2 tokens to look at type (skipping over ':' )
+			sToken valueToken = (*tokens)[i + 2];
+			sTokenType valueType = valueToken.type;
+			if      (valueType == S_JSON_TOKEN_LEFT_BRACKET) newObject->type = S_JSON_TYPE_ARRAY;
+			else if (valueType == S_JSON_TOKEN_LEFT_BRACE)   newObject->type = S_JSON_TYPE_OBJECT;
+			else if (valueType == S_JSON_TOKEN_PRIMITIVE)    newObject->type = S_JSON_TYPE_PRIMITIVE;
+			else if (valueType == S_JSON_TOKEN_STRING)       newObject->type = S_JSON_TYPE_STRING;
 			i++;
+			waitingOnValue = true;
 			break;
 		}
 
 		case S_JSON_TOKEN_STRING:
 		{
-			int parentId = jsonObjectStack.top();
-			sJsonObject& parent = context.jsonObjects[parentId];
-
-			if (parent.type == S_JSON_TYPE_OBJECT)
+			if(waitingOnValue)
 			{
-				int valueId = context.primitiveValues.size;
-				context.primitiveValues.push_back({});
-				context.primitiveValues.back().value = (*tokens)[i].value;
-				int memberId = jsonMemberStack.top();
-				parent.members[memberId].index = valueId;
-				jsonMemberStack.pop();
+				parent->value.value = (*tokens)[i].value;
+				waitingOnValue=false;
+				parentIDStack.pop();
 			}
-			else if (parent.type == S_JSON_TYPE_ARRAY)
+			else // in array
 			{
-
-				int valueId = context.primitiveValues.size;
-				context.primitiveValues.push_back({});
-				context.primitiveValues.back().value = (*tokens)[i].value;
-
-				sJsonMember member{};
-				member.type = S_JSON_TYPE_PRIMITIVE;
-				member.index = valueId;
-				parent.members.push_back(member);
+				sJsonObject *newObject = new sJsonObject();
+				newObject->type = S_JSON_TYPE_STRING;
+				objectArray.push_back(newObject);
+				newObject->value.value = (*tokens)[i].value;
+				(*(mvVector<int>*)(parent->_internal)).push_back(objectArray.size-1);	
 			}
 			i++;
 			break;
@@ -349,30 +326,21 @@ ParseJSON(char* rawData, int size)
 
 		case S_JSON_TOKEN_PRIMITIVE:
 		{
-			int parentId = jsonObjectStack.top();
-			sJsonObject& parent = context.jsonObjects[parentId];
-			if (parent.type == S_JSON_TYPE_OBJECT)
+			if(waitingOnValue)
 			{
-				int valueId = context.primitiveValues.size;
-				context.primitiveValues.push_back({});
-				context.primitiveValues.back().value = (*tokens)[i].value;
-
-				int memberId = jsonMemberStack.top();
-				parent.members[memberId].index = valueId;
-				jsonMemberStack.pop();
+				parent->value.value = (*tokens)[i].value;
+				waitingOnValue=false;
+				parentIDStack.pop();
 			}
-
-			else if (parent.type == S_JSON_TYPE_ARRAY)
+			else // in array
 			{
-
-				int valueId = context.primitiveValues.size;
-				context.primitiveValues.push_back({});
-				context.primitiveValues.back().value = (*tokens)[i].value;
-
-				sJsonMember member{};
-				member.type = S_JSON_TYPE_PRIMITIVE;
-				member.index = valueId;
-				parent.members.push_back(member);
+				sJsonObject *newObject = new sJsonObject();
+				newObject->type = S_JSON_TYPE_PRIMITIVE;
+				newObject->_internal = new mvVector<int>();
+				objectArray.push_back(newObject);
+				newObject->value.value = (*tokens)[i].value;
+				//memcpy(newObject->value.value.data, (*tokens)[i].value.data, (*tokens)[i].value.size_in_bytes());
+				(*(mvVector<int>*)(parent->_internal)).push_back(objectArray.size-1);	
 			}
 			i++;
 			break;
@@ -384,52 +352,17 @@ ParseJSON(char* rawData, int size)
 		}
 
 	}
-	jsonObjectStack.pop();
-
-	for (auto& object : context.jsonObjects)
-	{
-		object.context = ptrContext;
-		for (auto& member : object.members)
-			member.context = ptrContext;
-	}
-
-	return ptrContext;
-}
-
-bool
-sJsonDocument::doesMemberExist(const char* member)
-{
-	for (int i = 0; i < jsonObjects[1].members.size; i++)
-	{
-		if (strcmp(member, jsonObjects[1].members[i].name) == 0)
-			return true;
-	}
-
-	return false;
-}
-
-sJsonObject&
-sJsonDocument::operator[](const char* member)
-{
-	for (int i = 0; i < jsonObjects[1].members.size; i++)
-	{
-
-		if (strcmp(member, jsonObjects[1].members[i].name) == 0)
-		{
-			int index = jsonObjects[1].members[i].index;
-			return jsonObjects[index];
-		}
-	}
-
-	return jsonObjects[0];
+	parentIDStack.pop();
+	UpdateChildenPointers(rootObject, &objectArray);
+	return rootObject;
 }
 
 bool
 sJsonObject::doesMemberExist(const char* member)
 {
-	for (int i = 0; i < members.size; i++)
+	for (int i = 0; i < childCount; i++)
 	{
-		if (strcmp(member, members[i].name) == 0)
+		if (strcmp(member, children[i].name) == 0)
 			return true;
 	}
 
@@ -439,25 +372,25 @@ sJsonObject::doesMemberExist(const char* member)
 sJsonObject&
 sJsonObject::operator[](const char* member)
 {
-	for (int i = 0; i < members.size; i++)
+	for (int i = 0; i < childCount; i++)
 	{
 
-		if (strcmp(member, members[i].name) == 0)
-			return context->jsonObjects[members[i].index];
+		if (strcmp(member, children[i].name) == 0)
+			return children[i];
 	}
-
-	return context->jsonObjects[0];
+	assert(false);
+	return *this;
 }
 
-sJsonMember&
+sJsonObject&
 sJsonObject::getMember(const char* member)
 {
-	for (int i = 0; i < members.size; i++)
+	for (int i = 0; i < childCount; i++)
 	{
-		if (strcmp(member, members[i].name) == 0)
-			return members[i];
+		if (strcmp(member, children[i].name) == 0)
+			return children[i];
 	}
-
-	return members[0];
+	assert(false);
+	return *this;
 }
 

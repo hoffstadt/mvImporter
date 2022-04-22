@@ -8,11 +8,9 @@
 #include <string>
 #include <assert.h>
 
-struct sJsonDocument; // "root" json object
 struct sJsonObject;   // json object or array
 struct sJsonValue;    // primitive/string json value
 struct sJsonMember;   // json member (name + primitive/string value)
-
 typedef int sJsonType;
 
 // borrowed from Dear ImGui
@@ -24,7 +22,7 @@ struct mvVector
 	T*  data     = nullptr;
 	inline mvVector() { size = capacity = 0; data = nullptr; }
 	inline mvVector<T>& operator=(const mvVector<T>& src) { clear(); resize(src.size); memcpy(data, src.data, (size_t)size * sizeof(T)); return *this; }
-	inline ~mvVector() { if (data) free(data); }
+	//inline ~mvVector() { if (data) free(data); }
 	inline bool empty() const { return size == 0; }
 	inline int  size_in_bytes() const   { return size * (int)sizeof(T); }
 	inline T&   operator[](int i) { assert(i >= 0 && i < size); return data[i]; }
@@ -54,45 +52,29 @@ struct sJsonValue
 	mvVector<char> value;
 };
 
-struct sJsonDocument
-{
-	mvVector<sJsonValue>  primitiveValues;
-	mvVector<sJsonObject> jsonObjects;
-
-	bool doesMemberExist(const char* member);
-	sJsonObject& operator[](const char* member);
-};
-
-struct sJsonMember
-{
-	char           name[MV_IMPORTER_MAX_NAME_LENGTH];
-	sJsonType      type = S_JSON_TYPE_NONE;
-	int            index = -1;
-	sJsonDocument* context = nullptr;
-
-	inline operator int()          { return atoi(context->primitiveValues[index].value.data);}
-	inline operator unsigned()     { int value = atoi(context->primitiveValues[index].value.data); return (unsigned)value;}
-	inline operator float()        { return atof(context->primitiveValues[index].value.data);}
-	inline operator std::string()  { return std::string((char*)context->primitiveValues[index].value.data);}
-	inline operator sJsonObject&() { return context->jsonObjects[index];}
-};
-
 struct sJsonObject
 {
-	sJsonType             type = S_JSON_TYPE_NONE;
-	mvVector<sJsonMember> members;
-	sJsonDocument*        context = nullptr;
+	sJsonType              type;
+	sJsonObject*           children;
+	int                    childCount;
+	
+	char                   name[MV_IMPORTER_MAX_NAME_LENGTH];
+	sJsonValue             value;
+	void*                  _internal;
 
-	sJsonMember& getMember(const char* member);
-	bool          doesMemberExist(const char* member);
+	sJsonObject& getMember(const char* member);
+	bool         doesMemberExist(const char* member);
 
 	sJsonObject& operator[](const char* member);
-	inline sJsonMember& operator[](int i) { return members[i]; };
+	inline sJsonObject& operator[](int i) { return children[i]; };
+
+	inline operator int()         { return atoi(value.value.data);}
+	inline operator unsigned()    { int v = atoi(value.value.data); return (unsigned)v;}
+	inline operator float()       { return atof(value.value.data);}
+	inline operator std::string() { return std::string(value.value.data);}
 
 };
 
-
-
-sJsonDocument* ParseJSON(char* rawData, int size);
+sJsonObject* ParseJSON(char* rawData, int size);
 
 #endif
