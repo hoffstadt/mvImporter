@@ -54,6 +54,15 @@ struct sJsonValue
 	mvVector<char> value;
 };
 
+struct sJsonDocument
+{
+	mvVector<sJsonValue>  primitiveValues;
+	mvVector<sJsonObject> jsonObjects;
+
+	bool doesMemberExist(const char* member);
+	sJsonObject& operator[](const char* member);
+};
+
 struct sJsonMember
 {
 	char           name[MV_IMPORTER_MAX_NAME_LENGTH];
@@ -61,12 +70,11 @@ struct sJsonMember
 	int            index = -1;
 	sJsonDocument* context = nullptr;
 
-	//operator char* ();
-	operator int();
-	operator unsigned();
-	operator float();
-	operator sJsonObject& ();
-	operator std::string();
+	inline operator int()          { return atoi(context->primitiveValues[index].value.data);}
+	inline operator unsigned()     { int value = atoi(context->primitiveValues[index].value.data); return (unsigned)value;}
+	inline operator float()        { return atof(context->primitiveValues[index].value.data);}
+	inline operator std::string()  { return std::string((char*)context->primitiveValues[index].value.data);}
+	inline operator sJsonObject&() { return context->jsonObjects[index];}
 };
 
 struct sJsonObject
@@ -79,18 +87,11 @@ struct sJsonObject
 	bool          doesMemberExist(const char* member);
 
 	sJsonObject& operator[](const char* member);
-	sJsonMember& operator[](int i);
+	inline sJsonMember& operator[](int i) { return members[i]; };
 
 };
 
-struct sJsonDocument
-{
-	mvVector<sJsonValue>  primitiveValues;
-	mvVector<sJsonObject> jsonObjects;
 
-	bool doesMemberExist(const char* member);
-	sJsonObject& operator[](const char* member);
-};
 
 sJsonDocument* ParseJSON(char* rawData, int size);
 

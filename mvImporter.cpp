@@ -173,7 +173,7 @@ DecodeDataURI(mvVector<unsigned char>* out, std::string& mime_type,
 namespace mvImp {
 
 	static std::string*
-	_LoadExtensions(mvJsonDocument& j, unsigned& size)
+	_LoadExtensions(sJsonDocument& j, unsigned& size)
 	{
 		if (!j.doesMemberExist("extensionsUsed"))
 			return nullptr;
@@ -184,7 +184,7 @@ namespace mvImp {
 
 		for (int i = 0; i < extensionCount; i++)
 		{
-			//mvJsonObject& jExtension = j["extensionsUsed"][i];
+			//sJsonObject& jExtension = j["extensionsUsed"][i];
 			extensions[i] = j["extensionsUsed"][i];
 			size++;
 		}
@@ -193,7 +193,7 @@ namespace mvImp {
 	}
 
 	static mvGLTFAnimation*
-	_LoadAnimations(mvJsonDocument& j, unsigned& size)
+	_LoadAnimations(sJsonDocument& j, unsigned& size)
 	{
 		if (!j.doesMemberExist("animations"))
 			return nullptr;
@@ -204,7 +204,7 @@ namespace mvImp {
 
 		for (int i = 0; i < animationCount; i++)
 		{
-			mvJsonObject& janimation = j["animations"][i];
+			sJsonObject& janimation = j["animations"][i];
 			mvGLTFAnimation& animation = animations[i];
 
 			if (janimation.doesMemberExist("name"))
@@ -220,7 +220,7 @@ namespace mvImp {
 
 				for (int i = 0; i < samplerCount; i++)
 				{
-					mvJsonObject& jsampler = janimation["samplers"][i];
+					sJsonObject& jsampler = janimation["samplers"][i];
 					mvGLTFAnimationSampler& sampler = animation.samplers[i];
 
 					if (jsampler.doesMemberExist("input"))
@@ -248,7 +248,7 @@ namespace mvImp {
 
 				for (int i = 0; i < channelCount; i++)
 				{
-					mvJsonObject& jchannel = janimation["channels"][i];
+					sJsonObject& jchannel = janimation["channels"][i];
 					mvGLTFAnimationChannel& channel = animation.channels[i];
 
 					if (jchannel.doesMemberExist("sampler"))
@@ -259,7 +259,7 @@ namespace mvImp {
 					if (jchannel.doesMemberExist("target"))
 					{
 
-						mvJsonObject& jchanneltarget = jchannel.getMember("target");
+						sJsonObject& jchanneltarget = jchannel.getMember("target");
 						mvGLTFAnimationChannelTarget target{};
 
 						if (jchanneltarget.doesMemberExist("node"))
@@ -283,7 +283,7 @@ namespace mvImp {
 	}
 
 	static mvGLTFCamera*
-	_LoadCameras(mvJsonDocument& j, unsigned& size)
+	_LoadCameras(sJsonDocument& j, unsigned& size)
 	{
 		if (!j.doesMemberExist("cameras"))
 			return nullptr;
@@ -294,7 +294,7 @@ namespace mvImp {
 
 		for (int i = 0; i < cameraCount; i++)
 		{
-			mvJsonObject& jcamera = j["cameras"][i];
+			sJsonObject& jcamera = j["cameras"][i];
 			mvGLTFCamera& camera = cameras[i];
 
 			if (jcamera.doesMemberExist("name"))
@@ -319,7 +319,7 @@ namespace mvImp {
 			if (jcamera.doesMemberExist("perspective"))
 			{
 
-				mvJsonObject perspective = jcamera["perspective"];
+				sJsonObject perspective = jcamera["perspective"];
 
 				if (perspective.doesMemberExist("aspectRatio"))
 					camera.perspective.aspectRatio = perspective.getMember("aspectRatio");
@@ -338,7 +338,7 @@ namespace mvImp {
 			if (jcamera.doesMemberExist("orthographic"))
 			{
 
-				mvJsonObject orthographic = jcamera["orthographic"];
+				sJsonObject orthographic = jcamera["orthographic"];
 
 				if (orthographic.doesMemberExist("xmag"))
 					camera.orthographic.xmag = orthographic.getMember("xmag");
@@ -361,7 +361,7 @@ namespace mvImp {
 	}
 
 	static mvGLTFScene*
-	_LoadScenes(mvJsonDocument& j, unsigned& size)
+	_LoadScenes(sJsonDocument& j, unsigned& size)
 	{
 
 		if (!j.doesMemberExist("scenes"))
@@ -372,7 +372,7 @@ namespace mvImp {
 
 		for (int i = 0; i < count; i++)
 		{
-			mvJsonObject& jscene = j["scenes"][0];
+			sJsonObject& jscene = j["scenes"][0];
 			mvGLTFScene& scene = scenes[size];
 
 			if (jscene.doesMemberExist("nodes"))
@@ -394,7 +394,7 @@ namespace mvImp {
 	}
 
 	static mvGLTFNode*
-	_LoadNodes(mvJsonDocument& j, unsigned& size)
+	_LoadNodes(sJsonDocument& j, unsigned& size)
 	{
 		if (!j.doesMemberExist("nodes"))
 			return nullptr;
@@ -404,7 +404,7 @@ namespace mvImp {
 
 		for (int i = 0; i < count; i++)
 		{
-			mvJsonObject& jnode = j["nodes"][i];
+			sJsonObject& jnode = j["nodes"][i];
 			mvGLTFNode& node = nodes[size];
 
 			if (jnode.doesMemberExist("name"))
@@ -480,7 +480,7 @@ namespace mvImp {
 	}
 
 	static mvGLTFMesh*
-	_LoadMeshes(mvJsonDocument& j, unsigned& size)
+	_LoadMeshes(sJsonDocument& j, unsigned& size)
 	{
 		if (!j.doesMemberExist("meshes"))
 			return nullptr;
@@ -491,7 +491,7 @@ namespace mvImp {
 
 		for (int i = 0; i < meshCount; i++)
 		{
-			mvJsonObject& jmesh = j["meshes"][i];
+			sJsonObject& jmesh = j["meshes"][i];
 			mvGLTFMesh& mesh = meshes[i];
 
 			if (jmesh.doesMemberExist("name"))
@@ -503,7 +503,7 @@ namespace mvImp {
 				mesh.weights = new float[mesh.weights_count];
 				for (int j = 0; j < mesh.weights_count; j++)
 				{
-					mvJsonMember m = jmesh["weights"][j];
+					sJsonMember m = jmesh["weights"][j];
 					//mvGLTFMeshPrimitive& primitive = mesh.primitives[j];
 					mesh.weights[j] = m;
 				}
@@ -520,7 +520,7 @@ namespace mvImp {
 
 					mvGLTFMeshPrimitive& primitive = mesh.primitives[j];
 
-					mvJsonObject jprimitive = jmesh["primitives"][j];
+					sJsonObject jprimitive = jmesh["primitives"][j];
 
 					if (jprimitive.doesMemberExist("indices"))
 						primitive.indices_index = jprimitive.getMember("indices");
@@ -530,14 +530,14 @@ namespace mvImp {
 
 					if (jprimitive.doesMemberExist("attributes"))
 					{
-						mvJsonObject jattributes = jprimitive["attributes"];
+						sJsonObject jattributes = jprimitive["attributes"];
 						unsigned attrCount = jattributes.members.size;
 						primitive.attributes = new mvGLTFAttribute[attrCount];
 						
 
 						for (int k = 0; k < attrCount; k++)
 						{
-							mvJsonMember m = jattributes.members[k];
+							sJsonMember m = jattributes.members[k];
 							
 							//primitive.attributes[primitive.attribute_count] = { m.name , (int)m };
 							//primitive.attributes[primitive.attribute_count].semantic = m.name;
@@ -550,7 +550,7 @@ namespace mvImp {
 
 					if (jprimitive.doesMemberExist("targets"))
 					{
-						mvJsonObject jtargets = jprimitive["targets"];
+						sJsonObject jtargets = jprimitive["targets"];
 						unsigned targetCount = jtargets.members.size;
 						primitive.targets = new mvGLTFMorphTarget[targetCount];
 
@@ -558,13 +558,13 @@ namespace mvImp {
 						{
 							mvGLTFMorphTarget& target = primitive.targets[k];
 
-							mvJsonObject jtarget = jtargets.members[k];
+							sJsonObject jtarget = jtargets.members[k];
 							
 							unsigned attrCount = jtarget.members.size;
 							target.attributes = new mvGLTFAttribute[attrCount];
 							for (int x = 0; x < attrCount; x++)
 							{
-								mvJsonMember jattribute = jtarget.members[x];
+								sJsonMember jattribute = jtarget.members[x];
 								memcpy(target.attributes[target.attribute_count].semantic, jattribute.name, MV_IMPORTER_MAX_NAME_LENGTH);
 								target.attributes[target.attribute_count].index = (int)jattribute;
 								target.attribute_count++;
@@ -586,7 +586,7 @@ namespace mvImp {
 	}
 
 	static mvGLTFMaterial*
-	_LoadMaterials(mvJsonDocument& j, unsigned& size)
+	_LoadMaterials(sJsonDocument& j, unsigned& size)
 	{
 		if (!j.doesMemberExist("materials"))
 			return nullptr;
@@ -596,7 +596,7 @@ namespace mvImp {
 
 		for (int i = 0; i < count; i++)
 		{
-			mvJsonObject& jmaterial = j["materials"][i];
+			sJsonObject& jmaterial = j["materials"][i];
 			mvGLTFMaterial& material = materials[size];
 
 			if (jmaterial.doesMemberExist("name"))
@@ -739,7 +739,7 @@ namespace mvImp {
 	}
 
 	static mvGLTFTexture*
-	_LoadTextures(mvJsonDocument& j, unsigned& size)
+	_LoadTextures(sJsonDocument& j, unsigned& size)
 	{
 		if (!j.doesMemberExist("textures"))
 			return nullptr;
@@ -749,7 +749,7 @@ namespace mvImp {
 
 		for (int i = 0; i < count; i++)
 		{
-			mvJsonObject& jtexture = j["textures"][i];
+			sJsonObject& jtexture = j["textures"][i];
 			mvGLTFTexture& texture = textures[size];
 
 			if (jtexture.doesMemberExist("sampler"))
@@ -768,7 +768,7 @@ namespace mvImp {
 	}
 
 	static mvGLTFSampler*
-	_LoadSamplers(mvJsonDocument& j, unsigned& size)
+	_LoadSamplers(sJsonDocument& j, unsigned& size)
 	{
 		if (!j.doesMemberExist("samplers"))
 			return nullptr;
@@ -778,7 +778,7 @@ namespace mvImp {
 
 		for (int i = 0; i < count; i++)
 		{
-			mvJsonObject& jsampler = j["samplers"][i];
+			sJsonObject& jsampler = j["samplers"][i];
 			mvGLTFSampler& sampler = samplers[size];
 
 			if (jsampler.doesMemberExist("name"))
@@ -803,7 +803,7 @@ namespace mvImp {
 	}
 
 	static mvGLTFImage*
-	_LoadImages(mvJsonDocument& j, unsigned& size)
+	_LoadImages(sJsonDocument& j, unsigned& size)
 	{
 		if (!j.doesMemberExist("images"))
 			return nullptr;
@@ -813,7 +813,7 @@ namespace mvImp {
 
 		for (int i = 0; i < count; i++)
 		{
-			mvJsonObject& jimage = j["images"][i];
+			sJsonObject& jimage = j["images"][i];
 			mvGLTFImage& image = images[size];
 
 			if (jimage.doesMemberExist("uri"))
@@ -832,7 +832,7 @@ namespace mvImp {
 	}
 
 	static mvGLTFBuffer*
-	_LoadBuffers(mvJsonDocument& j, unsigned& size)
+	_LoadBuffers(sJsonDocument& j, unsigned& size)
 	{
 		if (!j.doesMemberExist("buffers"))
 			return nullptr;
@@ -842,7 +842,7 @@ namespace mvImp {
 
 		for (int i = 0; i < count; i++)
 		{
-			mvJsonObject& jbuffer = j["buffers"][i];
+			sJsonObject& jbuffer = j["buffers"][i];
 			mvGLTFBuffer& buffer = buffers[size];
 
 			if (jbuffer.doesMemberExist("uri"))
@@ -858,7 +858,7 @@ namespace mvImp {
 	}
 
 	static mvGLTFBufferView*
-	_LoadBufferViews(mvJsonDocument& j, unsigned& size)
+	_LoadBufferViews(sJsonDocument& j, unsigned& size)
 	{
 		if (!j.doesMemberExist("bufferViews"))
 			return nullptr;
@@ -869,7 +869,7 @@ namespace mvImp {
 		for (int i = 0; i < count; i++)
 		{
 
-			mvJsonObject& jbufferview = j["bufferViews"][i];
+			sJsonObject& jbufferview = j["bufferViews"][i];
 			mvGLTFBufferView& bufferview = bufferviews[size];
 
 			if (jbufferview.doesMemberExist("name"))
@@ -894,7 +894,7 @@ namespace mvImp {
 	}
 
 	static mvGLTFAccessor*
-	_LoadAccessors(mvJsonDocument& j, unsigned& size)
+	_LoadAccessors(sJsonDocument& j, unsigned& size)
 	{
 		if (!j.doesMemberExist("accessors"))
 			return nullptr;
@@ -904,7 +904,7 @@ namespace mvImp {
 
 		for (int i = 0; i < count; i++)
 		{
-			mvJsonObject& jaccessor = j["accessors"][i];
+			sJsonObject& jaccessor = j["accessors"][i];
 			mvGLTFAccessor& accessor = accessors[i];
 
 			if (jaccessor.doesMemberExist("name"))
@@ -977,7 +977,7 @@ namespace mvImp {
 	}
 
 	static mvGLTFSkin*
-	_LoadSkins(mvJsonDocument& j, unsigned& size)
+	_LoadSkins(sJsonDocument& j, unsigned& size)
 	{
 		if (!j.doesMemberExist("skins"))
 			return nullptr;
@@ -987,7 +987,7 @@ namespace mvImp {
 
 		for (int i = 0; i < count; i++)
 		{
-			mvJsonObject& jnode = j["skins"][i];
+			sJsonObject& jnode = j["skins"][i];
 			mvGLTFSkin& skin = skins[size];
 
 			if (jnode.doesMemberExist("name"))
@@ -1083,7 +1083,7 @@ mvLoadBinaryGLTF(const char* root, const char* file)
 		return model;
 	}
 
-	mvJsonDocument& context = *ParseJSON(chunkData, chunkLength);
+	sJsonDocument& context = *ParseJSON(chunkData, chunkLength);
 
 	if (context.doesMemberExist("scene"))
 	{
@@ -1092,7 +1092,7 @@ mvLoadBinaryGLTF(const char* root, const char* file)
 			if (strcmp("scene", context.jsonObjects[1].members[i].name) == 0)
 			{
 				int index = context.jsonObjects[1].members[i].index;
-				mvJsonValue value = context.primitiveValues[index];
+				sJsonValue value = context.primitiveValues[index];
 				model.scene = std::stoi(value.value.data);
 			}
 		}
@@ -1209,7 +1209,7 @@ mvLoadGLTF(const char* root, const char* file)
 		return model;
 	}
 
-	mvJsonDocument& context = *ParseJSON(data, dataSize);
+	sJsonDocument& context = *ParseJSON(data, dataSize);
 	delete[] data;
 	
 	if (context.doesMemberExist("scene"))
@@ -1219,7 +1219,7 @@ mvLoadGLTF(const char* root, const char* file)
 			if (strcmp("scene", context.jsonObjects[1].members[i].name) == 0)
 			{
 				int index = context.jsonObjects[1].members[i].index;
-				mvJsonValue value = context.primitiveValues[index];
+				sJsonValue value = context.primitiveValues[index];
 				model.scene = std::stoi(value.value.data);
 			}
 		}

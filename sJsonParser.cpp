@@ -22,12 +22,12 @@ struct sToken
 	mvVector<char> value;
 };
 
-struct mvStack
+struct sStack
 {
-	void push(int value);
-	void pop();
-	int  top();
-	bool empty();
+	inline void push(int value){ if (data.empty()) data.resize(2048); if (value == data.size) data.resize(value * 2);data[currentIndex++] = value;}
+	inline void pop()   { data[currentIndex] = -1; currentIndex--;}
+	inline int  top()   { return data[currentIndex - 1];}
+	inline bool empty() { return currentIndex == 0;}
 
 	int currentIndex = 0;
 	mvVector<int> data;
@@ -186,8 +186,8 @@ ParseJSON(char* rawData, int size)
 {
 	sJsonDocument* ptrContext = new sJsonDocument();
 	sJsonDocument& context = *ptrContext;
-	mvStack jsonObjectStack;
-	mvStack jsonMemberStack;
+	sStack jsonObjectStack;
+	sStack jsonMemberStack;
 
 	char* spacesRemoved = new char[size];
 	RemoveWhiteSpace(rawData, spacesRemoved, size);
@@ -424,39 +424,6 @@ sJsonDocument::operator[](const char* member)
 	return jsonObjects[0];
 }
 
-void
-mvStack::push(int value)
-{
-	if (data.empty())
-		data.resize(2048);
-
-	if (value == data.size)
-	{
-		data.resize(value * 2);
-	}
-	data[currentIndex] = value;
-	currentIndex++;
-}
-
-void
-mvStack::pop()
-{
-	data[currentIndex] = -1;
-	currentIndex--;
-}
-
-int
-mvStack::top()
-{
-	return data[currentIndex - 1];
-}
-
-bool
-mvStack::empty()
-{
-	return currentIndex == 0;
-}
-
 bool
 sJsonObject::doesMemberExist(const char* member)
 {
@@ -467,12 +434,6 @@ sJsonObject::doesMemberExist(const char* member)
 	}
 
 	return false;
-}
-
-sJsonMember&
-sJsonObject::operator[](int i)
-{
-	return members[i];
 }
 
 sJsonObject&
@@ -500,33 +461,3 @@ sJsonObject::getMember(const char* member)
 	return members[0];
 }
 
-sJsonMember::operator int()
-{
-	return atoi(context->primitiveValues[index].value.data);
-}
-
-sJsonMember::operator unsigned()
-{
-	int value = atoi(context->primitiveValues[index].value.data);
-	return (unsigned)value;
-}
-
-sJsonMember::operator float()
-{
-	return atof(context->primitiveValues[index].value.data);
-}
-
-// mvJsonMember::operator char*()
-// {
-// 	return (char*)context->primitiveValues[index].value.data;
-// }
-
-sJsonMember::operator std::string()
-{
-	return std::string((char*)context->primitiveValues[index].value.data);
-}
-
-sJsonMember::operator sJsonObject& ()
-{
-	return context->jsonObjects[index];
-}
