@@ -1252,7 +1252,7 @@ update_dynamic_texture(mvGraphics& graphics, mvTexture& texture, unsigned int wi
 }
 
 mvTexture
-create_texture(mvGraphics& graphics, mvVector<unsigned char> data)
+create_texture(mvGraphics& graphics, unsigned char* data, unsigned int dataSize)
 {
 	mvTexture texture{};
 	Microsoft::WRL::ComPtr<ID3D11Texture2D> textureResource;
@@ -1274,7 +1274,7 @@ create_texture(mvGraphics& graphics, mvVector<unsigned char> data)
 	// Load Image
 	int texWidth, texHeight, texNumChannels;
 	int texForceNumChannels = 4;
-	unsigned char* testTextureBytes = stbi_load_from_memory(data.data, data.size, &texWidth, &texHeight,
+	unsigned char* testTextureBytes = stbi_load_from_memory(data, dataSize, &texWidth, &texHeight,
 		&texNumChannels, texForceNumChannels);
 	assert(testTextureBytes);
 	

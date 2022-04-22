@@ -48,7 +48,7 @@
 @set S_STATIC_LIB=1
 
 @REM -----------------------------Sources--------------------------------------
-@set S_SOURCES=*.cpp
+@REM @set S_SOURCES=*.cpp
 @set S_SOURCES=../dependencies/imgui/*.cpp                %S_SOURCES%
 @set S_SOURCES=../dependencies/imgui/backends/*_dx11.cpp  %S_SOURCES%
 @set S_SOURCES=../dependencies/imgui/backends/*_win32.cpp %S_SOURCES%
@@ -65,7 +65,7 @@
 @set S_STATIC_LIB=0
 
 @REM -----------------------------Sources--------------------------------------
-@set S_SOURCES=main.cpp ../*.cpp
+@set S_SOURCES=*.cpp ../*.cpp
 
 @REM ----------------------------Libraries-------------------------------------
 @set S_LINK_LIBRARIES=dependencies.lib d3d11.lib d3dcompiler.lib

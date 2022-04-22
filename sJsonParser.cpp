@@ -1,5 +1,30 @@
 #include "sJsonParser.h"
 
+// borrowed from Dear ImGui
+template<typename T>
+struct mvVector
+{
+	int size     = 0u;
+	int capacity = 0u;
+	T*  data     = nullptr;
+	inline mvVector() { size = capacity = 0; data = nullptr; }
+	inline mvVector<T>& operator=(const mvVector<T>& src) { clear(); resize(src.size); memcpy(data, src.data, (size_t)size * sizeof(T)); return *this; }
+	//inline ~mvVector() { if (data) free(data); }
+	inline bool empty() const { return size == 0; }
+	inline int  size_in_bytes() const   { return size * (int)sizeof(T); }
+	inline T&   operator[](int i) { assert(i >= 0 && i < size); return data[i]; }
+	inline void clear() { if (data) { size = capacity = 0; free(data); data = nullptr; } }
+	inline T*   begin() { return data; }
+    inline T*   end() { return data + size; }
+	inline T&   back() { assert(size > 0); return data[size - 1]; }
+	inline void swap(mvVector<T>& rhs) { int rhs_size = rhs.size; rhs.size = size; size = rhs_size; int rhs_cap = rhs.capacity; rhs.capacity = capacity; capacity = rhs_cap; T* rhs_data = rhs.data; rhs.data = data; data = rhs_data; }
+	inline int  _grow_capacity(int sz) { int new_capacity = capacity ? (capacity + capacity / 2) : 8; return new_capacity > sz ? new_capacity : sz; }
+	inline void resize(int new_size) { if (new_size > capacity) reserve(_grow_capacity(new_size)); size = new_size; }
+	inline void reserve(int new_capacity) { if (new_capacity <= capacity) return; T* new_data = (T*)malloc((size_t)new_capacity * sizeof(T)); if (data) { memcpy(new_data, data, (size_t)size * sizeof(T)); free(data); } data = new_data; capacity = new_capacity; }
+	inline void push_back(const T& v) { if (size == capacity) reserve(_grow_capacity(size*2)); memcpy(&data[size], &v, sizeof(v)); size++;}
+	inline void pop_back() { assert(size > 0); size--; }
+};
+
 typedef int sTokenType;
 
 enum sTokenType_
@@ -183,8 +208,14 @@ RemoveWhiteSpace(char* rawData, char* spacesRemoved, size_t size)
 static void
 UpdateChildenPointers(sJsonObject* object, mvVector<sJsonObject*>* objects)
 {
+	assert(object->_internal);
+
 	if((*(mvVector<int>*)(object->_internal)).empty())
+	{
+		delete object->_internal;
+		object->_internal = nullptr;
 		return;
+	}
 
 	object->childCount = (*(mvVector<int>*)(object->_internal)).size;
 	object->children = new sJsonObject[object->childCount];
@@ -193,6 +224,9 @@ UpdateChildenPointers(sJsonObject* object, mvVector<sJsonObject*>* objects)
 		object->children[i] = *(*objects)[(*(mvVector<int>*)(object->_internal))[i]];
 		UpdateChildenPointers(&object->children[i], objects);
 	}
+
+	delete object->_internal;
+	object->_internal = nullptr;
 }
 
 sJsonObject*
@@ -308,7 +342,7 @@ ParseJSON(char* rawData, int size)
 		{
 			if(waitingOnValue)
 			{
-				parent->value.value = (*tokens)[i].value;
+				parent->value = (*tokens)[i].value.data;
 				waitingOnValue=false;
 				parentIDStack.pop();
 			}
@@ -317,7 +351,7 @@ ParseJSON(char* rawData, int size)
 				sJsonObject *newObject = new sJsonObject();
 				newObject->type = S_JSON_TYPE_STRING;
 				objectArray.push_back(newObject);
-				newObject->value.value = (*tokens)[i].value;
+				newObject->value = (*tokens)[i].value.data;
 				(*(mvVector<int>*)(parent->_internal)).push_back(objectArray.size-1);	
 			}
 			i++;
@@ -328,7 +362,7 @@ ParseJSON(char* rawData, int size)
 		{
 			if(waitingOnValue)
 			{
-				parent->value.value = (*tokens)[i].value;
+				parent->value = (*tokens)[i].value.data;
 				waitingOnValue=false;
 				parentIDStack.pop();
 			}
@@ -338,8 +372,7 @@ ParseJSON(char* rawData, int size)
 				newObject->type = S_JSON_TYPE_PRIMITIVE;
 				newObject->_internal = new mvVector<int>();
 				objectArray.push_back(newObject);
-				newObject->value.value = (*tokens)[i].value;
-				//memcpy(newObject->value.value.data, (*tokens)[i].value.data, (*tokens)[i].value.size_in_bytes());
+				newObject->value = (*tokens)[i].value.data;
 				(*(mvVector<int>*)(parent->_internal)).push_back(objectArray.size-1);	
 			}
 			i++;
@@ -354,19 +387,9 @@ ParseJSON(char* rawData, int size)
 	}
 	parentIDStack.pop();
 	UpdateChildenPointers(rootObject, &objectArray);
+	objectArray.clear();
+	parentIDStack.data.clear();
 	return rootObject;
-}
-
-bool
-sJsonObject::doesMemberExist(const char* member)
-{
-	for (int i = 0; i < childCount; i++)
-	{
-		if (strcmp(member, children[i].name) == 0)
-			return true;
-	}
-
-	return false;
 }
 
 sJsonObject&
@@ -382,15 +405,14 @@ sJsonObject::operator[](const char* member)
 	return *this;
 }
 
-sJsonObject&
+sJsonObject*
 sJsonObject::getMember(const char* member)
 {
 	for (int i = 0; i < childCount; i++)
 	{
 		if (strcmp(member, children[i].name) == 0)
-			return children[i];
+			return &children[i];
 	}
-	assert(false);
-	return *this;
+	return nullptr;
 }
 

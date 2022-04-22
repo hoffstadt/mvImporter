@@ -173,18 +173,20 @@ struct mvGLTFSampler
 
 struct mvGLTFImage
 {
-	std::string             mimeType;
-	std::string             uri;
-	mvVector<unsigned char> data;
-	bool                    embedded;
-	int                     buffer_view_index = -1;
+	std::string    mimeType;
+	std::string    uri;
+	unsigned char* data;
+	size_t         dataCount;
+	bool           embedded;
+	int            buffer_view_index = -1;
 };
 
 struct mvGLTFBuffer
 {
-	unsigned                byte_length = 0u;
-	std::string             uri;
-	mvVector<unsigned char> data;
+	unsigned       byte_length = 0u;
+	std::string    uri;
+	unsigned char* data;
+	size_t         dataCount;
 };
 
 struct mvGLTFBufferView
