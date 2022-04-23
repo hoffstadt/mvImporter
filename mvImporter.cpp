@@ -1,4 +1,5 @@
 #include "mvImporter.h"
+#define SEMPER_JSON_IMPLEMENTATION
 #include "sJsonParser.h"
 
 static bool
@@ -96,7 +97,7 @@ base64_decode(std::string const& encoded_string)
 }
 
 static bool
-DecodeDataURI(unsigned char* out, std::string& mime_type, const std::string& in, size_t reqBytes)
+DecodeDataURI(unsigned char** out, std::string& mime_type, const std::string& in, size_t reqBytes, bool checkSize)
 {
 	std::string header = "data:application/octet-stream;base64,";
 	std::string data;
@@ -157,9 +158,16 @@ DecodeDataURI(unsigned char* out, std::string& mime_type, const std::string& in,
 		return false;
 	}
 
-	//out->resize(data.size());
+	if(checkSize)
+	{
+		if(data.size() != reqBytes)
+			return false;
+		*out = new unsigned char[reqBytes];
+	}
+	else
+		*out = new unsigned char[data.size()];
 
-	std::copy(data.begin(), data.end(), out);
+	memcpy(*out, data.data(), reqBytes);
 	return true;
 }
 
@@ -639,15 +647,14 @@ namespace mvImp {
 			return nullptr;
 		size = jbuffers->childCount;
 		mvGLTFBuffer* buffers = new mvGLTFBuffer[size];
-
 		for (int i = 0; i < size; i++)
 		{
 			sJsonObject& jbuffer = (*jbuffers)[i];
 			mvGLTFBuffer& buffer = buffers[i];
 			buffer.uri = jbuffer.getStringMember("uri", "");
-			buffer.byte_length = jbuffer.getUIntMember("byteLength", 0u);
-			buffer.data = nullptr;
+			buffer.byte_length = jbuffer.getUIntMember("byteLength", 0u);	
 			buffer.dataCount = 0u;
+			buffer.data = nullptr;
 		}
 		return buffers;
 	}
@@ -802,19 +809,8 @@ mvLoadBinaryGLTF(const char* root, const char* file)
 		return model;
 	}
 
-	sJsonObject& rootObject = *ParseJSON(chunkData, chunkLength);
-
-	if (rootObject.doesMemberExist("scene"))
-	{
-		for (int i = 0; i < rootObject.childCount; i++)
-		{
-			if (strcmp("scene", rootObject.children[i].name) == 0)
-			{
-				model.scene = std::stoi(rootObject.children[i].value);
-			}
-		}
-	}
-
+	sJsonObject& rootObject = *Semper::parse_json(chunkData, chunkLength);
+	model.scene = rootObject.getIntMember("scene", 0);
 	model.scenes = mvImp::_LoadScenes(rootObject, model.scene_count);
 	model.nodes = mvImp::_LoadNodes(rootObject, model.node_count);
 	model.materials = mvImp::_LoadMaterials(rootObject, model.material_count);
@@ -863,7 +859,7 @@ mvLoadBinaryGLTF(const char* root, const char* file)
 		{
 			image.embedded = true;
 			std::string mime_type;
-			if (!DecodeDataURI(image.data, mime_type, image.uri, 0))
+			if (!DecodeDataURI(&image.data, mime_type, image.uri, 0, false))
 			{
 				assert(false && "here");
 			}
@@ -885,7 +881,7 @@ mvLoadBinaryGLTF(const char* root, const char* file)
 		if (isDataURI(buffer.uri))
 		{
 			std::string mime_type;
-			if (!DecodeDataURI(buffer.data, mime_type, buffer.uri, buffer.byte_length))
+			if (!DecodeDataURI(&buffer.data, mime_type, buffer.uri, buffer.byte_length, true))
 			{
 				assert(false && "here");
 			}
@@ -929,14 +925,9 @@ mvLoadGLTF(const char* root, const char* file)
 		return model;
 	}
 
-	sJsonObject& rootObject = *ParseJSON(data, dataSize);
+	sJsonObject& rootObject = *Semper::parse_json(data, dataSize);
 	delete[] data;
-	if(rootObject.doesMemberExist("scene"))
-	{
-		sJsonObject& sceneObject = *rootObject.getMember("scene");
-		model.scene = atoi(sceneObject.value);
-	}
-
+	model.scene = rootObject.getIntMember("scene", 0);
 	model.scenes = mvImp::_LoadScenes(rootObject, model.scene_count);
 	model.nodes = mvImp::_LoadNodes(rootObject, model.node_count);
 	model.materials = mvImp::_LoadMaterials(rootObject, model.material_count);
@@ -960,7 +951,7 @@ mvLoadGLTF(const char* root, const char* file)
 		{
 			image.embedded = true;
 			std::string mime_type;
-			if (!DecodeDataURI(image.data, mime_type, image.uri, 0))
+			if (!DecodeDataURI(&image.data, mime_type, image.uri, 0, false))
 			{
 				assert(false && "here");
 			}
@@ -979,7 +970,7 @@ mvLoadGLTF(const char* root, const char* file)
 		if (isDataURI(buffer.uri))
 		{
 			std::string mime_type;
-			if (!DecodeDataURI(buffer.data, mime_type, buffer.uri, buffer.byte_length))
+			if (!DecodeDataURI(&buffer.data, mime_type, buffer.uri, buffer.byte_length, true))
 			{
 				assert(false && "here");
 			}
