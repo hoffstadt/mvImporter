@@ -92,7 +92,7 @@ ParseForTokens(char* rawData, mvVector<sToken>& tokens)
 					}
 
 					sToken token{};
-					if (currentChar == '{') token.type = S_JSON_TOKEN_LEFT_BRACE;
+					if      (currentChar == '{') token.type = S_JSON_TOKEN_LEFT_BRACE;
 					else if (currentChar == '}') token.type = S_JSON_TOKEN_RIGHT_BRACE;
 					else if (currentChar == '[') token.type = S_JSON_TOKEN_LEFT_BRACKET;
 					else if (currentChar == ']') token.type = S_JSON_TOKEN_RIGHT_BRACKET;
@@ -331,8 +331,14 @@ ParseJSON(char* rawData, int size)
 			sTokenType valueType = valueToken.type;
 			if      (valueType == S_JSON_TOKEN_LEFT_BRACKET) newObject->type = S_JSON_TYPE_ARRAY;
 			else if (valueType == S_JSON_TOKEN_LEFT_BRACE)   newObject->type = S_JSON_TYPE_OBJECT;
-			else if (valueType == S_JSON_TOKEN_PRIMITIVE)    newObject->type = S_JSON_TYPE_PRIMITIVE;
 			else if (valueType == S_JSON_TOKEN_STRING)       newObject->type = S_JSON_TYPE_STRING;
+			else if (valueType == S_JSON_TOKEN_PRIMITIVE)
+			{
+				if(valueToken.value[0] == 't')      newObject->type = S_JSON_TYPE_BOOL;
+				else if(valueToken.value[0] == 'f') newObject->type = S_JSON_TYPE_BOOL;
+				else if(valueToken.value[0] == 'n') newObject->type = S_JSON_TYPE_NULL;
+				else                                newObject->type = S_JSON_TYPE_NUMBER;
+			}
 			i++;
 			waitingOnValue = true;
 			break;
@@ -350,6 +356,7 @@ ParseJSON(char* rawData, int size)
 			{
 				sJsonObject *newObject = new sJsonObject();
 				newObject->type = S_JSON_TYPE_STRING;
+				newObject->_internal = new mvVector<int>();
 				objectArray.push_back(newObject);
 				newObject->value = (*tokens)[i].value.data;
 				(*(mvVector<int>*)(parent->_internal)).push_back(objectArray.size-1);	
@@ -369,7 +376,10 @@ ParseJSON(char* rawData, int size)
 			else // in array
 			{
 				sJsonObject *newObject = new sJsonObject();
-				newObject->type = S_JSON_TYPE_PRIMITIVE;
+				if((*tokens)[i].value.data[0] == 't')      newObject->type = S_JSON_TYPE_BOOL;
+				else if((*tokens)[i].value.data[0] == 'f') newObject->type = S_JSON_TYPE_BOOL;
+				else if((*tokens)[i].value.data[0] == 'n') newObject->type = S_JSON_TYPE_NULL;
+				else                                       newObject->type = S_JSON_TYPE_NUMBER;
 				newObject->_internal = new mvVector<int>();
 				objectArray.push_back(newObject);
 				newObject->value = (*tokens)[i].value.data;

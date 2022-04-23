@@ -188,16 +188,16 @@ namespace mvImp {
 	static mvGLTFAnimation*
 	_LoadAnimations(sJsonObject& j, unsigned& size)
 	{
-		if (!j.doesMemberExist("animations"))
+		sJsonObject* janimations = j.getMember("animations");
+		if(janimations == nullptr)
 			return nullptr;
+		size = janimations->childCount;
 
-		unsigned animationCount = j["animations"].childCount;
+		mvGLTFAnimation* animations = new mvGLTFAnimation[size];
 
-		mvGLTFAnimation* animations = new mvGLTFAnimation[animationCount];
-
-		for (int i = 0; i < animationCount; i++)
+		for (int i = 0; i < size; i++)
 		{
-			sJsonObject& janimation = j["animations"][i];
+			sJsonObject& janimation = (*janimations)[i];
 			mvGLTFAnimation& animation = animations[i];
 			animation.channel_count = 0u;
 			animation.channels = nullptr;
@@ -205,153 +205,124 @@ namespace mvImp {
 			animation.samplers = nullptr;
 			animation.name = janimation.getStringMember("name", "");
 
-			if (janimation.doesMemberExist("samplers"))
+			if (sJsonObject* jsamplers = janimation.getMember("samplers"))
 			{
-				unsigned samplerCount = janimation["samplers"].childCount;
-				animation.samplers = new mvGLTFAnimationSampler[samplerCount];
-				animation.sampler_count = samplerCount;
+				animation.sampler_count = jsamplers->childCount;
+				animation.samplers = new mvGLTFAnimationSampler[animation.sampler_count];
 
-				for (int i = 0; i < samplerCount; i++)
+				for (int s = 0; s < animation.sampler_count; s++)
 				{
-					sJsonObject& jsampler = janimation["samplers"][i];
-					mvGLTFAnimationSampler& sampler = animation.samplers[i];
+					sJsonObject& jsampler = (*jsamplers)[s];
+					mvGLTFAnimationSampler& sampler = animation.samplers[s];
 					sampler.input = jsampler.getIntMember("input", -1);
 					sampler.output = jsampler.getIntMember("output", -1);
 					sampler.interpolation = jsampler.getStringMember("interpolation", "LINEAR");
-
 				}
 			}
 
-			if (janimation.doesMemberExist("channels"))
+			if (sJsonObject* jchannels = janimation.getMember("channels"))
 			{
-				unsigned channelCount = janimation["channels"].childCount;
-				animation.channels = new mvGLTFAnimationChannel[channelCount];
-				animation.channel_count = channelCount;
+				animation.channel_count = jchannels->childCount;
+				animation.channels = new mvGLTFAnimationChannel[animation.channel_count];
 
-				for (int i = 0; i < channelCount; i++)
+				for (int i = 0; i < animation.channel_count; i++)
 				{
-					sJsonObject& jchannel = janimation["channels"][i];
+					sJsonObject& jchannel = (*jchannels)[i];
 					mvGLTFAnimationChannel& channel = animation.channels[i];
 
 					channel.sampler = jchannel.getIntMember("sampler", -1);
 
-					if (jchannel.doesMemberExist("target"))
+					if (sJsonObject* jtarget = jchannel.getMember("target"))
 					{
-
-						sJsonObject& jchanneltarget = *jchannel.getMember("target");
-						mvGLTFAnimationChannelTarget target{};
-						channel.target.node = jchanneltarget.getIntMember("node", -1);
-						channel.target.path = jchanneltarget.getStringMember("path");
-
+						channel.target.node = jtarget->getIntMember("node", -1);
+						channel.target.path = jtarget->getStringMember("path", "");
 					}
 				}
 			}
-
-			size++;
 		}
-
 		return animations;
 	}
 
 	static mvGLTFCamera*
 	_LoadCameras(sJsonObject& j, unsigned& size)
 	{
-		if (!j.doesMemberExist("cameras"))
+		sJsonObject* jcameras = j.getMember("cameras");
+		if(jcameras == nullptr)
 			return nullptr;
+		size = jcameras->childCount;
 
-		unsigned cameraCount = j["cameras"].childCount;
+		mvGLTFCamera* cameras = new mvGLTFCamera[size];
 
-		mvGLTFCamera* cameras = new mvGLTFCamera[cameraCount];
-
-		for (int i = 0; i < cameraCount; i++)
+		for (int i = 0; i < size; i++)
 		{
-			sJsonObject& jcamera = j["cameras"][i];
+			sJsonObject& jcamera = (*jcameras)[i];
 			mvGLTFCamera& camera = cameras[i];
-			camera.name = jcamera.getStringMember("name");
+			camera.name = jcamera.getStringMember("name", "");
 			std::string type = jcamera.getStringMember("type", "perspective");
 
-			if (type == "perspective")
-			{
-				camera.type = MV_IMP_PERSPECTIVE;
-			}
-			else
-			{
-				camera.type = MV_IMP_ORTHOGRAPHIC;
-			}
+			if (type == "perspective") camera.type = MV_IMP_PERSPECTIVE;
+			else                       camera.type = MV_IMP_ORTHOGRAPHIC;
 
-			if (jcamera.doesMemberExist("perspective"))
+			if (sJsonObject* jperspective = jcamera.getMember("perspective"))
 			{
-				sJsonObject& perspective = jcamera["perspective"];
-				camera.perspective.aspectRatio = perspective.getFloatMember("aspectRatio", 0.0f);
-				camera.perspective.yfov = perspective.getFloatMember("yfov", 0.0f);
-				camera.perspective.zfar = perspective.getFloatMember("zfar", 0.0f);
-				camera.perspective.znear = perspective.getFloatMember("znear", 0.0f);
-
+				camera.perspective.aspectRatio = jperspective->getFloatMember("aspectRatio", 0.0f);
+				camera.perspective.yfov = jperspective->getFloatMember("yfov", 0.0f);
+				camera.perspective.zfar = jperspective->getFloatMember("zfar", 0.0f);
+				camera.perspective.znear = jperspective->getFloatMember("znear", 0.0f);
 			}
 
-			if (jcamera.doesMemberExist("orthographic"))
+			if (sJsonObject* jorthographic = jcamera.getMember("orthographic"))
 			{
-				sJsonObject& orthographic = jcamera["orthographic"];
-				camera.orthographic.xmag = orthographic.getFloatMember("xmag", 0.0f);
-				camera.orthographic.ymag = orthographic.getFloatMember("ymag", 0.0f);
-				camera.orthographic.zfar = orthographic.getFloatMember("zfar", 0.0f);
-				camera.orthographic.znear = orthographic.getFloatMember("znear", 0.0f);
+				camera.orthographic.xmag = jorthographic->getFloatMember("xmag", 0.0f);
+				camera.orthographic.ymag = jorthographic->getFloatMember("ymag", 0.0f);
+				camera.orthographic.zfar = jorthographic->getFloatMember("zfar", 0.0f);
+				camera.orthographic.znear = jorthographic->getFloatMember("znear", 0.0f);
 			}
-
-			size++;
 		}
-
 		return cameras;
 	}
 
 	static mvGLTFScene*
 	_LoadScenes(sJsonObject& j, unsigned& size)
 	{
-
-		if (!j.doesMemberExist("scenes"))
+		sJsonObject* jscenes = j.getMember("scenes");
+		if(jscenes == nullptr)
 			return nullptr;
-
-		unsigned count = j["scenes"].childCount;
-		mvGLTFScene* scenes = new mvGLTFScene[count];
-
-		for (int i = 0; i < count; i++)
+		size = jscenes->childCount;
+		mvGLTFScene* scenes = new mvGLTFScene[size];
+		for (int i = 0; i < size; i++)
 		{
-			sJsonObject& jscene = j["scenes"][0];
-			mvGLTFScene& scene = scenes[size];
+			sJsonObject& jscene = (*jscenes)[0];
+			mvGLTFScene& scene = scenes[i];
 			scene.node_count = 0u;
 			scene.nodes = nullptr;
-
-			if (jscene.doesMemberExist("nodes"))
+			if (sJsonObject* jnodes = jscene.getMember("nodes"))
 			{
-				unsigned nodeCount = jscene["nodes"].childCount;
-				scene.nodes = new unsigned[nodeCount];
-				for (int j = 0; j < nodeCount; j++)
+				scene.node_count = jnodes->childCount;
+				scene.nodes = new unsigned[scene.node_count];
+				for (int j = 0; j < scene.node_count; j++)
 				{
-					int node = jscene["nodes"][j].asInt();
-					scene.nodes[scene.node_count] = node;
-					scene.node_count++;
+					int node = (*jnodes)[j].asInt();
+					scene.nodes[j] = node;
 				}
 			}
-
-			size++;
 		}
-
 		return scenes;
 	}
 
 	static mvGLTFNode*
 	_LoadNodes(sJsonObject& j, unsigned& size)
 	{
-		if (!j.doesMemberExist("nodes"))
+		sJsonObject* jnodes = j.getMember("nodes");
+		if(jnodes == nullptr)
 			return nullptr;
+		size = jnodes->childCount;
+		mvGLTFNode* nodes = new mvGLTFNode[size];
 
-		unsigned count = j["nodes"].childCount;
-		mvGLTFNode* nodes = new mvGLTFNode[count];
-
-		for (int i = 0; i < count; i++)
+		for (int i = 0; i < size; i++)
 		{
-			sJsonObject& jnode = j["nodes"][i];
-			mvGLTFNode& node = nodes[size];
+			sJsonObject& jnode = (*jnodes)[i];
+			mvGLTFNode& node = nodes[i];
 			node.child_count = 0u;
 			node.children = nullptr;
 			for(int i = 0; i < 16; i++)
@@ -370,115 +341,69 @@ namespace mvImp {
 	        node.translation[0] = 0.0f;
 	        node.translation[1] = 0.0f;
 	        node.translation[2] = 0.0f;
-	        node.hadMatrix = false;
 			node.name = jnode.getStringMember("name", "");
 			node.mesh_index = jnode.getIntMember("mesh", -1);
 			node.camera_index = jnode.getIntMember("camera", -1);
 			node.skin_index = jnode.getIntMember("skin", -1);
+			jnode.getFloatArrayMember("translation", node.translation, 3);
+			jnode.getFloatArrayMember("scale", node.scale, 3);
+			jnode.getFloatArrayMember("rotation", node.rotation, 4);
+			jnode.getFloatArrayMember("matrix", node.matrix, 16);
+			node.hadMatrix = jnode.doesMemberExist("matrix");
 
-			if (jnode.doesMemberExist("children"))
+			if (sJsonObject* jchildren = jnode.getMember("children"))
 			{
-				unsigned childCount = jnode["children"].childCount;
-				node.children = new unsigned[childCount];
-
-				for (int j = 0; j < childCount; j++)
+				node.child_count = jchildren->childCount;
+				node.children = new unsigned[node.child_count];
+				for (int j = 0; j < node.child_count; j++)
 				{
-					unsigned child = jnode["children"][j].asFloat();
-					node.children[node.child_count] = child;
-					node.child_count++;
+					unsigned child = (*jchildren)[j].asFloat();
+					node.children[j] = child;
 				}
 			}
-
-			if (jnode.doesMemberExist("translation"))
-			{
-				unsigned compCount = jnode["translation"].childCount;
-
-				for (int j = 0; j < compCount; j++)
-				{
-					node.translation[j] = jnode["translation"][j].asFloat();
-				}
-			}
-
-			if (jnode.doesMemberExist("scale"))
-			{
-				unsigned compCount = jnode["scale"].childCount;
-
-				for (int j = 0; j < compCount; j++)
-				{
-					node.scale[j] = jnode["scale"][j].asFloat();
-				}
-			}
-
-			if (jnode.doesMemberExist("rotation"))
-			{
-				unsigned compCount = jnode["rotation"].childCount;
-
-				for (int j = 0; j < compCount; j++)
-				{
-					node.rotation[j] = jnode["rotation"][j].asFloat();
-				}
-			}
-
-			if (jnode.doesMemberExist("matrix"))
-			{
-				node.hadMatrix = true;
-				unsigned compCount = jnode["matrix"].childCount;
-
-				for (int j = 0; j < compCount; j++)
-				{
-					node.matrix[j] = jnode["matrix"][j].asFloat();
-				}
-			}
-
-			size++;
 		}
-
 		return nodes;
 	}
 
 	static mvGLTFMesh*
 	_LoadMeshes(sJsonObject& j, unsigned& size)
 	{
-		if (!j.doesMemberExist("meshes"))
+		sJsonObject* jmeshes = j.getMember("meshes");
+		if(jmeshes == nullptr)
 			return nullptr;
+		size = jmeshes->childCount;
+		mvGLTFMesh* meshes = new mvGLTFMesh[size];
 
-		unsigned meshCount = j["meshes"].childCount;
-
-		mvGLTFMesh* meshes = new mvGLTFMesh[meshCount];
-
-		for (int i = 0; i < meshCount; i++)
+		for (int i = 0; i < size; i++)
 		{
-			sJsonObject& jmesh = j["meshes"][i];
+			sJsonObject& jmesh = (*jmeshes)[i];
 			mvGLTFMesh& mesh = meshes[i];
 			mesh.primitives = nullptr;
 			mesh.primitives_count = 0u;
 			mesh.weights = nullptr;
 			mesh.weights_count = 0u;
-			mesh.name = jmesh.getStringMember("name");
+			mesh.name = jmesh.getStringMember("name", "");
 
-			if (jmesh.doesMemberExist("weights"))
+			if (sJsonObject* jweights = jmesh.getMember("weights"))
 			{
-				mesh.weights_count = jmesh["weights"].childCount;
+				mesh.weights_count = (*jweights).childCount;
 				mesh.weights = new float[mesh.weights_count];
 				for (int j = 0; j < mesh.weights_count; j++)
 				{
-					sJsonObject m = jmesh["weights"][j];
+					sJsonObject m = (*jweights)[j];
 					mesh.weights[j] = m.asFloat();
 				}
 			}
 
-			if (jmesh.doesMemberExist("primitives"))
+			if (sJsonObject* jprimitives = jmesh.getMember("primitives"))
 			{
-
-				mesh.primitives_count = jmesh["primitives"].childCount;
+				mesh.primitives_count = jprimitives->childCount;
 				mesh.primitives = new mvGLTFMeshPrimitive[mesh.primitives_count];
 
 				for (int j = 0; j < mesh.primitives_count; j++)
 				{
-
 					mvGLTFMeshPrimitive& primitive = mesh.primitives[j];
-
-					sJsonObject jprimitive = jmesh["primitives"][j];
+					sJsonObject jprimitive = (*jprimitives)[j];
 					primitive.mode = MV_IMP_TRIANGLES;
 					primitive.attributes = nullptr;
 					primitive.attribute_count = 0u;
@@ -487,73 +412,58 @@ namespace mvImp {
 					primitive.indices_index = jprimitive.getIntMember("indices", -1);
 					primitive.material_index = jprimitive.getIntMember("material", -1);
 
-					if (jprimitive.doesMemberExist("attributes"))
+					if (sJsonObject* jattributes = jprimitive.getMember("attributes"))
 					{
-						sJsonObject jattributes = jprimitive["attributes"];
-						unsigned attrCount = jattributes.childCount;
-						primitive.attributes = new mvGLTFAttribute[attrCount];
+						primitive.attribute_count = jattributes->childCount;
+						primitive.attributes = new mvGLTFAttribute[primitive.attribute_count];
 						
-
-						for (int k = 0; k < attrCount; k++)
+						for (int k = 0; k < primitive.attribute_count; k++)
 						{
-							sJsonObject& m = jattributes.children[k];
-							memcpy(primitive.attributes[primitive.attribute_count].semantic, m.name, MV_IMPORTER_MAX_NAME_LENGTH);
-							primitive.attributes[primitive.attribute_count].index = m.asInt();
-							primitive.attribute_count++;
+							sJsonObject& m = (*jattributes)[k];
+							memcpy(primitive.attributes[k].semantic, m.name, MV_IMPORTER_MAX_NAME_LENGTH);
+							primitive.attributes[k].index = m.asInt();
 						}
-
 					}
 
-					if (jprimitive.doesMemberExist("targets"))
+					if (sJsonObject* jtargets = jprimitive.getMember("targets"))
 					{
-						sJsonObject jtargets = jprimitive["targets"];
-						unsigned targetCount = jtargets.childCount;
-						primitive.targets = new mvGLTFMorphTarget[targetCount];
+						primitive.target_count = jtargets->childCount;
+						primitive.targets = new mvGLTFMorphTarget[primitive.target_count];
 
-						for (int k = 0; k < targetCount; k++)
+						for (int k = 0; k < primitive.target_count; k++)
 						{
 							mvGLTFMorphTarget& target = primitive.targets[k];
-
-							sJsonObject& jtarget = jtargets.children[k];
+							sJsonObject& jtarget = (*jtargets)[k];
 							
-							unsigned attrCount = jtarget.childCount;
-							target.attributes = new mvGLTFAttribute[attrCount];
-							for (int x = 0; x < attrCount; x++)
+							target.attribute_count = jtarget.childCount;
+							target.attributes = new mvGLTFAttribute[target.attribute_count];
+							for (int x = 0; x < target.attribute_count; x++)
 							{
-								sJsonObject& jattribute = jtarget.children[x];
-								memcpy(target.attributes[target.attribute_count].semantic, jattribute.name, MV_IMPORTER_MAX_NAME_LENGTH);
-								target.attributes[target.attribute_count].index = jattribute.asInt();
-								target.attribute_count++;
+								sJsonObject& jattribute = jtarget[x];
+								memcpy(target.attributes[x].semantic, jattribute.name, MV_IMPORTER_MAX_NAME_LENGTH);
+								target.attributes[x].index = jattribute.asInt();
 							}
-
-							primitive.target_count++;
 						}
-
 					}
-
-
 				}
 			}
-
-			size++;
 		}
-
 		return meshes;
 	}
 
 	static mvGLTFMaterial*
 	_LoadMaterials(sJsonObject& j, unsigned& size)
 	{
-		if (!j.doesMemberExist("materials"))
+		sJsonObject* jmaterials = j.getMember("materials");
+		if(jmaterials == nullptr)
 			return nullptr;
+		size = jmaterials->childCount;
+		mvGLTFMaterial* materials = new mvGLTFMaterial[size];
 
-		unsigned count = j["materials"].childCount;
-		mvGLTFMaterial* materials = new mvGLTFMaterial[count];
-
-		for (int i = 0; i < count; i++)
+		for (int i = 0; i < size; i++)
 		{
-			sJsonObject& jmaterial = j["materials"][i];
-			mvGLTFMaterial& material = materials[size];
+			sJsonObject& jmaterial = (*jmaterials)[i];
+			mvGLTFMaterial& material = materials[i];
 			material.name = jmaterial.getStringMember("name", "");
 			material.double_sided = jmaterial.getBoolMember("doubleSided", false);
 			material.alphaCutoff = jmaterial.getFloatMember("alphaCutoff", 0.5f);
@@ -575,161 +485,125 @@ namespace mvImp {
 	        material.emissive_factor[2] = 0.0f;
 	        material.alphaCutoff = 0.5f;
 	        material.double_sided = false;
-	        material.alphaMode = MV_ALPHA_MODE_OPAQUE;
 	        material.clearcoat_factor = 0.0f;
 	        material.clearcoat_roughness_factor = 0.0f;
 			material.clearcoat_texture = -1;
 			material.clearcoat_roughness_texture = -1;
 			material.clearcoat_normal_texture = -1;
+			material.base_color_texture = -1;
+	        material.metallic_roughness_texture = -1;
+	        material.normal_texture = -1;
+	        material.occlusion_texture = -1;
+	        material.emissive_texture = -1;
 
-			if (jmaterial.doesMemberExist("alphaMode"))
+			jmaterial.getFloatArrayMember("emissiveFactor", material.emissive_factor, 3);	
+
+			std::string alphaMode = jmaterial.getStringMember("alphaMode", "OPAQUE");
+			if     (alphaMode == "OPAQUE") material.alphaMode = MV_ALPHA_MODE_OPAQUE;
+			else if(alphaMode == "MASK")   material.alphaMode = MV_ALPHA_MODE_MASK;
+			else                           material.alphaMode = MV_ALPHA_MODE_BLEND;
+
+			if (sJsonObject* jrt = jmaterial.getMember("normalTexture"))
 			{
-				std::string alphaMode = jmaterial.getStringMember("alphaMode");
-				if (alphaMode == "OPAQUE")
-					material.alphaMode = MV_ALPHA_MODE_OPAQUE;
-				else if(alphaMode == "MASK")
-					material.alphaMode = MV_ALPHA_MODE_MASK;
-				else
-					material.alphaMode = MV_ALPHA_MODE_BLEND;
+				material.normal_texture = jrt->getIntMember("index", -1);
+				material.normal_texture_scale = jrt->getFloatMember("scale", 1.0f);
 			}
 
-			if (jmaterial.doesMemberExist("pbrMetallicRoughness"))
+			if (sJsonObject* jot = jmaterial.getMember("occlusionTexture"))
+			{
+				material.occlusion_texture = jot->getIntMember("index", -1);
+				material.occlusion_texture_strength = jot->getFloatMember("strength", 1.0f);
+			}
+
+			if (sJsonObject* jet = jmaterial.getMember("emissiveTexture"))
+			{
+				material.emissive_texture = jet->getIntMember("index", -1);
+			}
+
+			if (sJsonObject* jpbrmr = jmaterial.getMember("pbrMetallicRoughness"))
 			{
 				material.pbrMetallicRoughness = true;
-				material.metallic_factor = jmaterial["pbrMetallicRoughness"].getFloatMember("metallicFactor", 1.0f);
-				material.roughness_factor = jmaterial["pbrMetallicRoughness"].getFloatMember("roughnessFactor", 1.0f);
+				material.metallic_factor = jpbrmr->getFloatMember("metallicFactor", 1.0f);
+				material.roughness_factor = jpbrmr->getFloatMember("roughnessFactor", 1.0f);
+				jpbrmr->getFloatArrayMember("baseColorFactor", material.base_color_factor, 4);
 
-
-				if (jmaterial["pbrMetallicRoughness"].doesMemberExist("baseColorTexture"))
+				if (sJsonObject* jbaseColorTexture = jpbrmr->getMember("baseColorTexture"))
 				{
-					if (jmaterial["pbrMetallicRoughness"]["baseColorTexture"].doesMemberExist("index"))
-						material.base_color_texture = jmaterial["pbrMetallicRoughness"]["baseColorTexture"].getIntMember("index");
+					material.base_color_texture = jbaseColorTexture->getIntMember("index", -1);
 				}
-
-				if (jmaterial["pbrMetallicRoughness"].doesMemberExist("baseColorFactor"))
+				
+				if (sJsonObject* jmrt = jpbrmr->getMember("metallicRoughnessTexture"))
 				{
-					material.base_color_factor[0] = jmaterial["pbrMetallicRoughness"]["baseColorFactor"][0].asFloat();
-					material.base_color_factor[1] = jmaterial["pbrMetallicRoughness"]["baseColorFactor"][1].asFloat();
-					material.base_color_factor[2] = jmaterial["pbrMetallicRoughness"]["baseColorFactor"][2].asFloat();
-					material.base_color_factor[3] = jmaterial["pbrMetallicRoughness"]["baseColorFactor"][3].asFloat();
-				}
-
-				if (jmaterial["pbrMetallicRoughness"].doesMemberExist("metallicRoughnessTexture"))
-				{
-					material.metallic_roughness_texture = jmaterial["pbrMetallicRoughness"]["metallicRoughnessTexture"].getIntMember("index", -1);
+					material.metallic_roughness_texture = jmrt->getIntMember("index", -1);
 				}
 
 			}
 
-			if (jmaterial.doesMemberExist("normalTexture"))
+			if (sJsonObject* jextensions = jmaterial.getMember("extensions"))
 			{
-				material.normal_texture = jmaterial["normalTexture"].getIntMember("index", -1);
-				material.normal_texture_scale = jmaterial["normalTexture"].getFloatMember("scale", 1.0f);
-			}
-
-			if (jmaterial.doesMemberExist("occlusionTexture"))
-			{
-				material.occlusion_texture = jmaterial["occlusionTexture"].getIntMember("index", -1);
-				material.occlusion_texture_strength = jmaterial["occlusionTexture"].getFloatMember("strength", 1.0f);
-			}
-
-			if (jmaterial.doesMemberExist("emissiveTexture"))
-			{
-				material.emissive_texture = jmaterial["emissiveTexture"].getIntMember("index", -1);
-			}
-
-			if (jmaterial.doesMemberExist("emissiveFactor"))
-			{
-
-				material.emissive_factor[0] = jmaterial["emissiveFactor"][0].asFloat();
-				material.emissive_factor[1] = jmaterial["emissiveFactor"][1].asFloat();
-				material.emissive_factor[2] = jmaterial["emissiveFactor"][2].asFloat();
-			}		
-
-			if (jmaterial.doesMemberExist("extensions"))
-			{
-				if (jmaterial["extensions"].doesMemberExist("KHR_materials_clearcoat"))
+				if (sJsonObject* jKHR_cc = jextensions->getMember("KHR_materials_clearcoat"))
 				{
 					material.clearcoat_extension = true;
-					material.clearcoat_factor = jmaterial["extensions"]["KHR_materials_clearcoat"].getFloatMember("clearcoatFactor", 0.0f);
-					material.clearcoat_roughness_factor = jmaterial["extensions"]["KHR_materials_clearcoat"].getIntMember("clearcoatRoughnessFactor", 0.0f);
+					material.clearcoat_factor = jKHR_cc->getFloatMember("clearcoatFactor", 0.0f);
+					material.clearcoat_roughness_factor = jKHR_cc->getIntMember("clearcoatRoughnessFactor", 0.0f);
 
-					if (jmaterial["extensions"]["KHR_materials_clearcoat"].doesMemberExist("clearcoatTexture"))
+					if (sJsonObject* jcct = jKHR_cc->getMember("clearcoatTexture"))
 					{
-						material.clearcoat_texture = jmaterial["extensions"]["KHR_materials_clearcoat"]["clearcoatTexture"].getIntMember("index", -1);
-						material.clearcoat_normal_texture_scale = jmaterial["extensions"]["KHR_materials_clearcoat"]["clearcoatTexture"].getFloatMember("scale", 1.0f);
+						material.clearcoat_texture = jcct->getIntMember("index", -1);
+						material.clearcoat_normal_texture_scale = jcct->getFloatMember("scale", 1.0f);
 					}
-					if (jmaterial["extensions"]["KHR_materials_clearcoat"].doesMemberExist("clearcoatRoughnessTexture"))
+					if (sJsonObject* jccrt = jKHR_cc->getMember("clearcoatRoughnessTexture"))
 					{
-						material.clearcoat_roughness_texture = jmaterial["extensions"]["KHR_materials_clearcoat"]["clearcoatRoughnessTexture"].getIntMember("index", -1);
+						material.clearcoat_roughness_texture = jccrt->getIntMember("index", -1);
 					}
-					if (jmaterial["extensions"]["KHR_materials_clearcoat"].doesMemberExist("clearcoatNormalTexture"))
+					if (sJsonObject* jccnt = jKHR_cc->getMember("clearcoatNormalTexture"))
 					{
-						material.clearcoat_normal_texture = jmaterial["extensions"]["KHR_materials_clearcoat"]["clearcoatNormalTexture"].getIntMember("index", -1);
+						material.clearcoat_normal_texture = jccnt->getIntMember("index", -1);
 					}
-				}
-
-				if (jmaterial["pbrMetallicRoughness"].doesMemberExist("baseColorFactor"))
-				{
-					material.base_color_factor[0] = jmaterial["pbrMetallicRoughness"]["baseColorFactor"][0].asFloat();
-					material.base_color_factor[1] = jmaterial["pbrMetallicRoughness"]["baseColorFactor"][1].asFloat();
-					material.base_color_factor[2] = jmaterial["pbrMetallicRoughness"]["baseColorFactor"][2].asFloat();
-					material.base_color_factor[3] = jmaterial["pbrMetallicRoughness"]["baseColorFactor"][3].asFloat();
-				}
-
-				if (jmaterial["pbrMetallicRoughness"].doesMemberExist("metallicRoughnessTexture"))
-				{
-					material.metallic_roughness_texture = jmaterial["pbrMetallicRoughness"]["metallicRoughnessTexture"].getIntMember("index", -1);
 				}
 			}
-
-			size++;
 		}
-
 		return materials;
 	}
 
 	static mvGLTFTexture*
 	_LoadTextures(sJsonObject& j, unsigned& size)
 	{
-		if (!j.doesMemberExist("textures"))
+		sJsonObject* jtextures = j.getMember("textures");
+		if(jtextures == nullptr)
 			return nullptr;
+		size = jtextures->childCount;
+		mvGLTFTexture* textures = new mvGLTFTexture[size];
 
-		unsigned count = j["textures"].childCount;
-		mvGLTFTexture* textures = new mvGLTFTexture[count];
-
-		for (int i = 0; i < count; i++)
+		for (int i = 0; i < size; i++)
 		{
-			sJsonObject& jtexture = j["textures"][i];
-			mvGLTFTexture& texture = textures[size];
+			sJsonObject& jtexture = (*jtextures)[i];
+			mvGLTFTexture& texture = textures[i];
 			texture.sampler_index = jtexture.getIntMember("sampler", -1);
 			texture.image_index = jtexture.getIntMember("source", -1);
 			texture.name = jtexture.getStringMember("name", "");
-			size++;
 		}
-
 		return textures;
 	}
 
 	static mvGLTFSampler*
 	_LoadSamplers(sJsonObject& j, unsigned& size)
 	{
-		if (!j.doesMemberExist("samplers"))
+		sJsonObject* jsamplers = j.getMember("samplers");
+		if(jsamplers == nullptr)
 			return nullptr;
+		size = jsamplers->childCount;
+		mvGLTFSampler* samplers = new mvGLTFSampler[size];
 
-		unsigned count = j["samplers"].childCount;
-		mvGLTFSampler* samplers = new mvGLTFSampler[count];
-
-		for (int i = 0; i < count; i++)
+		for (int i = 0; i < size; i++)
 		{
-			sJsonObject& jsampler = j["samplers"][i];
-			mvGLTFSampler& sampler = samplers[size];
+			sJsonObject& jsampler = (*jsamplers)[i];
+			mvGLTFSampler& sampler = samplers[i];
 			sampler.name = jsampler.getStringMember("name", "");
 			sampler.mag_filter = jsampler.getIntMember("magFilter", -1);
 			sampler.min_filter = jsampler.getIntMember("minFilter", -1);
 			sampler.wrap_s = jsampler.getIntMember("wrapS", MV_IMP_WRAP_REPEAT);
 			sampler.wrap_t = jsampler.getIntMember("wrapT", MV_IMP_WRAP_REPEAT);
-			size++;
 		}
 		return samplers;
 	}
@@ -737,23 +611,22 @@ namespace mvImp {
 	static mvGLTFImage*
 	_LoadImages(sJsonObject& j, unsigned& size)
 	{
-		if (!j.doesMemberExist("images"))
+		sJsonObject* jimages = j.getMember("images");
+		if(jimages == nullptr)
 			return nullptr;
+		size = jimages->childCount;
+		mvGLTFImage* images = new mvGLTFImage[size];
 
-		unsigned count = j["images"].childCount;
-		mvGLTFImage* images = new mvGLTFImage[count];
-
-		for (int i = 0; i < count; i++)
+		for (int i = 0; i < size; i++)
 		{
-			sJsonObject& jimage = j["images"][i];
-			mvGLTFImage& image = images[size];
+			sJsonObject& jimage = (*jimages)[i];
+			mvGLTFImage& image = images[i];
 			image.uri = jimage.getStringMember("uri", "");
 			image.mimeType = jimage.getStringMember("mimeType", "");
 			image.buffer_view_index = jimage.getIntMember("bufferView", -1);
 			image.data = nullptr;
 			image.dataCount = 0u;
 			image.embedded = false; // ?
-			size++;
 		}
 		return images;
 	}
@@ -761,63 +634,58 @@ namespace mvImp {
 	static mvGLTFBuffer*
 	_LoadBuffers(sJsonObject& j, unsigned& size)
 	{
-		if (!j.doesMemberExist("buffers"))
+		sJsonObject* jbuffers = j.getMember("buffers");
+		if(jbuffers == nullptr)
 			return nullptr;
+		size = jbuffers->childCount;
+		mvGLTFBuffer* buffers = new mvGLTFBuffer[size];
 
-		unsigned count = j["buffers"].childCount;
-		mvGLTFBuffer* buffers = new mvGLTFBuffer[count];
-
-		for (int i = 0; i < count; i++)
+		for (int i = 0; i < size; i++)
 		{
-			sJsonObject& jbuffer = j["buffers"][i];
-			mvGLTFBuffer& buffer = buffers[size];
+			sJsonObject& jbuffer = (*jbuffers)[i];
+			mvGLTFBuffer& buffer = buffers[i];
 			buffer.uri = jbuffer.getStringMember("uri", "");
 			buffer.byte_length = jbuffer.getUIntMember("byteLength", 0u);
 			buffer.data = nullptr;
 			buffer.dataCount = 0u;
-			size++;
 		}
-
 		return buffers;
 	}
 
 	static mvGLTFBufferView*
 	_LoadBufferViews(sJsonObject& j, unsigned& size)
 	{
-		if (!j.doesMemberExist("bufferViews"))
+		sJsonObject* jbufferViews = j.getMember("bufferViews");
+		if(jbufferViews == nullptr)
 			return nullptr;
+		size = jbufferViews->childCount;
+		mvGLTFBufferView* bufferviews = new mvGLTFBufferView[size];
 
-		unsigned count = j["bufferViews"].childCount;
-		mvGLTFBufferView* bufferviews = new mvGLTFBufferView[count];
-
-		for (int i = 0; i < count; i++)
+		for (int i = 0; i < size; i++)
 		{
-
-			sJsonObject& jbufferview = j["bufferViews"][i];
-			mvGLTFBufferView& bufferview = bufferviews[size];
+			sJsonObject& jbufferview = (*jbufferViews)[i];
+			mvGLTFBufferView& bufferview = bufferviews[i];
 			bufferview.name = jbufferview.getStringMember("name", "");
 			bufferview.buffer_index = jbufferview.getIntMember("buffer", -1);
 			bufferview.byte_offset = jbufferview.getIntMember("byteOffset", 0);
 			bufferview.byte_length = jbufferview.getIntMember("byteLength", -1);
 			bufferview.byte_stride = jbufferview.getIntMember("byteStride", -1);
-			size++;
 		}
-
 		return bufferviews;
 	}
 
 	static mvGLTFAccessor*
 	_LoadAccessors(sJsonObject& j, unsigned& size)
 	{
-		if (!j.doesMemberExist("accessors"))
+		sJsonObject* jaccessors = j.getMember("accessors");
+		if(jaccessors == nullptr)
 			return nullptr;
+		size = jaccessors->childCount;
+		mvGLTFAccessor* accessors = new mvGLTFAccessor[size];
 
-		unsigned count = j["accessors"].childCount;
-		mvGLTFAccessor* accessors = new mvGLTFAccessor[count];
-
-		for (int i = 0; i < count; i++)
+		for (int i = 0; i < size; i++)
 		{
-			sJsonObject& jaccessor = j["accessors"][i];
+			sJsonObject& jaccessor = (*jaccessors)[i];
 			mvGLTFAccessor& accessor = accessors[i];
 			accessor.name = jaccessor.getStringMember("name", "");
 			accessor.byteOffset = jaccessor.getIntMember("byteOffset", 0);
@@ -825,80 +693,47 @@ namespace mvImp {
 			accessor.component_type = (mvGLTFComponentType)jaccessor.getIntMember("componentType", MV_IMP_FLOAT);
 			accessor.buffer_view_index = jaccessor.getIntMember("bufferView", -1);
 			accessor.type = MV_IMP_SCALAR;
+			jaccessor.getFloatArrayMember("max", accessor.maxes, 16);
+			jaccessor.getFloatArrayMember("min", accessor.mins, 16);
 
-			if (jaccessor.doesMemberExist("type"))
-			{
-				std::string strtype = jaccessor.getStringMember("type");
-				if (strtype == "SCALAR")    accessor.type = MV_IMP_SCALAR;
-				else if (strtype == "VEC2") accessor.type = MV_IMP_VEC2;
-				else if (strtype == "VEC3") accessor.type = MV_IMP_VEC3;
-				else if (strtype == "VEC4") accessor.type = MV_IMP_VEC4;
-				else if (strtype == "MAT2") accessor.type = MV_IMP_MAT2;
-				else if (strtype == "MAT3") accessor.type = MV_IMP_MAT3;
-				else if (strtype == "MAT4") accessor.type = MV_IMP_MAT4;
-			}
-
-			if (jaccessor.doesMemberExist("max"))
-			{
-
-				unsigned min_count = jaccessor["max"].childCount;
-				for (unsigned min_entry = 0u; min_entry < min_count; min_entry++)
-				{
-					accessor.maxes[min_entry] = jaccessor["max"][min_entry].asFloat();
-				}
-			}
-
-			if (jaccessor.doesMemberExist("min"))
-			{
-
-				unsigned min_count = jaccessor["min"].childCount;
-				for (unsigned min_entry = 0u; min_entry < min_count; min_entry++)
-				{
-					accessor.mins[min_entry] = jaccessor["min"][min_entry].asFloat();
-				}
-			}
-
-			size++;
+			std::string accessorType = jaccessor.getStringMember("type", "SCALAR");
+			if (accessorType == "SCALAR")    accessor.type = MV_IMP_SCALAR;
+			else if (accessorType == "VEC2") accessor.type = MV_IMP_VEC2;
+			else if (accessorType == "VEC3") accessor.type = MV_IMP_VEC3;
+			else if (accessorType == "VEC4") accessor.type = MV_IMP_VEC4;
+			else if (accessorType == "MAT2") accessor.type = MV_IMP_MAT2;
+			else if (accessorType == "MAT3") accessor.type = MV_IMP_MAT3;
+			else if (accessorType == "MAT4") accessor.type = MV_IMP_MAT4;
 		}
-
 		return accessors;
 	}
 
 	static mvGLTFSkin*
 	_LoadSkins(sJsonObject& j, unsigned& size)
 	{
-		if (!j.doesMemberExist("skins"))
+		sJsonObject* jskins = j.getMember("skins");
+		if(jskins == nullptr)
 			return nullptr;
+		size = jskins->childCount;
+		mvGLTFSkin* skins = new mvGLTFSkin[size];
 
-		unsigned count = j["skins"].childCount;
-		mvGLTFSkin* skins = new mvGLTFSkin[count];
-
-		for (int i = 0; i < count; i++)
+		for (int i = 0; i < size; i++)
 		{
-			sJsonObject& jnode = j["skins"][i];
-			mvGLTFSkin& skin = skins[size];
+			sJsonObject& jnode = (*jskins)[i];
+			mvGLTFSkin& skin = skins[i];
 			skin.name = jnode.getStringMember("name", "");
 			skin.inverseBindMatrices = jnode.getIntMember("inverseBindMatrices", -1);
 			skin.skeleton = jnode.getIntMember("skeleton", -1);
 			skin.joints = nullptr;
 			skin.joints_count = 0u;
 
-			if (jnode.doesMemberExist("joints"))
+			if (sJsonObject* jjoints = jnode.getMember("joints"))
 			{
-				unsigned childCount = jnode["joints"].childCount;
-				skin.joints = new unsigned[childCount];
-
-				for (int j = 0; j < childCount; j++)
-				{
-					unsigned child = jnode["joints"][j].asFloat();
-					skin.joints[skin.joints_count] = child;
-					skin.joints_count++;
-				}
+				skin.joints_count = jjoints->childCount;
+				skin.joints = new unsigned[skin.joints_count];
+				jjoints->asUIntArray(skin.joints, skin.joints_count);
 			}
-
-			size++;
 		}
-
 		return skins;
 	}
 
