@@ -1035,12 +1035,12 @@ _decode_data_uri(unsigned char** out, const char* in, size_t reqBytes, bool chec
 	{
 		if(data.size != reqBytes)
 			return false;
-		*out = new unsigned char[reqBytes];
+		*out = (unsigned char*)S_GLTF_ALLOC(sizeof(unsigned char)*reqBytes);
 		*finalSize = reqBytes;
 	}
 	else
 	{
-		*out = new unsigned char[data.size];
+		*out = (unsigned char*)S_GLTF_ALLOC(sizeof(unsigned char)*data.size);
 		*finalSize = data.size;
 	}
 
@@ -1056,11 +1056,11 @@ _LoadExtensions(sGltfJsonObject& j, unsigned& size)
 
 	unsigned extensionCount = j["extensionsUsed"].childCount;
 
-	char** extensions = new char*[extensionCount];
+	char** extensions = (char**)S_GLTF_ALLOC(sizeof(char*)*extensionCount);
 
 	for (int i = 0; i < extensionCount; i++)
 	{
-		extensions[i] = new char[S_GLTF_MAX_NAME_LENGTH];
+		extensions[i] = (char*)S_GLTF_ALLOC(sizeof(char)*S_GLTF_MAX_NAME_LENGTH);
 		sGltfJsonObject& jExtension = j["extensionsUsed"][i];
 		strncpy(extensions[i], jExtension.value, S_GLTF_MAX_NAME_LENGTH);
 		size++;
@@ -1077,7 +1077,7 @@ _LoadAnimations(sGltfJsonObject& j, unsigned& size)
 		return nullptr;
 	size = janimations->childCount;
 
-	sGLTFAnimation* animations = new sGLTFAnimation[size];
+	sGLTFAnimation* animations = (sGLTFAnimation*)S_GLTF_ALLOC(sizeof(sGLTFAnimation)*size);
 
 	for (int i = 0; i < size; i++)
 	{
@@ -1092,7 +1092,7 @@ _LoadAnimations(sGltfJsonObject& j, unsigned& size)
 		if (sGltfJsonObject* jsamplers = janimation.getMember("samplers"))
 		{
 			animation.sampler_count = jsamplers->childCount;
-			animation.samplers = new sGLTFAnimationSampler[animation.sampler_count];
+			animation.samplers = (sGLTFAnimationSampler*)S_GLTF_ALLOC(sizeof(sGLTFAnimationSampler)*animation.sampler_count);
 
 			for (int s = 0; s < animation.sampler_count; s++)
 			{
@@ -1107,7 +1107,7 @@ _LoadAnimations(sGltfJsonObject& j, unsigned& size)
 		if (sGltfJsonObject* jchannels = janimation.getMember("channels"))
 		{
 			animation.channel_count = jchannels->childCount;
-			animation.channels = new sGLTFAnimationChannel[animation.channel_count];
+			animation.channels = (sGLTFAnimationChannel*)S_GLTF_ALLOC(sizeof(sGLTFAnimationChannel)*animation.channel_count);
 
 			for (int i = 0; i < animation.channel_count; i++)
 			{
@@ -1135,7 +1135,7 @@ _LoadCameras(sGltfJsonObject& j, unsigned& size)
 		return nullptr;
 	size = jcameras->childCount;
 
-	sGLTFCamera* cameras = new sGLTFCamera[size];
+	sGLTFCamera* cameras = (sGLTFCamera*)S_GLTF_ALLOC(sizeof(sGLTFCamera)*size);
 
 	for (int i = 0; i < size; i++)
 	{
@@ -1173,7 +1173,7 @@ _LoadScenes(sGltfJsonObject& j, unsigned& size)
 	if(jscenes == nullptr)
 		return nullptr;
 	size = jscenes->childCount;
-	sGLTFScene* scenes = new sGLTFScene[size];
+	sGLTFScene* scenes = (sGLTFScene*)S_GLTF_ALLOC(sizeof(sGLTFScene)*size);
 	for (int i = 0; i < size; i++)
 	{
 		sGltfJsonObject& jscene = (*jscenes)[0];
@@ -1183,7 +1183,7 @@ _LoadScenes(sGltfJsonObject& j, unsigned& size)
 		if (sGltfJsonObject* jnodes = jscene.getMember("nodes"))
 		{
 			scene.node_count = jnodes->childCount;
-			scene.nodes = new unsigned[scene.node_count];
+			scene.nodes = (unsigned*)S_GLTF_ALLOC(sizeof(unsigned)*scene.node_count);
 			for (int j = 0; j < scene.node_count; j++)
 			{
 				int node = (*jnodes)[j].asInt();
@@ -1201,7 +1201,7 @@ _LoadNodes(sGltfJsonObject& j, unsigned& size)
 	if(jnodes == nullptr)
 		return nullptr;
 	size = jnodes->childCount;
-	sGLTFNode* nodes = new sGLTFNode[size];
+	sGLTFNode* nodes = (sGLTFNode*)S_GLTF_ALLOC(sizeof(sGLTFNode)*size);
 
 	for (int i = 0; i < size; i++)
 	{
@@ -1238,7 +1238,7 @@ _LoadNodes(sGltfJsonObject& j, unsigned& size)
 		if (sGltfJsonObject* jchildren = jnode.getMember("children"))
 		{
 			node.child_count = jchildren->childCount;
-			node.children = new unsigned[node.child_count];
+			node.children = (unsigned*)S_GLTF_ALLOC(sizeof(unsigned)*node.child_count);
 			for (int j = 0; j < node.child_count; j++)
 			{
 				unsigned child = (*jchildren)[j].asFloat();
@@ -1256,7 +1256,7 @@ _LoadMeshes(sGltfJsonObject& j, unsigned& size)
 	if(jmeshes == nullptr)
 		return nullptr;
 	size = jmeshes->childCount;
-	sGLTFMesh* meshes = new sGLTFMesh[size];
+	sGLTFMesh* meshes = (sGLTFMesh*)S_GLTF_ALLOC(sizeof(sGLTFMesh)*size);
 
 	for (int i = 0; i < size; i++)
 	{
@@ -1271,7 +1271,7 @@ _LoadMeshes(sGltfJsonObject& j, unsigned& size)
 		if (sGltfJsonObject* jweights = jmesh.getMember("weights"))
 		{
 			mesh.weights_count = (*jweights).childCount;
-			mesh.weights = new float[mesh.weights_count];
+			mesh.weights = (float*)S_GLTF_ALLOC(sizeof(float)*mesh.weights_count);
 			for (int j = 0; j < mesh.weights_count; j++)
 			{
 				sGltfJsonObject m = (*jweights)[j];
@@ -1282,7 +1282,7 @@ _LoadMeshes(sGltfJsonObject& j, unsigned& size)
 		if (sGltfJsonObject* jprimitives = jmesh.getMember("primitives"))
 		{
 			mesh.primitives_count = jprimitives->childCount;
-			mesh.primitives = new sGLTFMeshPrimitive[mesh.primitives_count];
+			mesh.primitives = (sGLTFMeshPrimitive*)S_GLTF_ALLOC(sizeof(sGLTFMeshPrimitive)*mesh.primitives_count);
 
 			for (int j = 0; j < mesh.primitives_count; j++)
 			{
@@ -1299,7 +1299,7 @@ _LoadMeshes(sGltfJsonObject& j, unsigned& size)
 				if (sGltfJsonObject* jattributes = jprimitive.getMember("attributes"))
 				{
 					primitive.attribute_count = jattributes->childCount;
-					primitive.attributes = new sGLTFAttribute[primitive.attribute_count];
+					primitive.attributes = (sGLTFAttribute*)S_GLTF_ALLOC(sizeof(sGLTFAttribute)*primitive.attribute_count);
 					
 					for (int k = 0; k < primitive.attribute_count; k++)
 					{
@@ -1312,7 +1312,7 @@ _LoadMeshes(sGltfJsonObject& j, unsigned& size)
 				if (sGltfJsonObject* jtargets = jprimitive.getMember("targets"))
 				{
 					primitive.target_count = jtargets->childCount;
-					primitive.targets = new sGLTFMorphTarget[primitive.target_count];
+					primitive.targets = (sGLTFMorphTarget*)S_GLTF_ALLOC(sizeof(sGLTFMorphTarget)*primitive.target_count);
 
 					for (int k = 0; k < primitive.target_count; k++)
 					{
@@ -1320,7 +1320,7 @@ _LoadMeshes(sGltfJsonObject& j, unsigned& size)
 						sGltfJsonObject& jtarget = (*jtargets)[k];
 						
 						target.attribute_count = jtarget.childCount;
-						target.attributes = new sGLTFAttribute[target.attribute_count];
+						target.attributes = (sGLTFAttribute*)S_GLTF_ALLOC(sizeof(sGLTFAttribute)*target.attribute_count);
 						for (int x = 0; x < target.attribute_count; x++)
 						{
 							sGltfJsonObject& jattribute = jtarget[x];
@@ -1342,7 +1342,7 @@ _LoadMaterials(sGltfJsonObject& j, unsigned& size)
 	if(jmaterials == nullptr)
 		return nullptr;
 	size = jmaterials->childCount;
-	sGLTFMaterial* materials = new sGLTFMaterial[size];
+	sGLTFMaterial* materials = (sGLTFMaterial*)S_GLTF_ALLOC(sizeof(sGLTFMaterial)*size);
 
 	for (int i = 0; i < size; i++)
 	{
@@ -1457,7 +1457,7 @@ _LoadTextures(sGltfJsonObject& j, unsigned& size)
 	if(jtextures == nullptr)
 		return nullptr;
 	size = jtextures->childCount;
-	sGLTFTexture* textures = new sGLTFTexture[size];
+	sGLTFTexture* textures = (sGLTFTexture*)S_GLTF_ALLOC(sizeof(sGLTFTexture)*size);
 
 	for (int i = 0; i < size; i++)
 	{
@@ -1477,7 +1477,7 @@ _LoadSamplers(sGltfJsonObject& j, unsigned& size)
 	if(jsamplers == nullptr)
 		return nullptr;
 	size = jsamplers->childCount;
-	sGLTFSampler* samplers = new sGLTFSampler[size];
+	sGLTFSampler* samplers = (sGLTFSampler*)S_GLTF_ALLOC(sizeof(sGLTFSampler)*size);
 
 	for (int i = 0; i < size; i++)
 	{
@@ -1499,7 +1499,7 @@ _LoadImages(sGltfJsonObject& j, unsigned& size)
 	if(jimages == nullptr)
 		return nullptr;
 	size = jimages->childCount;
-	sGLTFImage* images = new sGLTFImage[size];
+	sGLTFImage* images = (sGLTFImage*)S_GLTF_ALLOC(sizeof(sGLTFImage)*size);
 
 	for (int i = 0; i < size; i++)
 	{
@@ -1508,7 +1508,7 @@ _LoadImages(sGltfJsonObject& j, unsigned& size)
 		sGltfJsonObject* foundImage = jimage.getMember("uri");
 		if(foundImage)
 		{
-			image.uri = new char[foundImage->valueSize+1];
+			image.uri = (char*)S_GLTF_ALLOC(sizeof(char)*foundImage->valueSize+1);
 			strncpy(image.uri, foundImage->asString(), foundImage->valueSize);
 			image.uri[foundImage->valueSize] = 0;
 		}
@@ -1532,7 +1532,7 @@ _LoadBuffers(sGltfJsonObject& j, unsigned& size)
 	if(jbuffers == nullptr)
 		return nullptr;
 	size = jbuffers->childCount;
-	sGLTFBuffer* buffers = new sGLTFBuffer[size];
+	sGLTFBuffer* buffers = (sGLTFBuffer*)S_GLTF_ALLOC(sizeof(sGLTFBuffer)*size);
 	for (int i = 0; i < size; i++)
 	{
 		sGltfJsonObject& jbuffer = (*jbuffers)[i];
@@ -1540,7 +1540,7 @@ _LoadBuffers(sGltfJsonObject& j, unsigned& size)
 		sGltfJsonObject* foundBuffer = jbuffer.getMember("uri");
 		if(foundBuffer)
 		{
-			buffer.uri = new char[foundBuffer->valueSize+1];
+			buffer.uri = (char*)S_GLTF_ALLOC(sizeof(char)*foundBuffer->valueSize+1);
 			strncpy(buffer.uri, foundBuffer->asString(), foundBuffer->valueSize);
 			buffer.uri[foundBuffer->valueSize] = 0;
 		}
@@ -1562,7 +1562,7 @@ _LoadBufferViews(sGltfJsonObject& j, unsigned& size)
 	if(jbufferViews == nullptr)
 		return nullptr;
 	size = jbufferViews->childCount;
-	sGLTFBufferView* bufferviews = new sGLTFBufferView[size];
+	sGLTFBufferView* bufferviews = (sGLTFBufferView*)S_GLTF_ALLOC(sizeof(sGLTFBufferView)*size);
 
 	for (int i = 0; i < size; i++)
 	{
@@ -1584,7 +1584,7 @@ _LoadAccessors(sGltfJsonObject& j, unsigned& size)
 	if(jaccessors == nullptr)
 		return nullptr;
 	size = jaccessors->childCount;
-	sGLTFAccessor* accessors = new sGLTFAccessor[size];
+	sGLTFAccessor* accessors = (sGLTFAccessor*)S_GLTF_ALLOC(sizeof(sGLTFAccessor)*size);
 
 	for (int i = 0; i < size; i++)
 	{
@@ -1618,7 +1618,7 @@ _LoadSkins(sGltfJsonObject& j, unsigned& size)
 	if(jskins == nullptr)
 		return nullptr;
 	size = jskins->childCount;
-	sGLTFSkin* skins = new sGLTFSkin[size];
+	sGLTFSkin* skins = (sGLTFSkin*)S_GLTF_ALLOC(sizeof(sGLTFSkin)*size);
 
 	for (int i = 0; i < size; i++)
 	{
@@ -1633,7 +1633,7 @@ _LoadSkins(sGltfJsonObject& j, unsigned& size)
 		if (sGltfJsonObject* jjoints = jnode.getMember("joints"))
 		{
 			skin.joints_count = jjoints->childCount;
-			skin.joints = new unsigned[skin.joints_count];
+			skin.joints = (unsigned*)S_GLTF_ALLOC(sizeof(unsigned)*skin.joints_count);
 			jjoints->asUIntArray(skin.joints, skin.joints_count);
 		}
 	}
@@ -1659,7 +1659,7 @@ _ReadFile(const char* file, unsigned& size, const char* mode)
 		fseek(dataFile, 0, SEEK_SET);
 
 		// allocate memory to contain the whole file:
-		char* data = new char[size];
+		char* data = (char*)S_GLTF_ALLOC(sizeof(char)*size);
 
 		// copy the file into the buffer:
 		size_t result = fread(data, sizeof(char), size, dataFile);
@@ -1728,7 +1728,7 @@ sLoadBinaryGLTF(const char* root, const char* file)
 		char* datachunkData = &data[28 + chunkLength];
 
 		model.buffers[0].dataCount = model.buffers[0].byte_length;
-		model.buffers[0].data = new unsigned char[model.buffers[0].dataCount];
+		model.buffers[0].data = (unsigned char*)S_GLTF_ALLOC(sizeof(char)*model.buffers[0].dataCount);
 		memcpy(model.buffers[0].data, datachunkData, model.buffers[0].byte_length);
 		int a = 6;
 	}
@@ -1745,7 +1745,7 @@ sLoadBinaryGLTF(const char* root, const char* file)
 			char* bufferRawData = (char*)model.buffers[bufferView.buffer_index].data;
 			char* bufferRawSection = &bufferRawData[bufferView.byte_offset]; // start of buffer section
 			image.dataCount = bufferView.byte_length;
-			image.data = new unsigned char[image.dataCount];
+			image.data = (unsigned char*)S_GLTF_ALLOC(sizeof(char)*image.dataCount);
 			memcpy(image.data, bufferRawSection, bufferView.byte_length);
 			continue;
 		}
@@ -1791,15 +1791,15 @@ sLoadBinaryGLTF(const char* root, const char* file)
 			unsigned dataSize = 0u;
 			void* bufferdata = _ReadFile(combinedFile, dataSize, "rb");
 			buffer.dataCount = dataSize;
-			buffer.data = new unsigned char[buffer.dataCount];
+			buffer.data = (unsigned char*)S_GLTF_ALLOC(sizeof(char)*buffer.dataCount);
 			memcpy(buffer.data, bufferdata, dataSize);
-			delete[] bufferdata;
+			S_GLTF_FREE(bufferdata);
 		}
 
 	}
 
 	Semper::free_json(&rootObject);
-	delete[] data;
+	S_GLTF_FREE(data);
 	return model;
 }
 
@@ -1825,7 +1825,7 @@ Semper::load_gltf(const char* root, const char* file)
 	}
 
 	sGltfJsonObject* rootObject = load_json(data, dataSize);
-	delete[] data;
+	S_GLTF_FREE(data);
 	model.scene = rootObject->getIntMember("scene", 0);
 	model.scenes = _LoadScenes(*rootObject, model.scene_count);
 	model.nodes = _LoadNodes(*rootObject, model.node_count);
@@ -1883,7 +1883,7 @@ Semper::load_gltf(const char* root, const char* file)
 			unsigned dataSize = 0u;
 			void* data = _ReadFile(combinedFile, dataSize, "rb");
 			buffer.dataCount = dataSize;
-			buffer.data = new unsigned char[buffer.dataCount];
+			buffer.data = (unsigned char*)S_GLTF_ALLOC(sizeof(char)*buffer.dataCount);
 			memcpy(buffer.data, data, dataSize);
 		}
 
@@ -1904,74 +1904,74 @@ Semper::free_gltf(sGLTFModel& model)
 			
 			for (unsigned k = 0; k < model.meshes[i].primitives[j].target_count; k++)
 			{
-				delete[] model.meshes[i].primitives[j].targets[k].attributes;
+				S_GLTF_FREE(model.meshes[i].primitives[j].targets[k].attributes);
 			}
-			delete[] model.meshes[i].primitives[j].targets;
-			delete[] model.meshes[i].primitives[j].attributes;
+			S_GLTF_FREE(model.meshes[i].primitives[j].targets);
+			S_GLTF_FREE(model.meshes[i].primitives[j].attributes);
 		}
-		delete[] model.meshes[i].weights;
-		delete[] model.meshes[i].primitives;
+		S_GLTF_FREE(model.meshes[i].weights);
+		S_GLTF_FREE(model.meshes[i].primitives);
 	}
 
 
 	for (unsigned i = 0; i < model.node_count; i++)
 	{
 		if (model.nodes[i].children)
-			delete[] model.nodes[i].children;
+			S_GLTF_FREE(model.nodes[i].children);
 	}
 
 	for (unsigned i = 0; i < model.scene_count; i++)
 	{
 		if (model.scenes[i].nodes)
-			delete[] model.scenes[i].nodes;
+			S_GLTF_FREE(model.scenes[i].nodes);
 	}
 
 	for (unsigned i = 0; i < model.animation_count; i++)
 	{
 		if (model.animations[i].sampler_count > 0)
-			delete[] model.animations[i].samplers;
+			S_GLTF_FREE(model.animations[i].samplers);
 		if (model.animations[i].channel_count > 0)
-			delete[] model.animations[i].channels;
+			S_GLTF_FREE(model.animations[i].channels);
 	}
 
 	for (unsigned i = 0; i < model.skin_count; i++)
 	{
 		if (model.skins[i].joints_count > 0)
-			delete[] model.skins[i].joints;
+			S_GLTF_FREE(model.skins[i].joints);
 	}
 
 	for (unsigned i = 0; i < model.extension_count; i++)
 	{
-		delete[] (model.extensions[i]);
+		S_GLTF_FREE(model.extensions[i]);
 	}
 
 	for (unsigned i = 0; i < model.image_count; i++)
 	{
 		if(model.images[i].uri)
-			delete[] (model.images[i].uri);
+			S_GLTF_FREE(model.images[i].uri);
 	}
 
 	for (unsigned i = 0; i < model.buffer_count; i++)
 	{
 		if(model.buffers[i].uri)
-			delete[] (model.buffers[i].uri);
+			S_GLTF_FREE(model.buffers[i].uri);
 	}
 
-	delete[] model.scenes;
-	delete[] model.nodes;
-	delete[] model.meshes;
-	delete[] model.materials;
-	delete[] model.textures;
-	delete[] model.samplers;
-	delete[] model.images;
-	delete[] model.buffers;
-	delete[] model.bufferviews;
-	delete[] model.accessors;
-	delete[] model.cameras;
-	delete[] model.animations;
-	delete[] model.extensions;
-	delete[] model.skins;
-	delete[] model.extensions;
+	S_GLTF_FREE(model.scenes);
+	S_GLTF_FREE(model.nodes);
+	S_GLTF_FREE(model.meshes);
+	S_GLTF_FREE(model.materials);
+	S_GLTF_FREE(model.textures);
+	S_GLTF_FREE(model.samplers);
+	S_GLTF_FREE(model.images);
+	S_GLTF_FREE(model.buffers);
+	S_GLTF_FREE(model.bufferviews);
+	S_GLTF_FREE(model.accessors);
+	S_GLTF_FREE(model.cameras);
+	S_GLTF_FREE(model.animations);
+	S_GLTF_FREE(model.extensions);
+	S_GLTF_FREE(model.skins);
+	S_GLTF_FREE(model.extensions);
 
 	model.scenes = nullptr;
 	model.nodes = nullptr;
