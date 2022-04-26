@@ -107,7 +107,6 @@ struct mvVector
 	T*  data     = nullptr;
 	inline mvVector() { size = capacity = 0; data = nullptr; }
 	inline mvVector<T>& operator=(const mvVector<T>& src) { clear(); resize(src.size); memcpy(data, src.data, (size_t)size * sizeof(T)); return *this; }
-	//inline ~mvVector() { if (data) free(data); }
 	inline bool empty() const { return size == 0; }
 	inline int  size_in_bytes() const   { return size * (int)sizeof(T); }
 	inline T&   operator[](int i) { assert(i >= 0 && i < size); return data[i]; }
@@ -264,12 +263,9 @@ _remove_whitespace(char* rawData, char* spacesRemoved, size_t size)
 	size_t currentPos = 0;
 	size_t newCursor = 0;
 	bool insideString = false;
-
 	char currentChar = rawData[currentPos];
-
 	while (currentChar != 0)
 	{
-
 		if (currentChar == '"' && insideString)
 			insideString = false;
 		else if (currentChar == '"')
@@ -297,10 +293,8 @@ _remove_whitespace(char* rawData, char* spacesRemoved, size_t size)
 			spacesRemoved[newCursor] = 0;
 			break;
 		}
-
 		currentChar = rawData[currentPos];
 	}
-
 }
 
 static void
@@ -316,7 +310,7 @@ _update_children_pointers(sJsonObject* object, mvVector<sJsonObject*>* objects)
 	}
 
 	object->childCount = (*(mvVector<int>*)(object->_internal)).size;
-	object->children = new sJsonObject[object->childCount];
+	object->children = (sJsonObject*)malloc(sizeof(sJsonObject)*object->childCount);
 	for(int i = 0; i < (*(mvVector<int>*)(object->_internal)).size; i++)
 	{
 		object->children[i] = *(*objects)[(*(mvVector<int>*)(object->_internal))[i]];
@@ -333,13 +327,13 @@ Semper::parse_json(char* rawData, int size)
 	sStack parentIDStack;
 	mvVector<sJsonObject*> objectArray;
 
-	char* spacesRemoved = new char[size];
+	char* spacesRemoved = (char*)malloc(sizeof(char)*size);
 	_remove_whitespace(rawData, spacesRemoved, size);
 
-	mvVector<sToken_>* tokens = new mvVector<sToken_>;
+	mvVector<sToken_>* tokens = new mvVector<sToken_>[size];
 	_parse_for_tokens(spacesRemoved, *tokens);
 
-	sJsonObject *rootObject = new sJsonObject();
+	sJsonObject *rootObject = (sJsonObject *)malloc(sizeof(sJsonObject));
 	rootObject->type = S_JSON_TYPE_OBJECT;
 	rootObject->_internal = new mvVector<int>();
 	
@@ -368,10 +362,9 @@ Semper::parse_json(char* rawData, int size)
 			}
 			else
 			{
-				sJsonObject *newObject = new sJsonObject();
+				sJsonObject *newObject = (sJsonObject*)malloc(sizeof(sJsonObject));
 				newObject->type = S_JSON_TYPE_OBJECT;
 				newObject->_internal = new mvVector<int>();
-				mvVector<int>          _childrenID;
 				objectArray.push_back(newObject);
 				parentIDStack.push(objectArray.size-1);
 				(*(mvVector<int>*)(parent->_internal)).push_back(objectArray.size-1);
@@ -389,7 +382,7 @@ Semper::parse_json(char* rawData, int size)
 			}
 			else
 			{
-				sJsonObject *newObject = new sJsonObject();
+				sJsonObject *newObject = (sJsonObject*)malloc(sizeof(sJsonObject));
 				newObject->type = S_JSON_TYPE_ARRAY;
 				newObject->_internal = new mvVector<int>();
 				objectArray.push_back(newObject);
@@ -417,7 +410,7 @@ Semper::parse_json(char* rawData, int size)
 		case S_JSON_TOKEN_MEMBER:
 		{
 
-			sJsonObject* newObject = new sJsonObject();
+			sJsonObject* newObject = (sJsonObject*)malloc(sizeof(sJsonObject));
 			objectArray.push_back(newObject);
 			newObject->_internal = new mvVector<int>();
 			parentIDStack.push(objectArray.size-1);
@@ -452,7 +445,7 @@ Semper::parse_json(char* rawData, int size)
 			}
 			else // in array
 			{
-				sJsonObject *newObject = new sJsonObject();
+				sJsonObject *newObject = (sJsonObject*)malloc(sizeof(sJsonObject));
 				newObject->type = S_JSON_TYPE_STRING;
 				newObject->_internal = new mvVector<int>();
 				objectArray.push_back(newObject);
@@ -473,7 +466,7 @@ Semper::parse_json(char* rawData, int size)
 			}
 			else // in array
 			{
-				sJsonObject *newObject = new sJsonObject();
+				sJsonObject *newObject = (sJsonObject*)malloc(sizeof(sJsonObject));
 				if((*tokens)[i].value.data[0] == 't')      newObject->type = S_JSON_TYPE_BOOL;
 				else if((*tokens)[i].value.data[0] == 'f') newObject->type = S_JSON_TYPE_BOOL;
 				else if((*tokens)[i].value.data[0] == 'n') newObject->type = S_JSON_TYPE_NULL;
