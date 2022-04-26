@@ -161,30 +161,30 @@ struct sGLTFAttribute
 
 struct sGLTFAccessor
 {
-	std::string        name;              // default ""
-	sGLTFAccessorType  type;              // default S_GLTF_SCALAR
-	int                buffer_view_index; // default -1
-	sGLTFComponentType component_type;    // default S_GLTF_FLOAT
-	int                byteOffset;        // default 0
-	int                count;             // default -1
+	char               name[S_GLTF_MAX_NAME_LENGTH]; // default ""
+	sGLTFAccessorType  type;                         // default S_GLTF_SCALAR
+	int                buffer_view_index;            // default -1
+	sGLTFComponentType component_type;               // default S_GLTF_FLOAT
+	int                byteOffset;                   // default 0
+	int                count;                        // default -1
 	float              maxes[16];
 	float              mins[16];
 };
 
 struct sGLTFTexture
 {
-	std::string name;          // default ""
-	int         image_index;   // default -1
-	int         sampler_index; // default -1
+	char name[S_GLTF_MAX_NAME_LENGTH]; // default ""
+	int  image_index;                  // default -1
+	int  sampler_index;                // default -1
 };
 
 struct sGLTFSampler
 {
-	std::string name;       // default ""
-	int         mag_filter; // default -1
-	int         min_filter; // default -1
-	int         wrap_s;     // default S_GLTF_WRAP_REPEAT
-	int         wrap_t;     // default S_GLTF_WRAP_REPEAT
+	char name[S_GLTF_MAX_NAME_LENGTH]; // default ""
+	int  mag_filter;                   // default -1
+	int  min_filter;                   // default -1
+	int  wrap_s;                       // default S_GLTF_WRAP_REPEAT
+	int  wrap_t;                       // default S_GLTF_WRAP_REPEAT
 };
 
 struct sGLTFImage
@@ -207,42 +207,42 @@ struct sGLTFBuffer
 
 struct sGLTFBufferView
 {
-	std::string name;
-	int         buffer_index; // default -1
-	int         byte_offset;  // default  0
-	int         byte_length;  // default -1
-	int         byte_stride;  // default -1
+	char name[S_GLTF_MAX_NAME_LENGTH]; // default ""
+	int  buffer_index;                 // default -1
+	int  byte_offset;                  // default  0
+	int  byte_length;                  // default -1
+	int  byte_stride;                  // default -1
 };
 
 struct sGLTFMorphTarget
 {
 	sGLTFAttribute* attributes;       // default nullptr
-	unsigned         attribute_count; // default 0u
+	unsigned        attribute_count; // default 0u
 };
 
 struct sGLTFMeshPrimitive
 {
-	int                indices_index;   // accessor index, default -1
-	int                material_index;  // default -1
+	int               indices_index;   // accessor index, default -1
+	int               material_index;  // default -1
 	sGLTFPrimMode     mode;             // default S_GLTF_TRIANGLES
 	sGLTFAttribute*   attributes;       // default nullptr
-	unsigned           attribute_count; // default 0u
+	unsigned          attribute_count; // default 0u
 	sGLTFMorphTarget* targets;          // default nullptr
-	unsigned           target_count;    // default 0u
+	unsigned          target_count;    // default 0u
 };
 
 struct sGLTFMesh
 {
-	std::string          name;             // default ""
-	sGLTFMeshPrimitive* primitives;        // default nullptr
-	unsigned             primitives_count; // default 0u
-	float*               weights;          // default nullptr
-	unsigned             weights_count;    // default 0u
+	char                name[S_GLTF_MAX_NAME_LENGTH]; // default ""
+	sGLTFMeshPrimitive* primitives;                   // default nullptr
+	unsigned            primitives_count;             // default 0u
+	float*              weights;                      // default nullptr
+	unsigned            weights_count;                // default 0u
 };
 
 struct sGLTFMaterial
 {
-	std::string    name;                           // default ""
+	char           name[S_GLTF_MAX_NAME_LENGTH];   // default ""
 	int            base_color_texture;             // default -1
 	int            metallic_roughness_texture;     // default -1
 	int            normal_texture;                 // default -1
@@ -287,7 +287,7 @@ struct sGLTFOrthographic
 
 struct sGLTFCamera
 {
-	std::string       name; // default ""
+	char              name[S_GLTF_MAX_NAME_LENGTH]; // default ""
 	sGLTFCameraType   type; // default S_GLTF_PERSPECTIVE
 	sGLTFPerspective  perspective;
 	sGLTFOrthographic orthographic;
@@ -295,45 +295,45 @@ struct sGLTFCamera
 
 struct sGLTFNode
 {
-	std::string name;           // default ""
-	int         mesh_index;     // default 0.0f;
-	int         skin_index;     // default 0.0f;
-	int         camera_index;   // default 0.0f;
-	unsigned*   children;       // default nullptr;
-	unsigned    child_count;    // default 0u;
-	float       matrix[16];     // default identity
-	float       rotation[4];    // default { 0.0f, 0.0f, 0.0f, 1.0f };
-	float       scale[3];       // default { 1.0f, 1.0f, 1.0f};
-	float       translation[3]; // default { 0.0f, 0.0f, 0.0f};
-	bool        hadMatrix;      // default false;
+	char        name[S_GLTF_MAX_NAME_LENGTH]; // default ""
+	int         mesh_index;                   // default 0.0f;
+	int         skin_index;                   // default 0.0f;
+	int         camera_index;                 // default 0.0f;
+	unsigned*   children;                     // default nullptr;
+	unsigned    child_count;                  // default 0u;
+	float       matrix[16];                   // default identity
+	float       rotation[4];                  // default { 0.0f, 0.0f, 0.0f, 1.0f };
+	float       scale[3];                     // default { 1.0f, 1.0f, 1.0f};
+	float       translation[3];               // default { 0.0f, 0.0f, 0.0f};
+	bool        hadMatrix;                    // default false;
 };
 
 struct sGLTFAnimationChannelTarget
 {
-	int         node; // default -1
-	std::string path;
+	int  node; // default -1
+	char path[S_GLTF_MAX_NAME_LENGTH];
 };
 
 struct sGLTFAnimationChannel
 {
-	int                          sampler; // default -1
+	int                         sampler; // default -1
 	sGLTFAnimationChannelTarget target;
 };
 
 struct sGLTFAnimationSampler
 {
-	int         input;         // default -1
-	int         output;        // default -1
-	std::string interpolation; // default "LINEAR"
+	int  input;                                 // default -1
+	int  output;                                // default -1
+	char interpolation[S_GLTF_MAX_NAME_LENGTH]; // default "LINEAR"
 };
 
 struct sGLTFAnimation
 {
-	std::string            name;          // default ""
-	sGLTFAnimationChannel* channels;      // default nullptr
-	unsigned               channel_count; // default 0u
-	sGLTFAnimationSampler* samplers;      // default nullptr
-	unsigned               sampler_count; // default 0u
+	char                   name[S_GLTF_MAX_NAME_LENGTH]; // default ""
+	sGLTFAnimationChannel* channels;                     // default nullptr
+	unsigned               channel_count;                // default 0u
+	sGLTFAnimationSampler* samplers;                     // default nullptr
+	unsigned               sampler_count;                // default 0u
 };
 
 struct sGLTFScene
@@ -344,17 +344,17 @@ struct sGLTFScene
 
 struct sGLTFSkin
 {
-	std::string name;
-	int         inverseBindMatrices; // default -1
-	int         skeleton;            // default -1
-	unsigned*   joints;              // default nullptr
-	unsigned    joints_count;        // default 0u
+	char        name[S_GLTF_MAX_NAME_LENGTH]; // default ""
+	int         inverseBindMatrices;          // default -1
+	int         skeleton;                     // default -1
+	unsigned*   joints;                       // default nullptr
+	unsigned    joints_count;                 // default 0u
 };
 
 struct sGLTFModel
 {
-	std::string      root;        // default ""
-	std::string      name;        // default ""
+	const char*      root;
+	const char*      name;
 	sGLTFScene*      scenes;      // default nullptr
 	sGLTFNode*       nodes;       // default nullptr
 	sGLTFMesh*       meshes;      // default nullptr
@@ -368,7 +368,7 @@ struct sGLTFModel
 	sGLTFCamera*     cameras;     // default nullptr
 	sGLTFAnimation*  animations;  // default nullptr
 	sGLTFSkin*       skins;       // default nullptr
-	std::string*     extensions;  // default nullptr
+	char**           extensions;  // default nullptr
 
 	int      scene;            // default -1
 	unsigned scene_count;      // default 0u
@@ -394,6 +394,7 @@ struct sGLTFModel
 // sGLTF Implementation
 //-----------------------------------------------------------------------------
 
+//#define S_GLTF_IMPLEMENTATION
 #ifdef S_GLTF_IMPLEMENTATION
 
 //sJson, v0.1 (WIP)
@@ -414,7 +415,7 @@ typedef int sGltfJsonType; // enum -> sGltfJsonType_
 namespace Semper
 {
 	sGltfJsonObject* load_json(char* rawData, int size);
-	void         free_json(sGltfJsonObject** rootObject);
+	void             free_json(sGltfJsonObject** rootObject);
 }
 
 //-----------------------------------------------------------------------------
@@ -447,7 +448,7 @@ struct sGltfJsonObject
 
 	// retrieve members
 	inline sGltfJsonObject* getMember      (const char* member){ for (int i = 0; i < childCount; i++) if (strcmp(member, children[i].name) == 0) return &children[i]; return nullptr;}
-	inline bool         doesMemberExist(const char* member){ return getMember(member) != nullptr;}
+	inline bool             doesMemberExist(const char* member){ return getMember(member) != nullptr;}
 
 	// cast values
 	inline int      asInt()    { S_GLTF_ASSERT(type == S_GLTF_JSON_TYPE_NUMBER); return (int)strtod(value, nullptr);}
@@ -1002,7 +1003,7 @@ _base64_decode(std::string const& encoded_string)
 }
 
 static bool
-_decode_data_uri(unsigned char** out, std::string& mime_type, const std::string& in, size_t reqBytes, bool checkSize)
+_decode_data_uri(unsigned char** out, std::string& mime_type, const std::string& in, size_t reqBytes, bool checkSize, size_t* finalSize)
 {
 	std::string header = "data:application/octet-stream;base64,";
 	std::string data;
@@ -1068,15 +1069,19 @@ _decode_data_uri(unsigned char** out, std::string& mime_type, const std::string&
 		if(data.size() != reqBytes)
 			return false;
 		*out = new unsigned char[reqBytes];
+		*finalSize = reqBytes;
 	}
 	else
+	{
 		*out = new unsigned char[data.size()];
+		*finalSize = data.size();
+	}
 
-	memcpy(*out, data.data(), reqBytes);
+	memcpy(*out, data.data(), data.size());	
 	return true;
 }
 
-static std::string*
+static char**
 _LoadExtensions(sGltfJsonObject& j, unsigned& size)
 {
 	if (!j.doesMemberExist("extensionsUsed"))
@@ -1084,12 +1089,13 @@ _LoadExtensions(sGltfJsonObject& j, unsigned& size)
 
 	unsigned extensionCount = j["extensionsUsed"].childCount;
 
-	std::string* extensions = new std::string[extensionCount];
+	char** extensions = new char*[extensionCount];
 
 	for (int i = 0; i < extensionCount; i++)
 	{
+		extensions[i] = new char[S_GLTF_MAX_NAME_LENGTH];
 		sGltfJsonObject& jExtension = j["extensionsUsed"][i];
-		extensions[i] = jExtension.value;
+		strncpy(extensions[i], jExtension.value, S_GLTF_MAX_NAME_LENGTH);
 		size++;
 	}
 
@@ -1114,7 +1120,7 @@ _LoadAnimations(sGltfJsonObject& j, unsigned& size)
 		animation.channels = nullptr;
 		animation.sampler_count = 0u;
 		animation.samplers = nullptr;
-		animation.name = janimation.getStringMember("name", "");
+		strncpy(animation.name, janimation.getStringMember("name", ""), S_GLTF_MAX_NAME_LENGTH);
 
 		if (sGltfJsonObject* jsamplers = janimation.getMember("samplers"))
 		{
@@ -1127,7 +1133,7 @@ _LoadAnimations(sGltfJsonObject& j, unsigned& size)
 				sGLTFAnimationSampler& sampler = animation.samplers[s];
 				sampler.input = jsampler.getIntMember("input", -1);
 				sampler.output = jsampler.getIntMember("output", -1);
-				sampler.interpolation = jsampler.getStringMember("interpolation", "LINEAR");
+				strncpy(sampler.interpolation, jsampler.getStringMember("interpolation", "LINEAR"), S_GLTF_MAX_NAME_LENGTH);
 			}
 		}
 
@@ -1146,7 +1152,7 @@ _LoadAnimations(sGltfJsonObject& j, unsigned& size)
 				if (sGltfJsonObject* jtarget = jchannel.getMember("target"))
 				{
 					channel.target.node = jtarget->getIntMember("node", -1);
-					channel.target.path = jtarget->getStringMember("path", "");
+					strncpy(channel.target.path, jtarget->getStringMember("path", ""), S_GLTF_MAX_NAME_LENGTH);
 				}
 			}
 		}
@@ -1168,7 +1174,7 @@ _LoadCameras(sGltfJsonObject& j, unsigned& size)
 	{
 		sGltfJsonObject& jcamera = (*jcameras)[i];
 		sGLTFCamera& camera = cameras[i];
-		camera.name = jcamera.getStringMember("name", "");
+		strncpy(camera.name, jcamera.getStringMember("name", ""), S_GLTF_MAX_NAME_LENGTH);
 		std::string type = jcamera.getStringMember("type", "perspective");
 
 		if (type == "perspective") camera.type = S_GLTF_PERSPECTIVE;
@@ -1252,7 +1258,7 @@ _LoadNodes(sGltfJsonObject& j, unsigned& size)
 		node.translation[0] = 0.0f;
 		node.translation[1] = 0.0f;
 		node.translation[2] = 0.0f;
-		node.name = jnode.getStringMember("name", "");
+		strncpy(node.name, jnode.getStringMember("name", ""), S_GLTF_MAX_NAME_LENGTH);
 		node.mesh_index = jnode.getIntMember("mesh", -1);
 		node.camera_index = jnode.getIntMember("camera", -1);
 		node.skin_index = jnode.getIntMember("skin", -1);
@@ -1293,7 +1299,7 @@ _LoadMeshes(sGltfJsonObject& j, unsigned& size)
 		mesh.primitives_count = 0u;
 		mesh.weights = nullptr;
 		mesh.weights_count = 0u;
-		mesh.name = jmesh.getStringMember("name", "");
+		strncpy(mesh.name, jmesh.getStringMember("name", ""), S_GLTF_MAX_NAME_LENGTH);
 
 		if (sGltfJsonObject* jweights = jmesh.getMember("weights"))
 		{
@@ -1375,7 +1381,7 @@ _LoadMaterials(sGltfJsonObject& j, unsigned& size)
 	{
 		sGltfJsonObject& jmaterial = (*jmaterials)[i];
 		sGLTFMaterial& material = materials[i];
-		material.name = jmaterial.getStringMember("name", "");
+		strncpy(material.name, jmaterial.getStringMember("name", ""), S_GLTF_MAX_NAME_LENGTH);
 		material.double_sided = jmaterial.getBoolMember("doubleSided", false);
 		material.alphaCutoff = jmaterial.getFloatMember("alphaCutoff", 0.5f);
 		material.pbrMetallicRoughness = false;
@@ -1492,7 +1498,7 @@ _LoadTextures(sGltfJsonObject& j, unsigned& size)
 		sGLTFTexture& texture = textures[i];
 		texture.sampler_index = jtexture.getIntMember("sampler", -1);
 		texture.image_index = jtexture.getIntMember("source", -1);
-		texture.name = jtexture.getStringMember("name", "");
+		strncpy(texture.name, jtexture.getStringMember("name", ""), S_GLTF_MAX_NAME_LENGTH);
 	}
 	return textures;
 }
@@ -1510,7 +1516,7 @@ _LoadSamplers(sGltfJsonObject& j, unsigned& size)
 	{
 		sGltfJsonObject& jsampler = (*jsamplers)[i];
 		sGLTFSampler& sampler = samplers[i];
-		sampler.name = jsampler.getStringMember("name", "");
+		strncpy(sampler.name, jsampler.getStringMember("name", ""), S_GLTF_MAX_NAME_LENGTH);
 		sampler.mag_filter = jsampler.getIntMember("magFilter", -1);
 		sampler.min_filter = jsampler.getIntMember("minFilter", -1);
 		sampler.wrap_s = jsampler.getIntMember("wrapS", S_GLTF_WRAP_REPEAT);
@@ -1575,7 +1581,7 @@ _LoadBufferViews(sGltfJsonObject& j, unsigned& size)
 	{
 		sGltfJsonObject& jbufferview = (*jbufferViews)[i];
 		sGLTFBufferView& bufferview = bufferviews[i];
-		bufferview.name = jbufferview.getStringMember("name", "");
+		strncpy(bufferview.name, jbufferview.getStringMember("name", ""), S_GLTF_MAX_NAME_LENGTH);
 		bufferview.buffer_index = jbufferview.getIntMember("buffer", -1);
 		bufferview.byte_offset = jbufferview.getIntMember("byteOffset", 0);
 		bufferview.byte_length = jbufferview.getIntMember("byteLength", -1);
@@ -1597,7 +1603,7 @@ _LoadAccessors(sGltfJsonObject& j, unsigned& size)
 	{
 		sGltfJsonObject& jaccessor = (*jaccessors)[i];
 		sGLTFAccessor& accessor = accessors[i];
-		accessor.name = jaccessor.getStringMember("name", "");
+		strncpy(accessor.name, jaccessor.getStringMember("name", ""), S_GLTF_MAX_NAME_LENGTH);
 		accessor.byteOffset = jaccessor.getIntMember("byteOffset", 0);
 		accessor.count = jaccessor.getIntMember("count", -1);
 		accessor.component_type = (sGLTFComponentType)jaccessor.getIntMember("componentType", S_GLTF_FLOAT);
@@ -1631,7 +1637,7 @@ _LoadSkins(sGltfJsonObject& j, unsigned& size)
 	{
 		sGltfJsonObject& jnode = (*jskins)[i];
 		sGLTFSkin& skin = skins[i];
-		skin.name = jnode.getStringMember("name", "");
+		strncpy(skin.name, jnode.getStringMember("name", ""), S_GLTF_MAX_NAME_LENGTH);
 		skin.inverseBindMatrices = jnode.getIntMember("inverseBindMatrices", -1);
 		skin.skeleton = jnode.getIntMember("skeleton", -1);
 		skin.joints = nullptr;
@@ -1761,7 +1767,7 @@ sLoadBinaryGLTF(const char* root, const char* file)
 		{
 			image.embedded = true;
 			std::string mime_type;
-			if (!_decode_data_uri(&image.data, mime_type, image.uri, 0, false))
+			if (!_decode_data_uri(&image.data, mime_type, image.uri, 0, false, &image.dataCount))
 			{
 				assert(false && "here");
 			}
@@ -1783,7 +1789,7 @@ sLoadBinaryGLTF(const char* root, const char* file)
 		if (_is_data_uri(buffer.uri))
 		{
 			std::string mime_type;
-			if (!_decode_data_uri(&buffer.data, mime_type, buffer.uri, buffer.byte_length, true))
+			if (!_decode_data_uri(&buffer.data, mime_type, buffer.uri, buffer.byte_length, true, &buffer.dataCount))
 			{
 				assert(false && "here");
 			}
@@ -1854,7 +1860,7 @@ Semper::load_gltf(const char* root, const char* file)
 		{
 			image.embedded = true;
 			std::string mime_type;
-			if (!_decode_data_uri(&image.data, mime_type, image.uri, 0, false))
+			if (!_decode_data_uri(&image.data, mime_type, image.uri, 0, false, &image.dataCount))
 			{
 				assert(false && "here");
 			}
@@ -1873,7 +1879,7 @@ Semper::load_gltf(const char* root, const char* file)
 		if (_is_data_uri(buffer.uri))
 		{
 			std::string mime_type;
-			if (!_decode_data_uri(&buffer.data, mime_type, buffer.uri, buffer.byte_length, true))
+			if (!_decode_data_uri(&buffer.data, mime_type, buffer.uri, buffer.byte_length, true, &buffer.dataCount))
 			{
 				assert(false && "here");
 			}
@@ -1942,6 +1948,11 @@ Semper::free_gltf(sGLTFModel& model)
 			delete[] model.skins[i].joints;
 	}
 
+	for (unsigned i = 0; i < model.extension_count; i++)
+	{
+		delete[] (model.extensions[i]);
+	}
+
 	delete[] model.scenes;
 	delete[] model.nodes;
 	delete[] model.meshes;
@@ -1956,6 +1967,7 @@ Semper::free_gltf(sGLTFModel& model)
 	delete[] model.animations;
 	delete[] model.extensions;
 	delete[] model.skins;
+	delete[] model.extensions;
 
 	model.scenes = nullptr;
 	model.nodes = nullptr;
@@ -1971,7 +1983,9 @@ Semper::free_gltf(sGLTFModel& model)
 	model.animations = nullptr;
 	model.extensions = nullptr;
 	model.skins = nullptr;
+	model.extensions = nullptr;
 
+	model.extension_count = 0u;
 	model.scene_count = 0u;
 	model.node_count = 0u;
 	model.mesh_count = 0u;
