@@ -1,6 +1,6 @@
 #pragma once
 
-#include "mvMath.h"
+#include "sMath.h"
 #include "mvGraphics.h"
 #include "mvCamera.h"
 
@@ -11,10 +11,10 @@ struct mvDirectionalLight;
 struct mvPointLightInfo
 {
 
-    mvVec4 viewLightPos = { 0.0f, 15.0f, 0.0f, 1.0f };
+    sVec4 viewLightPos = { 0.0f, 15.0f, 0.0f, 1.0f };
     //-------------------------- ( 16 bytes )
 
-    mvVec3 diffuseColor = { 1.0f, 1.0f, 1.0f };
+    sVec3 diffuseColor = { 1.0f, 1.0f, 1.0f };
     float  diffuseIntensity = 1.0f;
     //-------------------------- ( 16 bytes )
 
@@ -31,10 +31,10 @@ struct mvDirectionLightInfo
 {
 
     float  diffuseIntensity = 1.0f;
-    mvVec3 viewLightDir = { 0.0f, -1.0f, 0.0f };
+    sVec3 viewLightDir = { 0.0f, -1.0f, 0.0f };
     //-------------------------- ( 16 bytes )
 
-    mvVec3 diffuseColor = { 1.0f, 1.0f, 1.0f };
+    sVec3 diffuseColor = { 1.0f, 1.0f, 1.0f };
     float  padding = 0.0f;
     //-------------------------- ( 16 bytes )
 

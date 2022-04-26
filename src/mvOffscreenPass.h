@@ -1,6 +1,6 @@
 #pragma once
 
-#include "mvMath.h"
+#include "sMath.h"
 #include "mvWindows.h"
 #include "mvGraphics.h"
 

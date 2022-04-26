@@ -1,7 +1,7 @@
 #pragma once
 
 #include <string>
-#include "mvMath.h"
+#include "sMath.h"
 #include "mvGraphics.h"
 
 // forward declarations
@@ -21,7 +21,7 @@ mvMaterial* mvGetRawMaterialAsset(mvMaterialManager* manager, const std::string&
 
 struct mvMaterialData
 {
-    mvVec4 albedo = { 0.45f, 0.45f, 0.85f, 1.0f };
+    sVec4 albedo = { 0.45f, 0.45f, 0.85f, 1.0f };
     //-------------------------- ( 16 bytes )
 
     float metalness = 1.0f;
@@ -30,7 +30,7 @@ struct mvMaterialData
     float fresnel   = 0.04f;
     //-------------------------- ( 16 bytes )
 
-    mvVec3 emisiveFactor = { 0.0f, 0.0f, 0.0f };
+    sVec3 emisiveFactor = { 0.0f, 0.0f, 0.0f };
     float occlusionStrength = 1.0f;
     //-------------------------- ( 16 bytes )
 
@@ -46,10 +46,10 @@ struct mvMaterialData
     float thicknessFactor          = 1.0f;
     //-------------------------- ( 16 bytes )
 
-    mvVec4 attenuationColor = { 0.45f, 0.45f, 0.85f, 1.0f };
+    sVec4 attenuationColor = { 0.45f, 0.45f, 0.85f, 1.0f };
     //-------------------------- ( 16 bytes )
 
-    mvVec3 sheenColorFactor = { 0.0f, 0.0f, 0.0f };
+    sVec3 sheenColorFactor = { 0.0f, 0.0f, 0.0f };
     float sheenRoughnessFactor = 1.0f;
     //-------------------------- ( 16 bytes )
 

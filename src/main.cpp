@@ -1,12 +1,12 @@
-#include <imgui.h>
-#include <imgui_internal.h>
-#include <imgui_impl_win32.h>
-#include <imgui_impl_dx11.h>
+#include <chrono>
+#include "imgui.h"
+#include "imgui_internal.h"
+#include "imgui_impl_win32.h"
+#include "imgui_impl_dx11.h"
 #include "mvLights.h"
 #include "mvOffscreenPass.h"
 #include "mvGraphics.h"
 #include "sGltf.h"
-#include "mvTimer.h"
 #include "gltf_scene_info.h"
 #include "mvAnimation.h"
 #include "mvAssetLoader.h"
@@ -15,9 +15,19 @@
 #define MV_ENVIRONMENT_CACHE 3
 #define MV_MODEL_CACHE 5
 
+struct mvTimer
+{
+	std::chrono::steady_clock::time_point _start;
+	std::chrono::steady_clock::time_point _last;
+	inline mvTimer() { _last = std::chrono::steady_clock::now();_start = std::chrono::steady_clock::now();}
+	inline float mark(){ const auto old = _last; _last = std::chrono::steady_clock::now(); const std::chrono::duration<float> frameTime = _last - old; return frameTime.count();}
+	inline float peek() { return std::chrono::duration<float>(std::chrono::steady_clock::now() - _last).count();}
+	inline float now() { const std::chrono::duration<float> totalTime = std::chrono::steady_clock::now() - _start; return totalTime.count();}
+	
+};
+
 mvViewport* window = nullptr;
 ImVec2 oldContentRegion = ImVec2(500, 500);
-
 
 // misc
 float currentTime = 0.0f;
@@ -76,12 +86,12 @@ int main()
     mvRendererContext renderCtx = create_renderer_context(graphics);
 
     // main camera
-    mvCamera camera = create_perspective_camera({ 0.0f, 0.0f, 5.0f }, (float)PI/4.0f, 1.0f, 0.1f, 400.0f);
+    mvCamera camera = create_perspective_camera({ 0.0f, 0.0f, 5.0f }, (float)S_PI/4.0f, 1.0f, 0.1f, 400.0f);
     renderCtx.camera = &camera;
 
     // lights
     mvPointLight pointlight = create_point_light(graphics);
-    pointlight.info.viewLightPos = mvVec4{ -15.0f, 15.0f, 10.0f, 0.0f };
+    pointlight.info.viewLightPos = sVec4{ -15.0f, 15.0f, 10.0f, 0.0f };
     mvDirectionalLight directionalLight = create_directional_light(graphics);
 
     // passes
@@ -181,20 +191,20 @@ int main()
                     nextModelCacheIndex = 0;
             }
 
-            camera.minBound = mvVec3{ modelCache[currentModel].minBoundary[0], modelCache[currentModel].minBoundary[1], modelCache[currentModel].minBoundary[2] };
-            camera.maxBound = mvVec3{ modelCache[currentModel].maxBoundary[0], modelCache[currentModel].maxBoundary[1], modelCache[currentModel].maxBoundary[2] };
+            camera.minBound = sVec3{ modelCache[currentModel].minBoundary[0], modelCache[currentModel].minBoundary[1], modelCache[currentModel].minBoundary[2] };
+            camera.maxBound = sVec3{ modelCache[currentModel].maxBoundary[0], modelCache[currentModel].maxBoundary[1], modelCache[currentModel].maxBoundary[2] };
 
             camera.target.x = (camera.minBound.x + camera.maxBound.x) / 2.0f;
             camera.target.y = (camera.minBound.y + camera.maxBound.y) / 2.0f;
             camera.target.z = (camera.minBound.z + camera.maxBound.z) / 2.0f;
 
             // fit radius
-            float maxAxisLength = get_max(camera.maxBound.x - camera.minBound.x, camera.maxBound.y - camera.minBound.y);
+            float maxAxisLength = Semper::get_max(camera.maxBound.x - camera.minBound.x, camera.maxBound.y - camera.minBound.y);
             float yfov = camera.fieldOfView;
             float xfov = camera.fieldOfView * camera.aspectRatio;
             float yZoom = maxAxisLength / 2.0f / tan(yfov / 2.0f);
             float xZoom = maxAxisLength / 2.0f / tan(xfov / 2.0f);
-            camera.distance = get_max(xZoom, yZoom);
+            camera.distance = Semper::get_max(xZoom, yZoom);
             camera.baseDistance = camera.distance;
 
             // fit camera planes
@@ -203,14 +213,14 @@ int main()
             camera.pitch = 0.0f;
             camera.nearZ = camera.distance - longestDistance * 0.6;
             camera.farZ = camera.distance + longestDistance * 0.6;
-            camera.nearZ = get_max(camera.nearZ, camera.farZ / 10000.0f);
+            camera.nearZ = Semper::get_max(camera.nearZ, camera.farZ / 10000.0f);
             camera.panSpeed = longestDistance / 3500;
 
             // fit camera target
             float target[3] = { 0.0f, 0.0f, 0.0f };
             for (int i = 0; i < 3; i++)
                 target[i] = (camera.maxBound[i] + camera.minBound[i]) / 2.0f;
-            camera.pos = mvVec3{ target[0], target[1], target[2] + camera.distance };
+            camera.pos = sVec3{ target[0], target[1], target[2] + camera.distance };
         }
 
         //-----------------------------------------------------------------------------
@@ -247,8 +257,8 @@ int main()
         ctx->OMSetRenderTargets(1, offscreen.targetView.GetAddressOf(), offscreen.depthView.Get());
         ctx->RSSetViewports(1u, &offscreen.viewport);
 
-        mvMat4 viewMatrix = create_arcball_view(camera);
-        mvMat4 projMatrix = create_projection(camera);
+        sMat4 viewMatrix = create_arcball_view(camera);
+        sMat4 projMatrix = create_projection(camera);
 
         renderCtx.globalInfo.camPos = camera.pos;
 
@@ -272,7 +282,7 @@ int main()
             ctx->PSSetShaderResources(14u, 1, environmentCache[currentEnvironment].brdfLUT.textureView.GetAddressOf());
         }
 
-        render_mesh_solid(graphics, renderCtx, modelCache[currentModel], pointlight.mesh, translate(identity_mat4(), pointlight.info.viewLightPos.xyz()), viewMatrix, projMatrix);
+        render_mesh_solid(graphics, renderCtx, modelCache[currentModel], pointlight.mesh, Semper::translate(pointlight.info.viewLightPos.xyz), viewMatrix, projMatrix);
 
         if (activeScene > -1)
         {
@@ -406,8 +416,8 @@ int main()
             static float dangle = 0.0f;
             if (ImGui::SliderFloat("X Angle##d", &dangle, -45.0f, 45.0f))
             {
-                float zcomponent = sinf(PI * dangle / 180.0f);
-                float ycomponent = cosf(PI * dangle / 180.0f);
+                float zcomponent = sinf(S_PI * dangle / 180.0f);
+                float ycomponent = cosf(S_PI * dangle / 180.0f);
                 directionalLight.info.viewLightDir = { 0.0f, -ycomponent, zcomponent };
             }
 

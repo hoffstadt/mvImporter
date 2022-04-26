@@ -8,13 +8,14 @@
 #include <string>
 #include "mvWindows.h"
 #include "sGltf.h"
-#include "mvMath.h"
+#include "sMath.h"
 
 typedef int mvAssetID;
 typedef int mvVertexElement;
 
 // forward declarations
 struct mvViewport;
+struct mvTransforms;
 struct mvModel;
 struct mvRenderJob;
 struct mvRendererContext;
@@ -82,9 +83,9 @@ mvComputeShader create_compute_shader         (mvGraphics& graphics, const std::
 // renderer
 mvRendererContext create_renderer_context(mvGraphics& graphics);
 void              submit_scene     (mvGraphics& graphics, mvModel& model, mvRendererContext& ctx, mvScene& scene);
-void              render_scenes    (mvGraphics& graphics, mvModel& model, mvRendererContext& ctx, mvMat4 cam, mvMat4 proj);
-void              render_skybox    (mvGraphics& graphics, mvRendererContext& rendererCtx, mvModel& model, mvCubeTexture& cubemap, ID3D11SamplerState* sampler, mvMat4 cam, mvMat4 proj);
-void              render_mesh_solid(mvGraphics& graphics, mvRendererContext& rendererCtx, mvModel& model, mvMesh& mesh, mvMat4 transform, mvMat4 cam, mvMat4 proj);
+void              render_scenes    (mvGraphics& graphics, mvModel& model, mvRendererContext& ctx, sMat4 cam, sMat4 proj);
+void              render_skybox    (mvGraphics& graphics, mvRendererContext& rendererCtx, mvModel& model, mvCubeTexture& cubemap, ID3D11SamplerState* sampler, sMat4 cam, sMat4 proj);
+void              render_mesh_solid(mvGraphics& graphics, mvRendererContext& rendererCtx, mvModel& model, mvMesh& mesh, sMat4 transform, sMat4 cam, sMat4 proj);
 
 enum mvVertexElement_
 {
@@ -104,6 +105,13 @@ enum mvVertexElement_
 	Weights1,
 };
 
+struct mvTransforms
+{
+	sMat4 model               = sMat4(1.0f);
+	sMat4 modelView           = sMat4(1.0f);
+	sMat4 modelViewProjection = sMat4(1.0f);
+};
+
 struct mvNode
 {
     std::string  name;
@@ -112,21 +120,21 @@ struct mvNode
     mvAssetID    camera = -1;
     mvAssetID    children[256];
     unsigned int childCount = 0u;
-    mvMat4       matrix               = identity_mat4();
-    mvVec3       translation          = { 0.0f, 0.0f, 0.0f };
-    mvVec4       rotation             = { 0.0f, 0.0f, 0.0f, 1.0f };
-    mvVec3       scale                = { 1.0f, 1.0f, 1.0f };
-    mvVec3       animationTranslation = { 0.0f, 0.0f, 0.0f };
-    mvVec4       animationRotation    = { 0.0f, 0.0f, 0.0f, 1.0f };
-    mvVec3       animationScale       = { 1.0f, 1.0f, 1.0f };
+    sMat4       matrix               = sMat4(1.0f);
+    sVec3       translation          = { 0.0f, 0.0f, 0.0f };
+    sVec4       rotation             = { 0.0f, 0.0f, 0.0f, 1.0f };
+    sVec3       scale                = { 1.0f, 1.0f, 1.0f };
+    sVec3       animationTranslation = { 0.0f, 0.0f, 0.0f };
+    sVec4       animationRotation    = { 0.0f, 0.0f, 0.0f, 1.0f };
+    sVec3       animationScale       = { 1.0f, 1.0f, 1.0f };
     bool         translationAnimated = false;
     bool         rotationAnimated = false;
     bool         scaleAnimated = false;
     bool         animated = false;
 
-    mvMat4      transform = identity_mat4();
-    mvMat4      worldTransform = identity_mat4();
-    mvMat4      inverseWorldTransform = identity_mat4();
+    sMat4      transform = sMat4(1.0f);
+    sMat4      worldTransform = sMat4(1.0f);
+    sMat4      inverseWorldTransform = sMat4(1.0f);
 };
 
 struct mvScene
@@ -306,17 +314,17 @@ struct mvMesh
 struct GlobalInfo
 {
 
-    mvVec3 ambientColor = { 0.04f, 0.04f, 0.04f };
+    sVec3 ambientColor = { 0.04f, 0.04f, 0.04f };
     int pcfRange = 0;
     //-------------------------- ( 16 bytes )
 
-    mvVec3 camPos;
+    sVec3 camPos;
     char _padding[4];
     //-------------------------- ( 16 bytes )
     
-    mvMat4 projection;
-    mvMat4 model;
-    mvMat4 view;
+    sMat4 projection;
+    sMat4 model;
+    sMat4 view;
     //-------------------------- ( 192 bytes )
 
     //-------------------------- ( 124 bytes )
@@ -325,7 +333,7 @@ struct GlobalInfo
 struct mvRenderJob
 {
     mvMeshPrimitive*                     meshPrimitive = nullptr;
-    mvMat4                               accumulatedTransform = identity_mat4();
+    sMat4                                accumulatedTransform = sMat4(1.0f);
     mvSkin*                              skin = nullptr;
     Microsoft::WRL::ComPtr<ID3D11Buffer> morphBuffer = nullptr;
 };

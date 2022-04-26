@@ -570,17 +570,17 @@ finalize_vertex_buffers(RawAttributeBuffers& rawBuffers, mvVertexLayout& modifie
         indices[1] = indexBuffer[i + 1];
         indices[2] = indexBuffer[i + 2];
 
-        mvVec3 p[3];
-        mvVec3 n[3];
-        mvVec4 tan[3];
-        mvVec2 tex0[3];
-        mvVec2 tex1[3];
-        mvVec4 color0[3];
-        mvVec4 color1[3];
-        mvVec4 joints0[3];
-        mvVec4 joints1[3];
-        mvVec4 weights0[3];
-        mvVec4 weights1[3];
+        sVec3 p[3];
+        sVec3 n[3];
+        sVec4 tan[3];
+        sVec2 tex0[3];
+        sVec2 tex1[3];
+        sVec4 color0[3];
+        sVec4 color1[3];
+        sVec4 joints0[3];
+        sVec4 joints1[3];
+        sVec4 weights0[3];
+        sVec4 weights1[3];
 
         unsigned int currentLocation = 0u;
         for (size_t j = 0; j < modifiedLayout.semantics.size(); j++)
@@ -738,11 +738,11 @@ finalize_vertex_buffers(RawAttributeBuffers& rawBuffers, mvVertexLayout& modifie
 
 
          //calculate tangents
-        mvVec3 edge1 = p[1] - p[0];
-        mvVec3 edge2 = p[2] - p[0];
+        sVec3 edge1 = p[1] - p[0];
+        sVec3 edge2 = p[2] - p[0];
 
-        mvVec2 uv1 = tex0[1] - tex0[0];
-        mvVec2 uv2 = tex0[2] - tex0[0];
+        sVec2 uv1 = tex0[1] - tex0[0];
+        sVec2 uv2 = tex0[2] - tex0[0];
 
         if (uv1.x * uv2.y == uv1.y * uv2.x)
         {
@@ -754,7 +754,7 @@ finalize_vertex_buffers(RawAttributeBuffers& rawBuffers, mvVertexLayout& modifie
 
         float dirCorrection = (uv1.x * uv2.y - uv1.y * uv2.x) < 0.0f ? -1.0f : 1.0f;
 
-        mvVec4 tangent = {
+        sVec4 tangent = {
             ((edge1.x * uv2.y) - (edge2.x * uv1.y)) * dirCorrection,
             ((edge1.y * uv2.y) - (edge2.y * uv1.y)) * dirCorrection,
             ((edge1.z * uv2.y) - (edge2.z * uv1.y)) * dirCorrection,
@@ -768,7 +768,7 @@ finalize_vertex_buffers(RawAttributeBuffers& rawBuffers, mvVertexLayout& modifie
             //    ((edge1.y * uv2.y) - (edge2.y * uv1.y)),
             //    ((edge1.z * uv2.y) - (edge2.z * uv1.y))
             //};
-            mvVec3 nn = normalize(cross(edge1, edge2));
+            sVec3 nn = Semper::normalize(Semper::cross(edge1, edge2));
             n[0] = nn;
             n[1] = nn;
             n[2] = nn;
@@ -776,12 +776,12 @@ finalize_vertex_buffers(RawAttributeBuffers& rawBuffers, mvVertexLayout& modifie
 
         // project tangent and bitangent into the plane formed by the vertex' normal
         //mvVec3 newTangent = cNormalize(tangent - n * (tangent * n));
-        mvVec4 tanf[3];
+        sVec4 tanf[3];
         for (size_t k = 0; k < 3; k++)
         {
             if (rawBuffers.tangentAttributeBuffer.empty())
             {
-                mvVec3 interTan = normalize(tangent.xyz() - n[k] * (tangent.xyz() * n[k]));
+                sVec3 interTan = Semper::normalize(tangent.xyz - n[k] * (tangent.xyz * n[k]));
                 tanf[k].x = interTan.x;
                 tanf[k].y = interTan.y;
                 tanf[k].z = interTan.z;
@@ -1238,10 +1238,10 @@ load_gltf_meshes(mvGraphics& graphics, mvModel& mvmodel, sGLTFModel& model, floa
 
                 sGLTFMaterial& material = model.materials[glprimitive.material_index];
 
-                materialData.data.albedo = *(mvVec4*)material.base_color_factor;
+                materialData.data.albedo = *(sVec4*)material.base_color_factor;
                 materialData.data.metalness = material.metallic_factor;
                 materialData.data.roughness = material.roughness_factor;
-                materialData.data.emisiveFactor = *(mvVec3*)material.emissive_factor;
+                materialData.data.emisiveFactor = *(sVec3*)material.emissive_factor;
                 materialData.data.occlusionStrength = material.occlusion_texture_strength;
                 materialData.data.alphaCutoff = 0.5f;
                 materialData.data.doubleSided = material.double_sided;
@@ -1314,17 +1314,17 @@ load_gltf_nodes(mvModel& mvmodel, sGLTFModel& model)
         for (int i = 0; i < glnode.child_count; i++)
             newNode.children[i] = (mvAssetID)glnode.children[i];
 
-        newNode.rotation = *(mvVec4*)(glnode.rotation);
-        newNode.scale = *(mvVec3*)(glnode.scale);
-        newNode.translation = *(mvVec3*)(glnode.translation);
+        newNode.rotation = *(sVec4*)(glnode.rotation);
+        newNode.scale = *(sVec3*)(glnode.scale);
+        newNode.translation = *(sVec3*)(glnode.translation);
 
         if (glnode.hadMatrix)
         {
-            newNode.matrix = *(mvMat4*)(glnode.matrix);
+            newNode.matrix = *(sMat4*)(glnode.matrix);
         }
         else
         {
-            newNode.matrix = rotation_translation_scale(newNode.rotation, newNode.translation, newNode.scale);
+            newNode.matrix = Semper::rotation_translation_scale(newNode.rotation, newNode.translation, newNode.scale);
         }
 
         newNode.transform = newNode.matrix;
@@ -1450,7 +1450,7 @@ load_gltf_assets(mvGraphics& graphics, sGLTFModel& model)
 
             if (camera.type == MV_CAMERA_PERSPECTIVE)
             {
-                mvMesh frustum1 = create_frustum2(graphics, camera.fieldOfView * 180.0f / PI, camera.aspectRatio, camera.nearZ, camera.farZ);
+                mvMesh frustum1 = create_frustum2(graphics, camera.fieldOfView * 180.0f / S_PI, camera.aspectRatio, camera.nearZ, camera.farZ);
                 mvmodel.meshes.push_back(frustum1);
                 node.mesh = mvmodel.meshes.size() - 1;
             }

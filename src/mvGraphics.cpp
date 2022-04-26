@@ -12,8 +12,8 @@
 #define S_GLTF_IMPLEMENTATION
 #include "sGltf.h"
 
-#define MV_MATH_IMPLEMENTATION
-#include "mvMath.h"
+#define SEMPER_MATH_IMPLEMENTATION
+#include "sMath.h"
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
@@ -370,7 +370,7 @@ create_renderer_context(mvGraphics& graphics)
 }
 
 static void
-submit_mesh(mvGraphics& graphics, mvModel& model, mvRendererContext& ctx, mvMesh& mesh, mvMat4 transform, mvSkin* skin)
+submit_mesh(mvGraphics& graphics, mvModel& model, mvRendererContext& ctx, mvMesh& mesh, sMat4 transform, mvSkin* skin)
 {
     auto device = graphics.imDeviceContext;
 
@@ -397,12 +397,12 @@ submit_mesh(mvGraphics& graphics, mvModel& model, mvRendererContext& ctx, mvMesh
 }
 
 static void
-submit_node(mvGraphics& graphics, mvModel& model, mvRendererContext& ctx, mvNode& node, mvMat4 parentTransform)
+submit_node(mvGraphics& graphics, mvModel& model, mvRendererContext& ctx, mvNode& node, sMat4 parentTransform)
 {
     mvSkin* skin = nullptr;
 
     node.worldTransform = parentTransform * node.transform;
-    node.inverseWorldTransform = invert(node.worldTransform);
+    node.inverseWorldTransform = Semper::invert(node.worldTransform);
 
     if (node.skin != -1)
         skin = &model.skins[node.skin];
@@ -413,7 +413,7 @@ submit_node(mvGraphics& graphics, mvModel& model, mvRendererContext& ctx, mvNode
         for (unsigned int i = 0; i < model.meshes[node.mesh].primitives.size(); i++)
         {
             mvMeshPrimitive& primitive = model.meshes[node.mesh].primitives[i];
-            ctx.wireframeJobs.push_back({ &primitive, node.worldTransform* scale(identity_mat4(), {-1.0f, -1.0f, -1.0f}) });
+            ctx.wireframeJobs.push_back({ &primitive, node.worldTransform*Semper::scale(-1.0f, -1.0f, -1.0f)});
         }
     }
 
@@ -432,7 +432,7 @@ submit_scene(mvGraphics& graphics, mvModel& model, mvRendererContext& ctx, mvSce
     {
         mvNode& rootNode = model.nodes[scene.nodes[i]];
         rootNode.worldTransform = rootNode.transform;
-        rootNode.inverseWorldTransform = invert(rootNode.worldTransform);
+        rootNode.inverseWorldTransform = Semper::invert(rootNode.worldTransform);
 
         if (rootNode.skin != -1)
             skin = &model.skins[rootNode.skin];
@@ -444,7 +444,7 @@ submit_scene(mvGraphics& graphics, mvModel& model, mvRendererContext& ctx, mvSce
             for (unsigned int i = 0; i < model.meshes[rootNode.mesh].primitives.size(); i++)
             {
                 mvMeshPrimitive& primitive = model.meshes[rootNode.mesh].primitives[i];
-                ctx.wireframeJobs.push_back({ &primitive, rootNode.worldTransform * scale(identity_mat4(), {-1.0f, -1.0f, -1.0f}) });
+                ctx.wireframeJobs.push_back({ &primitive, rootNode.worldTransform * Semper::scale(-1.0f, -1.0f, -1.0f)});
             }
         }
 
@@ -456,7 +456,7 @@ submit_scene(mvGraphics& graphics, mvModel& model, mvRendererContext& ctx, mvSce
 }
 
 static void
-render_job(mvGraphics& graphics, mvModel& model, mvRenderJob& job, mvMat4 cam, mvMat4 proj)
+render_job(mvGraphics& graphics, mvModel& model, mvRenderJob& job, sMat4 cam, sMat4 proj)
 {
     auto device = graphics.imDeviceContext;
 
@@ -529,7 +529,7 @@ render_job(mvGraphics& graphics, mvModel& model, mvRenderJob& job, mvMat4 cam, m
 }
 
 static void
-render_wireframe_job(mvGraphics& graphics, mvRendererContext& rendererCtx, mvModel& model, mvRenderJob& job, mvMat4 cam, mvMat4 proj)
+render_wireframe_job(mvGraphics& graphics, mvRendererContext& rendererCtx, mvModel& model, mvRenderJob& job, sMat4 cam, sMat4 proj)
 {
 
     auto device = graphics.imDeviceContext;
@@ -559,7 +559,7 @@ render_wireframe_job(mvGraphics& graphics, mvRendererContext& rendererCtx, mvMod
 }
 
 void 
-render_scenes(mvGraphics& graphics, mvModel& model, mvRendererContext& ctx, mvMat4 cam, mvMat4 proj)
+render_scenes(mvGraphics& graphics, mvModel& model, mvRendererContext& ctx, sMat4 cam, sMat4 proj)
 {
     // opaque objects
     for (int i = 0; i < ctx.opaqueJobs.size(); i++)
@@ -580,7 +580,7 @@ render_scenes(mvGraphics& graphics, mvModel& model, mvRendererContext& ctx, mvMa
 }
 
 void
-render_mesh_solid(mvGraphics& graphics, mvRendererContext& rendererCtx, mvModel& model, mvMesh& mesh, mvMat4 transform, mvMat4 cam, mvMat4 proj)
+render_mesh_solid(mvGraphics& graphics, mvRendererContext& rendererCtx, mvModel& model, mvMesh& mesh, sMat4 transform, sMat4 cam, sMat4 proj)
 {
     auto device = graphics.imDeviceContext;
 
@@ -612,7 +612,7 @@ render_mesh_solid(mvGraphics& graphics, mvRendererContext& rendererCtx, mvModel&
 }
 
 void 
-render_skybox(mvGraphics& graphics, mvRendererContext& rendererCtx, mvModel& model, mvCubeTexture& cubemap, ID3D11SamplerState* sampler, mvMat4 cam, mvMat4 proj)
+render_skybox(mvGraphics& graphics, mvRendererContext& rendererCtx, mvModel& model, mvCubeTexture& cubemap, ID3D11SamplerState* sampler, sMat4 cam, sMat4 proj)
 {
 
     static const float side = 1.0f / 2.0f;
@@ -649,7 +649,7 @@ render_skybox(mvGraphics& graphics, mvRendererContext& rendererCtx, mvModel& mod
     set_pipeline_state(graphics, rendererCtx.skyboxPipeline);
 
     mvTransforms transforms{};
-    transforms.model = identity_mat4() * scale(identity_mat4(), mvVec3{ 1.0f, 1.0f, -1.0f });
+    transforms.model = Semper::scale(1.0f, 1.0f, -1.0f );
     transforms.modelView = cam * transforms.model;
     transforms.modelViewProjection = proj * cam * transforms.model;
 
@@ -872,11 +872,11 @@ create_textured_cube(mvGraphics& graphics, float size)
     for (size_t i = 0; i < indices.size(); i += 3)
     {
 
-        mvVec3 p0 = { vertices[11 * indices[i]], vertices[14 * indices[i] + 1], vertices[14 * indices[i] + 2] };
-        mvVec3 p1 = { vertices[11 * indices[i+1]], vertices[14 * indices[i + 1] + 1], vertices[14 * indices[i + 1] + 2] };
-        mvVec3 p2 = { vertices[11 * indices[i+2]], vertices[14 * indices[i + 2] + 1], vertices[14 * indices[i + 2] + 2] };
+        sVec3 p0 = { vertices[11 * indices[i]], vertices[14 * indices[i] + 1], vertices[14 * indices[i] + 2] };
+        sVec3 p1 = { vertices[11 * indices[i+1]], vertices[14 * indices[i + 1] + 1], vertices[14 * indices[i + 1] + 2] };
+        sVec3 p2 = { vertices[11 * indices[i+2]], vertices[14 * indices[i + 2] + 1], vertices[14 * indices[i + 2] + 2] };
 
-        mvVec3 n = normalize(cross(p1 - p0, p2 - p0));
+        sVec3 n = Semper::normalize(Semper::cross(p1 - p0, p2 - p0));
         vertices[11 * indices[i] + 3] = n[0];
         vertices[11 * indices[i] + 4] = n[1];
         vertices[11 * indices[i] + 5] = n[2];
@@ -926,11 +926,11 @@ create_textured_quad(mvGraphics& graphics, float size)
 
     for (size_t i = 0; i < indices.size(); i += 3)
     {
-        mvVec3 p0 = { vertices[11 * indices[i]], vertices[11 * indices[i] + 1], vertices[11 * indices[i] + 2] };
-        mvVec3 p1 = { vertices[11 * indices[i + 1]], vertices[11 * indices[i + 1] + 1], vertices[11 * indices[i + 1] + 2] };
-        mvVec3 p2 = { vertices[11 * indices[i + 2]], vertices[11 * indices[i + 2] + 1], vertices[11 * indices[i + 2] + 2] };
+        sVec3 p0 = { vertices[11 * indices[i]], vertices[11 * indices[i] + 1], vertices[11 * indices[i] + 2] };
+        sVec3 p1 = { vertices[11 * indices[i + 1]], vertices[11 * indices[i + 1] + 1], vertices[11 * indices[i + 1] + 2] };
+        sVec3 p2 = { vertices[11 * indices[i + 2]], vertices[11 * indices[i + 2] + 1], vertices[11 * indices[i + 2] + 2] };
 
-        mvVec3 n = normalize(cross(p1 - p0, p2 - p0));
+        sVec3 n = Semper::normalize(Semper::cross(p1 - p0, p2 - p0));
         vertices[11 * indices[i] + 3] = n[0];
         vertices[11 * indices[i] + 4] = n[1];
         vertices[11 * indices[i] + 5] = n[2];
@@ -1586,7 +1586,7 @@ create_cube_map_from_hdr(mvGraphics& graphics, const std::string& path)
 	mvCubeTexture texture{};
 	Microsoft::WRL::ComPtr<ID3D11Texture2D> textureResource;
 
-	mvVec4* surfaces[6];
+	sVec4* surfaces[6];
 
 	float gamma = 1.0f;
 	float gamma_scale = 1.0f;
@@ -1599,14 +1599,14 @@ create_cube_map_from_hdr(mvGraphics& graphics, const std::string& path)
 
 	int pixels = texWidth * texHeight * 4 * 4;
 
-	mvVec2 inUV = { 0.0f, 0.0f };
+	sVec2 inUV = { 0.0f, 0.0f };
 	int currentPixel = 0;
 
 	int res = 512;
 	float xinc = 1.0f / (float)res;
 	float yinc = 1.0f / (float)res;
 	for (int i = 0; i < 6; i++)
-		surfaces[i] = new mvVec4[res * res];
+		surfaces[i] = new sVec4[res * res];
 
 	mvComputeShader shader = create_compute_shader(graphics, std::string(graphics.shaderDirectory) + "panorama_to_cube.hlsl");
 	mvBuffer inputBuffer = create_buffer(graphics, testTextureBytes, texWidth * texHeight * 4 * sizeof(float), (D3D11_BIND_FLAG)(D3D11_BIND_UNORDERED_ACCESS | D3D11_BIND_SHADER_RESOURCE), sizeof(float) * 4, D3D11_RESOURCE_MISC_BUFFER_STRUCTURED);
@@ -1705,7 +1705,7 @@ create_cube_map_from_hdr(mvGraphics& graphics, const std::string& path)
 }
 
 static void
-copy_resource_to_cubemap(mvGraphics& graphics, ID3D11Texture2D* specularTextureResource, mvCubeTexture& dst, std::vector<mvVec4*>& surfaces, int width, int height, int mipSlice, int mipLevels)
+copy_resource_to_cubemap(mvGraphics& graphics, ID3D11Texture2D* specularTextureResource, mvCubeTexture& dst, std::vector<sVec4*>& surfaces, int width, int height, int mipSlice, int mipLevels)
 {
 	D3D11_BOX sourceRegion;
 	for (int i = 0; i < 6; ++i)
@@ -1738,15 +1738,15 @@ copy_resource_to_cubemap(mvGraphics& graphics, ID3D11Texture2D* specularTextureR
 	}
 }
 
-static std::vector<mvVec4*>*
+static std::vector<sVec4*>*
 create_single_specular_map(mvGraphics& graphics, mvCubeTexture& cubemap, int resolution, int width, int sampleCount, float lodBias, int currentMipLevel, int outputMipLevels)
 {
 
-	std::vector<mvVec4*>* surfaces = new std::vector<mvVec4*>(7);
+	std::vector<sVec4*>* surfaces = new std::vector<sVec4*>(7);
 	for (int i = 0; i < 6; i++)
-		(*surfaces)[i] = new mvVec4[width * width];
+		(*surfaces)[i] = new sVec4[width * width];
 
-	(*surfaces)[6] = new mvVec4[width * width];
+	(*surfaces)[6] = new sVec4[width * width];
 
 	mvBuffer faces[6];
 	for (int i = 0; i < 6; i++)
@@ -1880,9 +1880,9 @@ create_irradiance_map(mvGraphics& graphics, mvCubeTexture& cubemap, int resoluti
 
 	mvCubeTexture texture{};
 
-	mvVec4* surfaces[6];
+	sVec4* surfaces[6];
 	for (int i = 0; i < 6; i++)
-		surfaces[i] = new mvVec4[resolution * resolution];
+		surfaces[i] = new sVec4[resolution * resolution];
 
 	mvBuffer faces[6];
 	for (int i = 0; i < 6; i++)
@@ -2062,7 +2062,7 @@ create_environment(mvGraphics& graphics, const std::string& path, int resolution
 	for (int i = mipLevels - 1; i != -1; i--)
 	{
 		int currentWidth = resolution >> i;
-		std::vector<mvVec4*>* faces = create_single_specular_map(graphics, environment.skyMap, resolution, currentWidth, sampleCount, lodBias, i, mipLevels);
+		std::vector<sVec4*>* faces = create_single_specular_map(graphics, environment.skyMap, resolution, currentWidth, sampleCount, lodBias, i, mipLevels);
 		copy_resource_to_cubemap(graphics, environment.specularTextureResource.Get(), environment.specularMap, *faces, currentWidth, currentWidth, i, mipLevels);
 
 		if (i == 0)

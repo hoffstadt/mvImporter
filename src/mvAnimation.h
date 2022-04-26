@@ -11,7 +11,7 @@ struct mvSkin;
 struct mvModel;
 
 void advance_animations(mvModel& model, mvAnimation& animation, float tcurrent);
-void compute_joints    (mvGraphics& graphics, mvModel& model, mvMat4 transform, mvSkin& skin);
+void compute_joints    (mvGraphics& graphics, mvModel& model, sMat4 transform, mvSkin& skin);
 
 struct mvSkin
 {

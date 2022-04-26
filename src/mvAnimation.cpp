@@ -1,15 +1,83 @@
 #include "mvAnimation.h"
 #include "mvAssetLoader.h"
+#include "sMath.h"
 #include <assert.h>
 
-static mvVec4
+static sVec4
+slerpQuat(sVec4 q1, sVec4 q2, float t)
+{
+
+	// from https://glmatrix.net/docs/quat.js.html
+	sVec4 qn1 = Semper::normalize(q1);
+	sVec4 qn2 = Semper::normalize(q2);
+
+	sVec4 qresult{};
+
+	float ax = qn1.x;
+	float ay = qn1.y;
+	float az = qn1.z;
+	float aw = qn1.w;
+
+	float bx = qn2.x;
+	float by = qn2.y;
+	float bz = qn2.z;
+	float bw = qn2.w;
+
+	float omega = 0.0f;
+	float cosom = 0.0f;
+	float sinom = 0.0f;
+	float scale0 = 0.0f;
+	float scale1 = 0.0f;
+
+	// calc cosine
+	cosom = ax * bx + ay * by + az * bz + aw * bw;
+
+	// adjust signs (if necessary)
+	if (cosom < 0.0f) 
+	{
+		cosom = -cosom;
+		bx = -bx;
+		by = -by;
+		bz = -bz;
+		bw = -bw;
+	}
+
+	// calculate coefficients
+	if (1.0f - cosom > 0.000001f)
+	{
+		// standard case (slerp)
+		omega = acos(cosom);
+		sinom = sin(omega);
+		scale0 = sin((1.0f - t) * omega) / sinom;
+		scale1 = sin(t * omega) / sinom;
+	}
+	else 
+	{
+		// "from" and "to" quaternions are very close
+		//  ... so we can do a linear interpolation
+		scale0 = 1.0f - t;
+		scale1 = t;
+	}
+
+	// calculate final values
+	qresult[0] = scale0 * ax + scale1 * bx;
+	qresult[1] = scale0 * ay + scale1 * by;
+	qresult[2] = scale0 * az + scale1 * bz;
+	qresult[3] = scale0 * aw + scale1 * bw;
+
+	qresult = Semper::normalize(qresult);
+
+	return qresult;
+}
+
+static sVec4
 interpolate_quat(mvAnimationChannel& channel, float tcurrent, float tmax)
 {
     
     // Wrap t around, so the animation loops.
     // Make sure that t is never earlier than the first keyframe and never later then the last keyframe.
     tcurrent = fmod(tcurrent, tmax);
-    tcurrent = clamp(tcurrent, channel.inputdata[0], channel.inputdata.back());
+    tcurrent = Semper::clamp(channel.inputdata[0], tcurrent, channel.inputdata.back());
 
     if (channel.tprev > tcurrent)
     {
@@ -24,12 +92,12 @@ interpolate_quat(mvAnimationChannel& channel, float tcurrent, float tmax)
     {
         if (tcurrent <= channel.inputdata[i])
         {
-            nextKey = clamp(i, 1, (int)channel.inputdata.size()-1);
+            nextKey = Semper::clamp(1, i, (int)channel.inputdata.size()-1);
             break;
         }
     }
 
-    channel.prevKey = clamp(nextKey - 1, 0, nextKey);
+    channel.prevKey = Semper::clamp(0, nextKey - 1, nextKey);
 
     float keyDelta = channel.inputdata[nextKey] - channel.inputdata[channel.prevKey];
 
@@ -40,13 +108,13 @@ interpolate_quat(mvAnimationChannel& channel, float tcurrent, float tmax)
     {
         if (channel.interpolation == "LINEAR")
         {
-            mvVec4 q0 = *(mvVec4*)&channel.outputdata[channel.prevKey*4];
-            mvVec4 q1 = *(mvVec4*)&channel.outputdata[nextKey*4];
+            sVec4 q0 = *(sVec4*)&channel.outputdata[channel.prevKey*4];
+            sVec4 q1 = *(sVec4*)&channel.outputdata[nextKey*4];
             return slerpQuat(q0, q1, tn);
         }
         else if (channel.interpolation == "STEP")
         {
-            return *(mvVec4*)&channel.outputdata[channel.prevKey * 4];
+            return *(sVec4*)&channel.outputdata[channel.prevKey * 4];
         }
         else if(channel.interpolation == "CUBICSPLINE")
         {
@@ -59,7 +127,7 @@ interpolate_quat(mvAnimationChannel& channel, float tcurrent, float tmax)
             float tSq = tn * tn;
             float tCub = tSq * tn;
 
-            mvVec4 result{};
+            sVec4 result{};
 
             for (int i = 0; i < 4; i++)
             {
@@ -71,7 +139,7 @@ interpolate_quat(mvAnimationChannel& channel, float tcurrent, float tmax)
                 result[i] = ((2 * tCub - 3 * tSq + 1) * v0) + ((tCub - 2 * tSq + tn) * b) + ((-2 * tCub + 3 * tSq) * v1) + ((tCub - tSq) * a);
             }
 
-            return normalize(result);
+            return Semper::normalize(result);
         }
         else
         {
@@ -81,13 +149,13 @@ interpolate_quat(mvAnimationChannel& channel, float tcurrent, float tmax)
 
     if (channel.interpolation == "LINEAR")
     {
-        mvVec4 q0 = *(mvVec4*)&channel.outputdata[channel.prevKey * 4];
-        mvVec4 q1 = *(mvVec4*)&channel.outputdata[nextKey * 4];
+        sVec4 q0 = *(sVec4*)&channel.outputdata[channel.prevKey * 4];
+        sVec4 q1 = *(sVec4*)&channel.outputdata[nextKey * 4];
         return slerpQuat(q0, q1, tn);
     }
     else if (channel.interpolation == "STEP")
     {
-        return *(mvVec4*)&channel.outputdata[channel.prevKey * 4];
+        return *(sVec4*)&channel.outputdata[channel.prevKey * 4];
     }
     else if (channel.interpolation == "CUBICSPLINE")
     {
@@ -98,7 +166,7 @@ interpolate_quat(mvAnimationChannel& channel, float tcurrent, float tmax)
         assert(false);
     }
 
-    return mvVec4{};
+    return sVec4{};
 }
 
 static void
@@ -108,7 +176,7 @@ interpolate(mvAnimationChannel& channel, float tcurrent, float tmax, unsigned in
     // Wrap t around, so the animation loops.
     // Make sure that t is never earlier than the first keyframe and never later then the last keyframe.
     tcurrent = fmod(tcurrent, tmax);
-    tcurrent = clamp(tcurrent, channel.inputdata[0], channel.inputdata.back());
+    tcurrent = Semper::clamp(channel.inputdata[0], tcurrent, channel.inputdata.back());
 
     if (channel.tprev > tcurrent)
     {
@@ -123,12 +191,12 @@ interpolate(mvAnimationChannel& channel, float tcurrent, float tmax, unsigned in
     {
         if (tcurrent <= channel.inputdata[i])
         {
-            nextKey = clamp(i, 1, (int)channel.inputdata.size() - 1);
+            nextKey = Semper::clamp(1, i,  (int)channel.inputdata.size() - 1);
             break;
         }
     }
 
-    channel.prevKey = clamp(nextKey - 1, 0, nextKey);
+    channel.prevKey = Semper::clamp(0, nextKey - 1, nextKey);
 
     float keyDelta = channel.inputdata[nextKey] - channel.inputdata[channel.prevKey];
 
@@ -165,7 +233,7 @@ interpolate(mvAnimationChannel& channel, float tcurrent, float tmax, unsigned in
         float tSq = tn * tn;
         float tCub = tSq * tn;
 
-        mvVec3 result{};
+        sVec3 result{};
 
         for (int i = 0; i < stride; i++)
         {
@@ -238,15 +306,15 @@ advance_animations(mvModel& model, mvAnimation& animation, float tcurrent)
             assert(false);
         }
 
-        mvVec3& trans = node.translationAnimated ? node.animationTranslation : node.translation;
-        mvVec3& scal = node.scaleAnimated ? node.animationScale : node.scale;
-        mvVec4& rot = node.rotationAnimated ? node.animationRotation : node.rotation;
-        node.transform = rotation_translation_scale(rot, trans, scal);
+        sVec3& trans = node.translationAnimated ? node.animationTranslation : node.translation;
+        sVec3& scal = node.scaleAnimated ? node.animationScale : node.scale;
+        sVec4& rot = node.rotationAnimated ? node.animationRotation : node.rotation;
+        node.transform = Semper::rotation_translation_scale(rot, trans, scal);
     }
 }
 
 void
-compute_joints(mvGraphics& graphics, mvModel& model, mvMat4 transform, mvSkin& skin)
+compute_joints(mvGraphics& graphics, mvModel& model, sMat4 transform, mvSkin& skin)
 {
     unsigned int textureWidth = ceil(sqrt(skin.jointCount * 8));
 
@@ -254,13 +322,13 @@ compute_joints(mvGraphics& graphics, mvModel& model, mvMat4 transform, mvSkin& s
     {
         int joint = skin.joints[i];
         mvNode& node = model.nodes[joint];
-        mvMat4 ibm = (*(mvMat4*)&skin.inverseBindMatrices[i * 16]);
-        mvMat4 jointMatrix = transform * node.worldTransform * ibm;
-        mvMat4 invertJoint = invert(jointMatrix);
-        mvMat4 normalMatrix = transpose(invertJoint);
+        sMat4 ibm = (*(sMat4*)&skin.inverseBindMatrices[i * 16]);
+        sMat4 jointMatrix = transform * node.worldTransform * ibm;
+        sMat4 invertJoint = Semper::invert(jointMatrix);
+        sMat4 normalMatrix = Semper::transpose(invertJoint);
 
-        *(mvMat4*)&skin.textureData[i * 32] = jointMatrix;
-        *(mvMat4*)&skin.textureData[i * 32 + 16] = normalMatrix;
+        *(sMat4*)&skin.textureData[i * 32] = jointMatrix;
+        *(sMat4*)&skin.textureData[i * 32 + 16] = normalMatrix;
     }
 
     update_dynamic_texture(graphics, skin.jointTexture, textureWidth, textureWidth, skin.textureData.data());
