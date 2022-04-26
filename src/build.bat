@@ -24,7 +24,7 @@
 @REM --------------------------Common Include Paths----------------------------
 @set S_INCLUDE_DIRECTORIES=/I. /I.. /I "%WindowsSdkDir%Include\um" /I "%WindowsSdkDir%Include\shared" /I "%DXSDK_DIR%Include"
 @set S_INCLUDE_DIRECTORIES=/I../dependencies/imgui /I../dependencies/imgui/backends %S_INCLUDE_DIRECTORIES%
-@set S_INCLUDE_DIRECTORIES=/I../dependencies/stb %S_INCLUDE_DIRECTORIES%
+@set S_INCLUDE_DIRECTORIES=/I../dependencies/stb /I../dependencies/Semper %S_INCLUDE_DIRECTORIES%
 
 @REM --------------------------Common Library Paths----------------------------
 @set S_LINK_DIRECTORIES=/LIBPATH:%S_OUT_DIR% /LIBPATH:"%DXSDK_DIR%/Lib/x86"
@@ -55,7 +55,7 @@
 
 @REM ---------------------Run Semper build script------------------------------
 @pushd %dir%
-@if NOT EXIST %S_OUT_DIR%\%S_OUT_BIN% @call ..\dependencies\Semper\semper_build.bat -c Debug
+@if NOT EXIST %S_OUT_DIR%\%S_OUT_BIN% @call ../src/semper_build.bat -c Debug
 @popd
 
 @REM ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -76,6 +76,6 @@
 @REM ---------------------Run Semper build script------------------------------
 @pushd %dir%
 @if EXIST %S_OUT_DIR%\%S_OUT_BIN% del %S_OUT_DIR%\%S_OUT_BIN%
-@call ..\dependencies\Semper\semper_build.bat -c Debug
+@call ../src/semper_build.bat -c Debug
 @popd
 

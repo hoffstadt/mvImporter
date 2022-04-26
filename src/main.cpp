@@ -67,7 +67,7 @@ int main()
     modelIDCache[0] = modelIndex;
     
     window = initialize_viewport(1850, 900);
-    mvGraphics graphics = setup_graphics(*window, "../sandbox_d3d11/shaders/");
+    mvGraphics graphics = setup_graphics(*window, "../src/shaders/");
 
     // setup imgui
     ImGui::CreateContext();
