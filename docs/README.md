@@ -6,6 +6,10 @@ A small toy PBR renderer used for testing some of my small "stb-style" asset loa
   <img src="https://github.com/hoffstadt/mvImporter/blob/master/docs/images/damagedhelmet.png?raw=true" alt="DamagedHelmet">
 </div>
 
+<div align="center">
+  <img src="https://github.com/hoffstadt/mvImporter/blob/master/docs/images/flighthelmet.png?raw=true" alt="FlightHelmet">
+</div>
+
 ## Building
 ### Windows
 **Requirements**
