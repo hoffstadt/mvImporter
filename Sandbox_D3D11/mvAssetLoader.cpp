@@ -58,7 +58,7 @@ mvFillBufferAsType(mvGLTFModel& model, mvGLTFAccessor& accessor, std::vector<W>&
 {
     int bufferviewStride = mvGetBufferViewStride(model, accessor);
     mvGLTFBufferView bufferView = model.bufferviews[accessor.buffer_view_index];
-    char* bufferRawData = (char*)model.buffers[bufferView.buffer_index].data.data;
+    char* bufferRawData = (char*)model.buffers[bufferView.buffer_index].data;
     char* bufferRawSection = &bufferRawData[bufferView.byte_offset + accessor.byteOffset]; // start of buffer section
 
     unsigned char actualItemCompCount = mvGetAccessorItemCompCount(accessor);
@@ -175,7 +175,7 @@ setup_texture(mvGraphics& graphics, mvGLTFModel& model, unsigned int currentPrim
     mvTexture result{};
     if (model.images[texture.image_index].embedded)
     {
-        result = create_texture(graphics, model.images[texture.image_index].data);
+        result = create_texture(graphics, model.images[texture.image_index].data, model.images[texture.image_index].dataCount);
     }
     else
         result = create_texture(graphics, model.root + uri);

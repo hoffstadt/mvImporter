@@ -63,7 +63,7 @@ void          cleanup_environment(mvEnvironment& environment);
 
 // textures
 mvTexture     create_texture     (mvGraphics& graphics, const std::string& path);
-mvTexture     create_texture     (mvGraphics& graphics, mvVector<unsigned char> data);
+mvTexture     create_texture     (mvGraphics& graphics, unsigned char* data, unsigned int dataSize);
 mvCubeTexture create_cube_texture(mvGraphics& graphics, const std::string& path);
 mvTexture     create_dynamic_texture(mvGraphics& graphics, unsigned int width, unsigned int height, unsigned int arraySize = 1);
 mvTexture     create_texture(mvGraphics& graphics, unsigned int width, unsigned int height, unsigned int arraySize = 1, float* data = nullptr);
