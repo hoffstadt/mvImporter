@@ -5,6 +5,7 @@
 #include <wrl.h>
 #include <thread>
 #include <vector>
+#include <string>
 #include "mvWindows.h"
 #include "sGltf.h"
 #include "mvMath.h"

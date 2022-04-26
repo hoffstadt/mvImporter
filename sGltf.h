@@ -25,7 +25,9 @@
 #define S_GLTF_MAX_NAME_LENGTH 256
 #endif
 
-#include <string> // temporary
+#ifndef S_GLTF_MAX_FILE_PATH_LENGTH
+#define S_GLTF_MAX_FILE_PATH_LENGTH 2024
+#endif
 
 #ifndef S_GLTF_ALLOC
 #define S_GLTF_ALLOC(x) malloc(x)
@@ -189,18 +191,18 @@ struct sGLTFSampler
 
 struct sGLTFImage
 {
-	std::string    mimeType;          // default ""
-	std::string    uri;               // default ""
-	unsigned char* data;              // default nullptr
-	size_t         dataCount;         // default 0u
-	bool           embedded;          // default
-	int            buffer_view_index; // default -1
+	char           mimeType[S_GLTF_MAX_NAME_LENGTH]; // default ""
+	char*          uri;                              // default ""
+	unsigned char* data;                             // default nullptr
+	size_t         dataCount;                        // default 0u
+	bool           embedded;                         // default
+	int            buffer_view_index;                // default -1
 };
 
 struct sGLTFBuffer
 {
 	unsigned       byte_length; // default 0u
-	std::string    uri;         // default ""
+	char*          uri;         // default ""
 	unsigned char* data;        // default nullptr
 	size_t         dataCount;   // default 0u
 };
@@ -444,6 +446,7 @@ struct sGltfJsonObject
 	int              childCount;	
 	char             name[S_GLTF_JSON_MAX_NAME_LENGTH];
 	char*            value;
+	size_t           valueSize;
 	void*            _internal;
 
 	// retrieve members
@@ -809,6 +812,7 @@ Semper::load_json(char* rawData, int size)
 			parentIDStack.push(objectArray.size-1);
 			(*(sGltfVector_<int>*)(parent->_internal)).push_back(objectArray.size-1);
 			memcpy(newObject->name, (*tokens)[i].value.data, (*tokens)[i].value.size_in_bytes());
+			newObject->valueSize = (*tokens)[i].value.size_in_bytes();
 
 			// look ahead to 2 tokens to look at type (skipping over ':' )
 			sGltfToken_ valueToken = (*tokens)[i + 2];
@@ -833,6 +837,7 @@ Semper::load_json(char* rawData, int size)
 			if(waitingOnValue)
 			{
 				parent->value = (*tokens)[i].value.data;
+				parent->valueSize = (*tokens)[i].value.size;
 				waitingOnValue=false;
 				parentIDStack.pop();
 			}
@@ -844,6 +849,7 @@ Semper::load_json(char* rawData, int size)
 				new (newObject->_internal) sGltfVector_<int>();
 				objectArray.push_back(newObject);
 				newObject->value = (*tokens)[i].value.data;
+				newObject->valueSize = (*tokens)[i].value.size_in_bytes();
 				(*(sGltfVector_<int>*)(parent->_internal)).push_back(objectArray.size-1);	
 			}
 			i++;
@@ -869,6 +875,7 @@ Semper::load_json(char* rawData, int size)
 				new (newObject->_internal) sGltfVector_<int>();
 				objectArray.push_back(newObject);
 				newObject->value = (*tokens)[i].value.data;
+				newObject->valueSize = (*tokens)[i].value.size_in_bytes();
 				(*(sGltfVector_<int>*)(parent->_internal)).push_back(objectArray.size-1);	
 			}
 			i++;
@@ -908,38 +915,10 @@ Semper::free_json(sGltfJsonObject** rootObjectPtr)
 	rootObjectPtr = nullptr;
 }
 
-static bool
-_is_data_uri(const std::string& in)
+static inline bool
+_is_data_uri(const char* in)
 {
-	std::string header = "data:application/octet-stream;base64,";
-	if (in.find(header) == 0)
-		return true;
-
-	header = "data:image/jpeg;base64,";
-	if (in.find(header) == 0)
-		return true;
-
-	header = "data:image/png;base64,";
-	if (in.find(header) == 0)
-		return true;
-
-	header = "data:image/bmp;base64,";
-	if (in.find(header) == 0)
-		return true;
-
-	header = "data:image/gif;base64,";
-	if (in.find(header) == 0)
-		return true;
-
-	header = "data:text/plain;base64,";
-	if (in.find(header) == 0)
-		return true;
-
-	header = "data:application/gltf-buffer;base64,";
-	if (in.find(header) == 0)
-		return true;
-
-	return false;
+	return strncmp("data:", in, 5) == 0;
 }
 
 static inline bool
@@ -948,37 +927,47 @@ _is_base64(unsigned char c)
 	return (isalnum(c) || (c == '+') || (c == '/'));
 }
 
-static std::string
-_base64_decode(std::string const& encoded_string)
+static size_t
+_find_in_string(const char* in, char str)
 {
-	int in_len = static_cast<int>(encoded_string.size());
+	char currentChar = in[0];
+	size_t pos = 0u;
+	while(currentChar != 0)
+	{
+		if(currentChar == str)
+		{
+			return pos;
+		}
+		pos++;
+		currentChar = in[pos];
+	}
+
+	return (size_t)-1;
+}
+
+static sGltfVector_<char> 
+_base64_decode(const char* encoded_string)
+{
+	int in_len = strlen(encoded_string);
 	int i = 0;
 	int j = 0;
 	int in_ = 0;
 	unsigned char char_array_4[4], char_array_3[3];
-	std::string ret;
+	sGltfVector_<char> ret;
 
-	const std::string base64_chars =
-		"ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-		"abcdefghijklmnopqrstuvwxyz"
-		"0123456789+/";
+	static const char* base64_chars= "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
-	while (in_len-- && (encoded_string[in_] != '=') &&
-		_is_base64(encoded_string[in_])) {
+	while (in_len-- && (encoded_string[in_] != '=') && _is_base64(encoded_string[in_])) 
+		{
 		char_array_4[i++] = encoded_string[in_];
 		in_++;
-		if (i == 4) {
-			for (i = 0; i < 4; i++)
-				char_array_4[i] =
-				static_cast<unsigned char>(base64_chars.find(char_array_4[i]));
-
-			char_array_3[0] =
-				(char_array_4[0] << 2) + ((char_array_4[1] & 0x30) >> 4);
-			char_array_3[1] =
-				((char_array_4[1] & 0xf) << 4) + ((char_array_4[2] & 0x3c) >> 2);
+		if (i == 4) 
+		{
+			for (i = 0; i < 4; i++) char_array_4[i] = (unsigned char)(_find_in_string(base64_chars, char_array_4[i]));
+			char_array_3[0] = (char_array_4[0] << 2) + ((char_array_4[1] & 0x30) >> 4);
+			char_array_3[1] = ((char_array_4[1] & 0xf) << 4) + ((char_array_4[2] & 0x3c) >> 2);
 			char_array_3[2] = ((char_array_4[2] & 0x3) << 6) + char_array_4[3];
-
-			for (i = 0; (i < 3); i++) ret += char_array_3[i];
+			for (i = 0; (i < 3); i++) ret.push_back(char_array_3[i]);
 			i = 0;
 		}
 	}
@@ -986,79 +975,57 @@ _base64_decode(std::string const& encoded_string)
 	if (i)
 	{
 		for (j = i; j < 4; j++) char_array_4[j] = 0;
-
-		for (j = 0; j < 4; j++)
-			char_array_4[j] =
-			static_cast<unsigned char>(base64_chars.find(char_array_4[j]));
-
+		for (j = 0; j < 4; j++) char_array_4[j] = (unsigned char)(_find_in_string(base64_chars, char_array_4[j]));
 		char_array_3[0] = (char_array_4[0] << 2) + ((char_array_4[1] & 0x30) >> 4);
-		char_array_3[1] =
-			((char_array_4[1] & 0xf) << 4) + ((char_array_4[2] & 0x3c) >> 2);
+		char_array_3[1] = ((char_array_4[1] & 0xf) << 4) + ((char_array_4[2] & 0x3c) >> 2);
 		char_array_3[2] = ((char_array_4[2] & 0x3) << 6) + char_array_4[3];
-
-		for (j = 0; (j < i - 1); j++) ret += char_array_3[j];
+		for (j = 0; (j < i - 1); j++) ret.push_back(char_array_3[j]);
 	}
 
 	return ret;
 }
 
 static bool
-_decode_data_uri(unsigned char** out, std::string& mime_type, const std::string& in, size_t reqBytes, bool checkSize, size_t* finalSize)
+_decode_data_uri(unsigned char** out, const char* in, size_t reqBytes, bool checkSize, size_t* finalSize)
 {
-	std::string header = "data:application/octet-stream;base64,";
-	std::string data;
-	if (in.find(header) == 0) {
-		data = _base64_decode(in.substr(header.size()));  // cut mime string.
-	}
-
-	if (data.empty()) {
-		header = "data:image/jpeg;base64,";
-		if (in.find(header) == 0) {
-			mime_type = "image/jpeg";
-			data = _base64_decode(in.substr(header.size()));  // cut mime string.
+	sGltfVector_<char> data;
+	if(in[5] == 'a')
+	{
+		if(in[17] == 'o' || in[17] == 'g')
+		{
+			data = _base64_decode(&in[37]);  // cut mime string.
+		}
+		else
+		{
+			assert(false);
 		}
 	}
-
-	if (data.empty()) {
-		header = "data:image/png;base64,";
-		if (in.find(header) == 0) {
-			mime_type = "image/png";
-			data = _base64_decode(in.substr(header.size()));  // cut mime string.
-		}
+	else if(in[5] == 't')
+	{
+		//strncpy(mime_type, "text/plain", 16);
+		data = _base64_decode(&in[23]);  // cut mime string.
+	}
+	else if(in[11] == 'j')
+	{
+		//strncpy(mime_type, "image/jpeg", 16);
+		data = _base64_decode(&in[23]);  // cut mime string.		
+	}
+	else if(in[11] == 'b')
+	{
+		//strncpy(mime_type, "image/bmp", 16);
+		data = _base64_decode(&in[22]);  // cut mime string.		
+	}
+	else if(in[11] == 'g')
+	{
+		//strncpy(mime_type, "image/gif", 16);
+		data = _base64_decode(&in[22]);  // cut mime string.		
+	}
+	else if(in[11] == 'p')
+	{
+		//strncpy(mime_type, "image/png", 16);
+		data = _base64_decode(&in[22]);  // cut mime string.
 	}
 
-	if (data.empty()) {
-		header = "data:image/bmp;base64,";
-		if (in.find(header) == 0) {
-			mime_type = "image/bmp";
-			data = _base64_decode(in.substr(header.size()));  // cut mime string.
-		}
-	}
-
-	if (data.empty()) {
-		header = "data:image/gif;base64,";
-		if (in.find(header) == 0) {
-			mime_type = "image/gif";
-			data = _base64_decode(in.substr(header.size()));  // cut mime string.
-		}
-	}
-
-	if (data.empty()) {
-		header = "data:text/plain;base64,";
-		if (in.find(header) == 0) {
-			mime_type = "text/plain";
-			data = _base64_decode(in.substr(header.size()));
-		}
-	}
-
-	if (data.empty()) {
-		header = "data:application/gltf-buffer;base64,";
-		if (in.find(header) == 0) {
-			data = _base64_decode(in.substr(header.size()));
-		}
-	}
-
-	// TODO(syoyo): Allow empty buffer? #229
 	if (data.empty()) 
 	{
 		return false;
@@ -1066,18 +1033,18 @@ _decode_data_uri(unsigned char** out, std::string& mime_type, const std::string&
 
 	if(checkSize)
 	{
-		if(data.size() != reqBytes)
+		if(data.size != reqBytes)
 			return false;
 		*out = new unsigned char[reqBytes];
 		*finalSize = reqBytes;
 	}
 	else
 	{
-		*out = new unsigned char[data.size()];
-		*finalSize = data.size();
+		*out = new unsigned char[data.size];
+		*finalSize = data.size;
 	}
 
-	memcpy(*out, data.data(), data.size());	
+	memcpy(*out, data.data, data.size);
 	return true;
 }
 
@@ -1175,10 +1142,10 @@ _LoadCameras(sGltfJsonObject& j, unsigned& size)
 		sGltfJsonObject& jcamera = (*jcameras)[i];
 		sGLTFCamera& camera = cameras[i];
 		strncpy(camera.name, jcamera.getStringMember("name", ""), S_GLTF_MAX_NAME_LENGTH);
-		std::string type = jcamera.getStringMember("type", "perspective");
+		const char* type = jcamera.getStringMember("type", "perspective");
 
-		if (type == "perspective") camera.type = S_GLTF_PERSPECTIVE;
-		else                       camera.type = S_GLTF_ORTHOGRAPHIC;
+		if (type[0] =='p') camera.type = S_GLTF_PERSPECTIVE;
+		else               camera.type = S_GLTF_ORTHOGRAPHIC;
 
 		if (sGltfJsonObject* jperspective = jcamera.getMember("perspective"))
 		{
@@ -1415,10 +1382,10 @@ _LoadMaterials(sGltfJsonObject& j, unsigned& size)
 
 		jmaterial.getFloatArrayMember("emissiveFactor", material.emissive_factor, 3);	
 
-		std::string alphaMode = jmaterial.getStringMember("alphaMode", "OPAQUE");
-		if     (alphaMode == "OPAQUE") material.alphaMode = S_ALPHA_MODE_OPAQUE;
-		else if(alphaMode == "MASK")   material.alphaMode = S_ALPHA_MODE_MASK;
-		else                           material.alphaMode = S_ALPHA_MODE_BLEND;
+		const char* alphaMode = jmaterial.getStringMember("alphaMode", "OPAQUE");
+		if     (alphaMode[0] == 'O') material.alphaMode = S_ALPHA_MODE_OPAQUE;
+		else if(alphaMode[0] == 'M') material.alphaMode = S_ALPHA_MODE_MASK;
+		else                         material.alphaMode = S_ALPHA_MODE_BLEND;
 
 		if (sGltfJsonObject* jrt = jmaterial.getMember("normalTexture"))
 		{
@@ -1538,8 +1505,18 @@ _LoadImages(sGltfJsonObject& j, unsigned& size)
 	{
 		sGltfJsonObject& jimage = (*jimages)[i];
 		sGLTFImage& image = images[i];
-		image.uri = jimage.getStringMember("uri", "");
-		image.mimeType = jimage.getStringMember("mimeType", "");
+		sGltfJsonObject* foundImage = jimage.getMember("uri");
+		if(foundImage)
+		{
+			image.uri = new char[foundImage->valueSize+1];
+			strncpy(image.uri, foundImage->asString(), foundImage->valueSize);
+			image.uri[foundImage->valueSize] = 0;
+		}
+		else
+		{
+			image.uri = nullptr;
+		}
+		strncpy(image.mimeType, jimage.getStringMember("mimeType", ""), S_GLTF_MAX_NAME_LENGTH);
 		image.buffer_view_index = jimage.getIntMember("bufferView", -1);
 		image.data = nullptr;
 		image.dataCount = 0u;
@@ -1560,7 +1537,17 @@ _LoadBuffers(sGltfJsonObject& j, unsigned& size)
 	{
 		sGltfJsonObject& jbuffer = (*jbuffers)[i];
 		sGLTFBuffer& buffer = buffers[i];
-		buffer.uri = jbuffer.getStringMember("uri", "");
+		sGltfJsonObject* foundBuffer = jbuffer.getMember("uri");
+		if(foundBuffer)
+		{
+			buffer.uri = new char[foundBuffer->valueSize+1];
+			strncpy(buffer.uri, foundBuffer->asString(), foundBuffer->valueSize);
+			buffer.uri[foundBuffer->valueSize] = 0;
+		}
+		else
+		{
+			buffer.uri = nullptr;
+		}
 		buffer.byte_length = jbuffer.getUIntMember("byteLength", 0u);	
 		buffer.dataCount = 0u;
 		buffer.data = nullptr;
@@ -1612,14 +1599,14 @@ _LoadAccessors(sGltfJsonObject& j, unsigned& size)
 		jaccessor.getFloatArrayMember("max", accessor.maxes, 16);
 		jaccessor.getFloatArrayMember("min", accessor.mins, 16);
 
-		std::string accessorType = jaccessor.getStringMember("type", "SCALAR");
-		if (accessorType == "SCALAR")    accessor.type = S_GLTF_SCALAR;
-		else if (accessorType == "VEC2") accessor.type = S_GLTF_VEC2;
-		else if (accessorType == "VEC3") accessor.type = S_GLTF_VEC3;
-		else if (accessorType == "VEC4") accessor.type = S_GLTF_VEC4;
-		else if (accessorType == "MAT2") accessor.type = S_GLTF_MAT2;
-		else if (accessorType == "MAT3") accessor.type = S_GLTF_MAT3;
-		else if (accessorType == "MAT4") accessor.type = S_GLTF_MAT4;
+		const char* accessorType = jaccessor.getStringMember("type", "SCALAR");
+		if (accessorType[0] == 'S')    accessor.type = S_GLTF_SCALAR;
+		else if (accessorType[0] == 'V' && accessorType[3] == '2') accessor.type = S_GLTF_VEC2;
+		else if (accessorType[0] == 'V' && accessorType[3] == '3') accessor.type = S_GLTF_VEC3;
+		else if (accessorType[0] == 'V' && accessorType[3] == '4') accessor.type = S_GLTF_VEC4;
+		else if (accessorType[0] == 'M' && accessorType[3] == '2') accessor.type = S_GLTF_MAT2;
+		else if (accessorType[0] == 'M' && accessorType[3] == '3') accessor.type = S_GLTF_MAT3;
+		else if (accessorType[0] == 'M' && accessorType[3] == '4') accessor.type = S_GLTF_MAT4;
 	}
 	return accessors;
 }
@@ -1766,8 +1753,7 @@ sLoadBinaryGLTF(const char* root, const char* file)
 		if (_is_data_uri(image.uri))
 		{
 			image.embedded = true;
-			std::string mime_type;
-			if (!_decode_data_uri(&image.data, mime_type, image.uri, 0, false, &image.dataCount))
+			if (!_decode_data_uri(&image.data, image.uri, 0, false, &image.dataCount))
 			{
 				assert(false && "here");
 			}
@@ -1779,6 +1765,10 @@ sLoadBinaryGLTF(const char* root, const char* file)
 
 	}
 
+	static char combinedFile[S_GLTF_MAX_FILE_PATH_LENGTH];
+	for(int i = 0; i < S_GLTF_MAX_FILE_PATH_LENGTH; i++)
+		combinedFile[i] = 0;
+
 	for (unsigned i = 0; i < model.buffer_count; i++)
 	{
 		sGLTFBuffer& buffer = model.buffers[i];
@@ -1788,18 +1778,18 @@ sLoadBinaryGLTF(const char* root, const char* file)
 
 		if (_is_data_uri(buffer.uri))
 		{
-			std::string mime_type;
-			if (!_decode_data_uri(&buffer.data, mime_type, buffer.uri, buffer.byte_length, true, &buffer.dataCount))
+			if (!_decode_data_uri(&buffer.data, buffer.uri, buffer.byte_length, true, &buffer.dataCount))
 			{
 				assert(false && "here");
 			}
 		}
 		else
-		{
-			std::string combinedFile = model.root;
-			combinedFile.append(buffer.uri);
+		{	
+			strcpy(combinedFile, model.root);
+			strcpy(&combinedFile[strlen(model.root)], buffer.uri);
+
 			unsigned dataSize = 0u;
-			void* bufferdata = _ReadFile(combinedFile.c_str(), dataSize, "rb");
+			void* bufferdata = _ReadFile(combinedFile, dataSize, "rb");
 			buffer.dataCount = dataSize;
 			buffer.data = new unsigned char[buffer.dataCount];
 			memcpy(buffer.data, bufferdata, dataSize);
@@ -1859,8 +1849,7 @@ Semper::load_gltf(const char* root, const char* file)
 		if (_is_data_uri(image.uri))
 		{
 			image.embedded = true;
-			std::string mime_type;
-			if (!_decode_data_uri(&image.data, mime_type, image.uri, 0, false, &image.dataCount))
+			if (!_decode_data_uri(&image.data, image.uri, 0, false, &image.dataCount))
 			{
 				assert(false && "here");
 			}
@@ -1872,24 +1861,27 @@ Semper::load_gltf(const char* root, const char* file)
 
 	}
 
+	static char combinedFile[S_GLTF_MAX_FILE_PATH_LENGTH];
+	for(int i = 0; i < S_GLTF_MAX_FILE_PATH_LENGTH; i++)
+		combinedFile[i] = 0;
 	for (unsigned i = 0; i < model.buffer_count; i++)
 	{
 		sGLTFBuffer& buffer = model.buffers[i];
 
 		if (_is_data_uri(buffer.uri))
 		{
-			std::string mime_type;
-			if (!_decode_data_uri(&buffer.data, mime_type, buffer.uri, buffer.byte_length, true, &buffer.dataCount))
+			if (!_decode_data_uri(&buffer.data, buffer.uri, buffer.byte_length, true, &buffer.dataCount))
 			{
 				assert(false && "here");
 			}
 		}
 		else
 		{
-			std::string combinedFile = model.root;
-			combinedFile.append(buffer.uri);
+			strcpy(combinedFile, model.root);
+			strcpy(&combinedFile[strlen(model.root)], buffer.uri);
+
 			unsigned dataSize = 0u;
-			void* data = _ReadFile(combinedFile.c_str(), dataSize, "rb");
+			void* data = _ReadFile(combinedFile, dataSize, "rb");
 			buffer.dataCount = dataSize;
 			buffer.data = new unsigned char[buffer.dataCount];
 			memcpy(buffer.data, data, dataSize);
@@ -1951,6 +1943,18 @@ Semper::free_gltf(sGLTFModel& model)
 	for (unsigned i = 0; i < model.extension_count; i++)
 	{
 		delete[] (model.extensions[i]);
+	}
+
+	for (unsigned i = 0; i < model.image_count; i++)
+	{
+		if(model.images[i].uri)
+			delete[] (model.images[i].uri);
+	}
+
+	for (unsigned i = 0; i < model.buffer_count; i++)
+	{
+		if(model.buffers[i].uri)
+			delete[] (model.buffers[i].uri);
 	}
 
 	delete[] model.scenes;
