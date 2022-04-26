@@ -6,7 +6,7 @@
 #include <thread>
 #include <vector>
 #include "mvWindows.h"
-#include "mvImporter.h"
+#include "sGltf.h"
 #include "mvMath.h"
 
 typedef int mvAssetID;

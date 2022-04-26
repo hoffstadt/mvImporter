@@ -5,7 +5,7 @@
 #include "mvLights.h"
 #include "mvOffscreenPass.h"
 #include "mvGraphics.h"
-#include "mvImporter.h"
+#include "sGltf.h"
 #include "mvTimer.h"
 #include "gltf_scene_info.h"
 #include "mvAnimation.h"
@@ -70,7 +70,7 @@ int main()
     ID3D11DeviceContext* ctx = graphics.imDeviceContext.Get();
 
     environmentCache[0] = create_environment(graphics, "../data/glTF-Sample-Environments/" + std::string(env_maps[envMapIndex]) + ".hdr", 1024, 1024, 1.0f, 7);
-    mvGLTFModel gltfmodel0 = mvLoadGLTF(gltf_directories[modelIndex], gltf_models[modelIndex]);
+    sGLTFModel gltfmodel0 = Semper::load_gltf(gltf_directories[modelIndex], gltf_models[modelIndex]);
     modelCache[0] = load_gltf_assets(graphics, gltfmodel0);
     
     mvRendererContext renderCtx = create_renderer_context(graphics);
@@ -173,9 +173,9 @@ int main()
                 currentModel = nextModelCacheIndex;
                 unload_gltf_assets(modelCache[nextModelCacheIndex]);
                 modelIDCache[nextModelCacheIndex] = modelIndex;
-                gltfmodel0 = mvLoadGLTF(gltf_directories[modelIndex], gltf_models[modelIndex]);
+                gltfmodel0 = Semper::load_gltf(gltf_directories[modelIndex], gltf_models[modelIndex]);
                 modelCache[nextModelCacheIndex] = load_gltf_assets(graphics, gltfmodel0);
-                mvCleanupGLTF(gltfmodel0);
+                Semper::free_gltf(gltfmodel0);
                 nextModelCacheIndex++;
                 if (nextModelCacheIndex >= MV_MODEL_CACHE)
                     nextModelCacheIndex = 0;

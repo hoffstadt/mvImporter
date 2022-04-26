@@ -9,8 +9,8 @@
 #include "mvAnimation.h"
 #include "mvViewport.h"
 
-#define MV_IMPORTER_IMPLEMENTATION
-#include "mvImporter.h"
+#define S_GLTF_IMPLEMENTATION
+#include "sGltf.h"
 
 #define MV_MATH_IMPLEMENTATION
 #include "mvMath.h"

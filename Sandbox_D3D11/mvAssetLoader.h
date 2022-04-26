@@ -5,7 +5,7 @@
 #include "mvGraphics.h"
 
 // forward declarations
-struct mvGLTFModel;
+struct sGLTFModel;
 struct mvCamera;
 struct mvMesh;
 struct mvNode;
@@ -28,5 +28,5 @@ struct mvModel
     float                    maxBoundary[3];
 };
 
-mvModel load_gltf_assets  (mvGraphics& graphics, mvGLTFModel& model);
+mvModel load_gltf_assets  (mvGraphics& graphics, sGLTFModel& model);
 void    unload_gltf_assets(mvModel& model);

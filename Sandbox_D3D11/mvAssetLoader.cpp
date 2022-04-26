@@ -1,23 +1,23 @@
 #include "mvAssetLoader.h"
 #include <unordered_map>
 #include <assert.h>
-#include "mvImporter.h"
+#include "sGltf.h"
 #include "mvGraphics.h"
 #include "mvAnimation.h"
 #include "mvCamera.h"
 
 static unsigned char
-mvGetAccessorItemCompCount(mvGLTFAccessor& accessor)
+mvGetAccessorItemCompCount(sGLTFAccessor& accessor)
 {
     switch (accessor.type)
     {
-    case(MV_IMP_SCALAR): return 1u;
-    case(MV_IMP_VEC2): return 2u;
-    case(MV_IMP_VEC3): return 3u;
-    case(MV_IMP_VEC4): return 4u;
-    case(MV_IMP_MAT2): return 4u;
-    case(MV_IMP_MAT3): return 9u;
-    case(MV_IMP_MAT4): return 16u;
+    case(S_GLTF_SCALAR): return 1u;
+    case(S_GLTF_VEC2): return 2u;
+    case(S_GLTF_VEC3): return 3u;
+    case(S_GLTF_VEC4): return 4u;
+    case(S_GLTF_MAT2): return 4u;
+    case(S_GLTF_MAT3): return 9u;
+    case(S_GLTF_MAT4): return 16u;
     default:
         assert(false && "Undefined attribute type");
         return 0u;
@@ -25,9 +25,9 @@ mvGetAccessorItemCompCount(mvGLTFAccessor& accessor)
 }
 
 static int
-mvGetBufferViewStride(mvGLTFModel& model, mvGLTFAccessor& accessor)
+mvGetBufferViewStride(sGLTFModel& model, sGLTFAccessor& accessor)
 {
-    mvGLTFBufferView& bufferview = model.bufferviews[accessor.buffer_view_index];
+    sGLTFBufferView& bufferview = model.bufferviews[accessor.buffer_view_index];
 
     unsigned char actualItemCompCount = mvGetAccessorItemCompCount(accessor);
 
@@ -36,17 +36,17 @@ mvGetBufferViewStride(mvGLTFModel& model, mvGLTFAccessor& accessor)
     {
         switch (accessor.component_type)
         {
-        case MV_IMP_UNSIGNED_BYTE:
-        case MV_IMP_BYTE: return 1 * actualItemCompCount;
+        case S_GLTF_UNSIGNED_BYTE:
+        case S_GLTF_BYTE: return 1 * actualItemCompCount;
 
-        case MV_IMP_UNSIGNED_SHORT:
-        case MV_IMP_SHORT: return 2 * actualItemCompCount;
+        case S_GLTF_UNSIGNED_SHORT:
+        case S_GLTF_SHORT: return 2 * actualItemCompCount;
 
-        case MV_IMP_FLOAT:
-        case MV_IMP_INT:
-        case MV_IMP_UNSIGNED_INT: return 4 * actualItemCompCount;
+        case S_GLTF_FLOAT:
+        case S_GLTF_INT:
+        case S_GLTF_UNSIGNED_INT: return 4 * actualItemCompCount;
 
-        case MV_IMP_DOUBLE: return 8 * actualItemCompCount;
+        case S_GLTF_DOUBLE: return 8 * actualItemCompCount;
         }
     }
     return bufferview.byte_stride;
@@ -54,10 +54,10 @@ mvGetBufferViewStride(mvGLTFModel& model, mvGLTFAccessor& accessor)
 
 template<typename T, typename W>
 static void
-mvFillBufferAsType(mvGLTFModel& model, mvGLTFAccessor& accessor, std::vector<W>& outBuffer, unsigned int componentCap)
+mvFillBufferAsType(sGLTFModel& model, sGLTFAccessor& accessor, std::vector<W>& outBuffer, unsigned int componentCap)
 {
     int bufferviewStride = mvGetBufferViewStride(model, accessor);
-    mvGLTFBufferView bufferView = model.bufferviews[accessor.buffer_view_index];
+    sGLTFBufferView bufferView = model.bufferviews[accessor.buffer_view_index];
     char* bufferRawData = (char*)model.buffers[bufferView.buffer_index].data;
     char* bufferRawSection = &bufferRawData[bufferView.byte_offset + accessor.byteOffset]; // start of buffer section
 
@@ -78,38 +78,38 @@ mvFillBufferAsType(mvGLTFModel& model, mvGLTFAccessor& accessor, std::vector<W>&
 
 template<typename W>
 static void
-mvFillBuffer(mvGLTFModel& model, mvGLTFAccessor& accessor, std::vector<W>& outBuffer, unsigned int componentCap = 4)
+mvFillBuffer(sGLTFModel& model, sGLTFAccessor& accessor, std::vector<W>& outBuffer, unsigned int componentCap = 4)
 {
-    mvGLTFComponentType indexCompType = accessor.component_type;
+    sGLTFComponentType indexCompType = accessor.component_type;
 
     switch (indexCompType)
     {
-    case MV_IMP_BYTE:
-    case MV_IMP_UNSIGNED_BYTE:
+    case S_GLTF_BYTE:
+    case S_GLTF_UNSIGNED_BYTE:
         mvFillBufferAsType<unsigned char>(model, accessor, outBuffer, componentCap);
         break;
 
-    case MV_IMP_SHORT:
+    case S_GLTF_SHORT:
         mvFillBufferAsType<signed short>(model, accessor, outBuffer, componentCap);
         break;
 
-    case MV_IMP_UNSIGNED_SHORT:
+    case S_GLTF_UNSIGNED_SHORT:
         mvFillBufferAsType<unsigned short>(model, accessor, outBuffer, componentCap);
         break;
 
-    case MV_IMP_INT:
+    case S_GLTF_INT:
         mvFillBufferAsType<int>(model, accessor, outBuffer, componentCap);
         break;
 
-    case MV_IMP_UNSIGNED_INT:
+    case S_GLTF_UNSIGNED_INT:
         mvFillBufferAsType<unsigned int>(model, accessor, outBuffer, componentCap);
         break;
 
-    case MV_IMP_FLOAT:
+    case S_GLTF_FLOAT:
         mvFillBufferAsType<float>(model, accessor, outBuffer, componentCap);
         break;
 
-    case MV_IMP_DOUBLE:
+    case S_GLTF_DOUBLE:
         mvFillBufferAsType<double>(model, accessor, outBuffer, componentCap);
         break;
 
@@ -123,9 +123,9 @@ get_address_mode(int address)
 {
     switch (address)
     {
-    case MV_IMP_WRAP_CLAMP_TO_EDGE:   return D3D11_TEXTURE_ADDRESS_CLAMP;
-    case MV_IMP_WRAP_MIRRORED_REPEAT: return D3D11_TEXTURE_ADDRESS_MIRROR;
-    case MV_IMP_WRAP_REPEAT:          return D3D11_TEXTURE_ADDRESS_WRAP;
+    case S_GLTF_WRAP_CLAMP_TO_EDGE:   return D3D11_TEXTURE_ADDRESS_CLAMP;
+    case S_GLTF_WRAP_MIRRORED_REPEAT: return D3D11_TEXTURE_ADDRESS_MIRROR;
+    case S_GLTF_WRAP_REPEAT:          return D3D11_TEXTURE_ADDRESS_WRAP;
     default:                          return D3D11_TEXTURE_ADDRESS_WRAP;
     }
 }
@@ -134,19 +134,19 @@ static D3D11_FILTER
 get_filter_mode(int minFilter, int magFilter)
 {
     //return D3D11_FILTER_MIN_MAG_MIP_POINT;
-    if (magFilter == MV_IMP_FILTER_LINEAR)
+    if (magFilter == S_GLTF_FILTER_LINEAR)
     {
         switch (minFilter)
         {
 
-        case MV_IMP_FILTER_LINEAR_MIPMAP_NEAREST:  return D3D11_FILTER_MIN_MAG_LINEAR_MIP_POINT;
-        case MV_IMP_FILTER_NEAREST_MIPMAP_LINEAR:  return D3D11_FILTER_MIN_POINT_MAG_MIP_LINEAR;
+        case S_GLTF_FILTER_LINEAR_MIPMAP_NEAREST:  return D3D11_FILTER_MIN_MAG_LINEAR_MIP_POINT;
+        case S_GLTF_FILTER_NEAREST_MIPMAP_LINEAR:  return D3D11_FILTER_MIN_POINT_MAG_MIP_LINEAR;
 
-        case MV_IMP_FILTER_LINEAR:
-        case MV_IMP_FILTER_LINEAR_MIPMAP_LINEAR:   return D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+        case S_GLTF_FILTER_LINEAR:
+        case S_GLTF_FILTER_LINEAR_MIPMAP_LINEAR:   return D3D11_FILTER_MIN_MAG_MIP_LINEAR;
 
-        case MV_IMP_FILTER_NEAREST:
-        case MV_IMP_FILTER_NEAREST_MIPMAP_NEAREST:
+        case S_GLTF_FILTER_NEAREST:
+        case S_GLTF_FILTER_NEAREST_MIPMAP_NEAREST:
         default:                                   return D3D11_FILTER_MIN_POINT_MAG_LINEAR_MIP_POINT;
         }
     }
@@ -154,23 +154,23 @@ get_filter_mode(int minFilter, int magFilter)
     {
         switch (minFilter)
         {
-        case MV_IMP_FILTER_LINEAR_MIPMAP_NEAREST:  return D3D11_FILTER_MIN_LINEAR_MAG_MIP_POINT;
-        case MV_IMP_FILTER_NEAREST_MIPMAP_LINEAR:  return D3D11_FILTER_MIN_MAG_POINT_MIP_LINEAR;
-        case MV_IMP_FILTER_LINEAR:
-        case MV_IMP_FILTER_LINEAR_MIPMAP_LINEAR:   return D3D11_FILTER_MIN_LINEAR_MAG_POINT_MIP_LINEAR;
-        case MV_IMP_FILTER_NEAREST_MIPMAP_NEAREST:
-        case MV_IMP_FILTER_NEAREST:
+        case S_GLTF_FILTER_LINEAR_MIPMAP_NEAREST:  return D3D11_FILTER_MIN_LINEAR_MAG_MIP_POINT;
+        case S_GLTF_FILTER_NEAREST_MIPMAP_LINEAR:  return D3D11_FILTER_MIN_MAG_POINT_MIP_LINEAR;
+        case S_GLTF_FILTER_LINEAR:
+        case S_GLTF_FILTER_LINEAR_MIPMAP_LINEAR:   return D3D11_FILTER_MIN_LINEAR_MAG_POINT_MIP_LINEAR;
+        case S_GLTF_FILTER_NEAREST_MIPMAP_NEAREST:
+        case S_GLTF_FILTER_NEAREST:
         default:                                   return D3D11_FILTER_MIN_MAG_MIP_POINT;
         }
     }
 }
 
 static mvTexture
-setup_texture(mvGraphics& graphics, mvGLTFModel& model, unsigned int currentPrimitive, int textureID, bool& flag, std::string& name, std::string suffix)
+setup_texture(mvGraphics& graphics, sGLTFModel& model, unsigned int currentPrimitive, int textureID, bool& flag, std::string& name, std::string suffix)
 {
     if (textureID == -1)
         return {};
-    mvGLTFTexture& texture = model.textures[textureID];
+    sGLTFTexture& texture = model.textures[textureID];
     std::string uri = model.images[texture.image_index].uri;
     mvTexture result{};
     if (model.images[texture.image_index].embedded)
@@ -182,7 +182,7 @@ setup_texture(mvGraphics& graphics, mvGLTFModel& model, unsigned int currentPrim
     flag = true;
     if (texture.sampler_index > -1)
     {
-        mvGLTFSampler& sampler = model.samplers[texture.sampler_index];
+        sGLTFSampler& sampler = model.samplers[texture.sampler_index];
 
         // Create Sampler State
         D3D11_SAMPLER_DESC samplerDesc{};
@@ -203,12 +203,12 @@ setup_texture(mvGraphics& graphics, mvGLTFModel& model, unsigned int currentPrim
 }
 
 static void
-load_gltf_skins(mvGraphics& graphics, mvModel& mvmodel, mvGLTFModel& model)
+load_gltf_skins(mvGraphics& graphics, mvModel& mvmodel, sGLTFModel& model)
 {
 
     for (unsigned int currentSkin = 0u; currentSkin < model.skin_count; currentSkin++)
     {
-        mvGLTFSkin& glskin = model.skins[currentSkin];
+        sGLTFSkin& glskin = model.skins[currentSkin];
         mvSkin skin{};
 
         skin.skeleton = glskin.skeleton;
@@ -251,7 +251,7 @@ struct RawAttributeBuffers
 };
 
 static std::vector<mvVertexElement>
-load_raw_attribute_buffers(mvGLTFModel& model, mvGLTFMeshPrimitive& glprimitive, RawAttributeBuffers& rawBuffers, float* minBoundary, float* maxBoundary)
+load_raw_attribute_buffers(sGLTFModel& model, sGLTFMeshPrimitive& glprimitive, RawAttributeBuffers& rawBuffers, float* minBoundary, float* maxBoundary)
 {
     std::vector<mvVertexElement> attributes;
     for (unsigned int i = 0; i < glprimitive.attribute_count; i++)
@@ -310,15 +310,15 @@ load_raw_attribute_buffers(mvGLTFModel& model, mvGLTFMeshPrimitive& glprimitive,
         }
         else if (strcmp(attribute.semantic, "COLOR_0") == 0)
         {
-            mvGLTFAccessor& accessor = model.accessors[attribute.index];
-            if (accessor.type == MV_IMP_VEC3)
+            sGLTFAccessor& accessor = model.accessors[attribute.index];
+            if (accessor.type == S_GLTF_VEC3)
             {
                 rawBuffers.hasColor0Vec3 = true;
                 rawBuffers.hasColor0Vec4 = false;
                 attributes.push_back(Color3_0);
                 mvFillBuffer(model, model.accessors[attribute.index], rawBuffers.color0AttributeBuffer, 3);
             }
-            else if (accessor.type == MV_IMP_VEC4)
+            else if (accessor.type == S_GLTF_VEC4)
             {
                 rawBuffers.hasColor0Vec3 = false;
                 rawBuffers.hasColor0Vec4 = true;
@@ -333,15 +333,15 @@ load_raw_attribute_buffers(mvGLTFModel& model, mvGLTFMeshPrimitive& glprimitive,
         }
         else if (strcmp(attribute.semantic, "COLOR_1") == 0)
         {
-            mvGLTFAccessor& accessor = model.accessors[attribute.index];
-            if (accessor.type == MV_IMP_VEC3)
+            sGLTFAccessor& accessor = model.accessors[attribute.index];
+            if (accessor.type == S_GLTF_VEC3)
             {
                 rawBuffers.hasColor1Vec3 = true;
                 rawBuffers.hasColor1Vec4 = false;
                 attributes.push_back(Color3_1);
                 mvFillBuffer(model, model.accessors[attribute.index], rawBuffers.color1AttributeBuffer, 3);
             }
-            else if (accessor.type == MV_IMP_VEC4)
+            else if (accessor.type == S_GLTF_VEC4)
             {
                 rawBuffers.hasColor1Vec3 = false;
                 rawBuffers.hasColor1Vec4 = true;
@@ -364,7 +364,7 @@ load_raw_attribute_buffers(mvGLTFModel& model, mvGLTFMeshPrimitive& glprimitive,
 }
 
 static void
-combine_vertex_buffer(unsigned int triangleCount, mvVertexLayout& modifiedLayout, mvGLTFMeshPrimitive& glprimitive, std::vector<unsigned int> origIndexBuffer, RawAttributeBuffers& rawBuffers, std::vector<unsigned int>& indexBuffer, std::vector<float>& combinedVertexBuffer)
+combine_vertex_buffer(unsigned int triangleCount, mvVertexLayout& modifiedLayout, sGLTFMeshPrimitive& glprimitive, std::vector<unsigned int> origIndexBuffer, RawAttributeBuffers& rawBuffers, std::vector<unsigned int>& indexBuffer, std::vector<float>& combinedVertexBuffer)
 {
     for (size_t i = 0; i < triangleCount / 3; i++)
     {
@@ -902,7 +902,7 @@ finalize_vertex_buffers(RawAttributeBuffers& rawBuffers, mvVertexLayout& modifie
 }
 
 static std::vector<mvVertexElement>
-gather_target_attributes(mvGLTFModel& model, mvGLTFMeshPrimitive& glprimitive)
+gather_target_attributes(sGLTFModel& model, sGLTFMeshPrimitive& glprimitive)
 {
     std::vector<mvVertexElement> targetAttributes;
 
@@ -916,10 +916,10 @@ gather_target_attributes(mvGLTFModel& model, mvGLTFMeshPrimitive& glprimitive)
 
     for (int i = 0; i < glprimitive.target_count; i++)
     {
-        mvGLTFMorphTarget target = glprimitive.targets[i];
+        sGLTFMorphTarget target = glprimitive.targets[i];
         for (int j = 0; j < target.attribute_count; j++)
         {
-            mvGLTFAttribute attribute = target.attributes[j];
+            sGLTFAttribute attribute = target.attributes[j];
             if (strcmp(attribute.semantic, "POSITION") == 0 && !hasPosition)
             {
                 hasPosition = true;
@@ -948,12 +948,12 @@ gather_target_attributes(mvGLTFModel& model, mvGLTFMeshPrimitive& glprimitive)
             else if (strcmp(attribute.semantic, "COLOR_0") == 0 && !hasColor1)
             {
                 hasColor0 = true;
-                mvGLTFAccessor& accessor = model.accessors[attribute.index];
-                if (accessor.type == MV_IMP_VEC3)
+                sGLTFAccessor& accessor = model.accessors[attribute.index];
+                if (accessor.type == S_GLTF_VEC3)
                 {
                     targetAttributes.push_back(Color3_0);
                 }
-                else if (accessor.type == MV_IMP_VEC4)
+                else if (accessor.type == S_GLTF_VEC4)
                 {
                     targetAttributes.push_back(Color4_0);
                 }
@@ -967,12 +967,12 @@ gather_target_attributes(mvGLTFModel& model, mvGLTFMeshPrimitive& glprimitive)
             else if (strcmp(attribute.semantic, "COLOR_1") == 0 && !hasColor1)
             {
                 hasColor1 = true;
-                mvGLTFAccessor& accessor = model.accessors[attribute.index];
-                if (accessor.type == MV_IMP_VEC3)
+                sGLTFAccessor& accessor = model.accessors[attribute.index];
+                if (accessor.type == S_GLTF_VEC3)
                 {
                     targetAttributes.push_back(Color3_1);
                 }
-                else if (accessor.type == MV_IMP_VEC4)
+                else if (accessor.type == S_GLTF_VEC4)
                 {
                     targetAttributes.push_back(Color4_1);
                 }
@@ -988,12 +988,12 @@ gather_target_attributes(mvGLTFModel& model, mvGLTFMeshPrimitive& glprimitive)
 }
 
 static void
-load_gltf_meshes(mvGraphics& graphics, mvModel& mvmodel, mvGLTFModel& model, float* minBoundary, float* maxBoundary)
+load_gltf_meshes(mvGraphics& graphics, mvModel& mvmodel, sGLTFModel& model, float* minBoundary, float* maxBoundary)
 {
 
     for (unsigned int currentMesh = 0u; currentMesh < model.mesh_count; currentMesh++)
     {
-        mvGLTFMesh& glmesh = model.meshes[currentMesh];
+        sGLTFMesh& glmesh = model.meshes[currentMesh];
 
         mvMesh newMesh{};
         newMesh.name = glmesh.name;
@@ -1032,14 +1032,14 @@ load_gltf_meshes(mvGraphics& graphics, mvModel& mvmodel, mvGLTFModel& model, flo
         for (unsigned int currentPrimitive = 0u; currentPrimitive < glmesh.primitives_count; currentPrimitive++)
         {
 
-            mvGLTFMeshPrimitive& glprimitive = glmesh.primitives[currentPrimitive];
+            sGLTFMeshPrimitive& glprimitive = glmesh.primitives[currentPrimitive];
 
             std::vector<unsigned int> origIndexBuffer;
             if (glprimitive.indices_index > -1)
             {
                 unsigned char indexCompCount = mvGetAccessorItemCompCount(model.accessors[glprimitive.indices_index]);
 
-                mvGLTFComponentType indexCompType = model.accessors[glprimitive.indices_index].component_type;
+                sGLTFComponentType indexCompType = model.accessors[glprimitive.indices_index].component_type;
                 mvFillBuffer(model, model.accessors[glprimitive.indices_index], origIndexBuffer);
             }
 
@@ -1125,7 +1125,7 @@ load_gltf_meshes(mvGraphics& graphics, mvModel& mvmodel, mvGLTFModel& model, flo
 
                 for (int i = 0; i < glprimitive.target_count; i++)
                 {
-                    mvGLTFMorphTarget& target = glprimitive.targets[i];
+                    sGLTFMorphTarget& target = glprimitive.targets[i];
 
                     for (const auto& item : attributeOffsets)
                     {
@@ -1138,12 +1138,12 @@ load_gltf_meshes(mvGraphics& graphics, mvModel& mvmodel, mvGLTFModel& model, flo
                             {
                                 std::vector<float> data;
                                 
-                                mvGLTFAccessor& accessor = model.accessors[target.attributes[j].index];
+                                sGLTFAccessor& accessor = model.accessors[target.attributes[j].index];
                                 int offset = item.second * singleTextureSize;
                                 mvFillBuffer(model, accessor, data);
 
                                 std::vector<float> rdata;
-                                if (accessor.type == MV_IMP_VEC2)
+                                if (accessor.type == S_GLTF_VEC2)
                                 {
                                     rdata.resize(origIndexBuffer.size() * 2);
                                     for (int k = 0; k < origIndexBuffer.size(); k++)
@@ -1153,7 +1153,7 @@ load_gltf_meshes(mvGraphics& graphics, mvModel& mvmodel, mvGLTFModel& model, flo
                                         rdata[k * 3 + 1] = data[i0 * 3 + 1];
                                     }
                                 }
-                                else if (accessor.type == MV_IMP_VEC3)
+                                else if (accessor.type == S_GLTF_VEC3)
                                 {
                                     rdata.resize(origIndexBuffer.size() * 3);
                                     for (int k = 0; k < origIndexBuffer.size(); k++)
@@ -1164,7 +1164,7 @@ load_gltf_meshes(mvGraphics& graphics, mvModel& mvmodel, mvGLTFModel& model, flo
                                         rdata[k * 3 + 2] = data[i0 * 3 + 2];
                                     }
                                 }
-                                else if (accessor.type == MV_IMP_VEC4)
+                                else if (accessor.type == S_GLTF_VEC4)
                                 {
                                     rdata.resize(origIndexBuffer.size() * 4);
                                     for (int k = 0; k < origIndexBuffer.size(); k++)
@@ -1180,12 +1180,12 @@ load_gltf_meshes(mvGraphics& graphics, mvModel& mvmodel, mvGLTFModel& model, flo
 
                                 switch (accessor.type)
                                 {
-                                case MV_IMP_VEC2:
-                                case MV_IMP_VEC3:
+                                case S_GLTF_VEC2:
+                                case S_GLTF_VEC3:
                                 {
                                     int paddingOffset = 0;
                                     int accessorOffset = 0;
-                                    int componentCount = accessor.type == MV_IMP_VEC2 ? 2 : 3;
+                                    int componentCount = accessor.type == S_GLTF_VEC2 ? 2 : 3;
                                     for (int k = 0; k < origIndexBuffer.size(); k++)
                                     {
                                         memcpy(&newMesh.primitives.back().morphData[offset + paddingOffset], &rdata[accessorOffset], sizeof(float)*componentCount);
@@ -1194,7 +1194,7 @@ load_gltf_meshes(mvGraphics& graphics, mvModel& mvmodel, mvGLTFModel& model, flo
                                     }
                                     break;
                                 }
-                                case MV_IMP_VEC4:
+                                case S_GLTF_VEC4:
                                 {
                                     memcpy(&newMesh.primitives.back().morphData[offset], rdata.data(), rdata.size() * sizeof(float));
                                     break;
@@ -1236,7 +1236,7 @@ load_gltf_meshes(mvGraphics& graphics, mvModel& mvmodel, mvGLTFModel& model, flo
             if (glprimitive.material_index != -1)
             {
 
-                mvGLTFMaterial& material = model.materials[glprimitive.material_index];
+                sGLTFMaterial& material = model.materials[glprimitive.material_index];
 
                 materialData.data.albedo = *(mvVec4*)material.base_color_factor;
                 materialData.data.metalness = material.metallic_factor;
@@ -1293,12 +1293,12 @@ load_gltf_meshes(mvGraphics& graphics, mvModel& mvmodel, mvGLTFModel& model, flo
 }
 
 static void
-load_gltf_nodes(mvModel& mvmodel, mvGLTFModel& model)
+load_gltf_nodes(mvModel& mvmodel, sGLTFModel& model)
 {
 
     for (unsigned int currentNode = 0u; currentNode < model.node_count; currentNode++)
     {
-        mvGLTFNode& glnode = model.nodes[currentNode];
+        sGLTFNode& glnode = model.nodes[currentNode];
 
         mvNode newNode{};
         newNode.name = glnode.name;
@@ -1335,12 +1335,12 @@ load_gltf_nodes(mvModel& mvmodel, mvGLTFModel& model)
 }
 
 static void
-load_gltf_animations(mvModel& mvmodel, mvGLTFModel& model)
+load_gltf_animations(mvModel& mvmodel, sGLTFModel& model)
 {
 
     for (unsigned int currentAnimation = 0u; currentAnimation < model.animation_count; currentAnimation++)
     {
-        mvGLTFAnimation& glanimation = model.animations[currentAnimation];
+        sGLTFAnimation& glanimation = model.animations[currentAnimation];
 
         mvAnimation animation{};
         animation.channels = new mvAnimationChannel[glanimation.channel_count];
@@ -1348,18 +1348,18 @@ load_gltf_animations(mvModel& mvmodel, mvGLTFModel& model)
 
         for (unsigned int channel_index = 0u; channel_index < glanimation.channel_count; channel_index++)
         {
-            mvGLTFAnimationChannel& glchannel = glanimation.channels[channel_index];
-            mvGLTFAnimationSampler& glsampler = glanimation.samplers[glchannel.sampler];
+            sGLTFAnimationChannel& glchannel = glanimation.channels[channel_index];
+            sGLTFAnimationSampler& glsampler = glanimation.samplers[glchannel.sampler];
             mvAnimationChannel& channel = animation.channels[channel_index];
             channel.node = glchannel.target.node;
             channel.path = glchannel.target.path;
             channel.interpolation = glsampler.interpolation;
 
-            mvGLTFAccessor& inputaccessor = model.accessors[glsampler.input];
-            mvGLTFAccessor& outputaccessor = model.accessors[glsampler.output];
+            sGLTFAccessor& inputaccessor = model.accessors[glsampler.input];
+            sGLTFAccessor& outputaccessor = model.accessors[glsampler.output];
             mvFillBuffer(model, inputaccessor, channel.inputdata, 1);
 
-            mvGLTFComponentType indexCompType = outputaccessor.component_type;
+            sGLTFComponentType indexCompType = outputaccessor.component_type;
 
             if (channel.path == "translation" || channel.path == "scale")
             {
@@ -1383,7 +1383,7 @@ load_gltf_animations(mvModel& mvmodel, mvGLTFModel& model)
 }
 
 mvModel
-load_gltf_assets(mvGraphics& graphics, mvGLTFModel& model)
+load_gltf_assets(mvGraphics& graphics, sGLTFModel& model)
 {
     mvModel mvmodel{};
     float maxBoundary[3] = { -FLT_MAX , -FLT_MAX , -FLT_MAX };
@@ -1396,10 +1396,10 @@ load_gltf_assets(mvGraphics& graphics, mvGLTFModel& model)
 
     for (unsigned int currentCamera = 0u; currentCamera < model.camera_count; currentCamera++)
     {
-        mvGLTFCamera& glcamera = model.cameras[currentCamera];
+        sGLTFCamera& glcamera = model.cameras[currentCamera];
         mvCamera camera{};
 
-        if (glcamera.type == MV_IMP_PERSPECTIVE)
+        if (glcamera.type == S_GLTF_PERSPECTIVE)
         {
             camera.type = MV_CAMERA_PERSPECTIVE;
             camera.aspectRatio = glcamera.perspective.aspectRatio;
@@ -1467,7 +1467,7 @@ load_gltf_assets(mvGraphics& graphics, mvGLTFModel& model)
 
     for (unsigned int currentScene = 0u; currentScene < model.scene_count; currentScene++)
     {
-        mvGLTFScene& glscene = model.scenes[currentScene];
+        sGLTFScene& glscene = model.scenes[currentScene];
 
         mvScene newScene{};
         newScene.nodeCount = glscene.node_count;
