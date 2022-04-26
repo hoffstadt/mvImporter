@@ -65,7 +65,7 @@
 @set S_STATIC_LIB=0
 
 @REM -----------------------------Sources--------------------------------------
-@set S_SOURCES=*.cpp ../*.cpp
+@set S_SOURCES=*.cpp
 
 @REM ----------------------------Libraries-------------------------------------
 @set S_LINK_LIBRARIES=dependencies.lib d3d11.lib d3dcompiler.lib
